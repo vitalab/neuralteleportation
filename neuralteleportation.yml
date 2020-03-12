@@ -1,0 +1,24 @@
+name: neuralteleportation
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python>=3.7
+  - pip
+  - scipy
+  - matplotlib
+  - scikit-image
+  - scikit-learn
+  - pandas
+  - h5py
+  - tqdm
+  - pytorch
+  - torchvision
+  - cudatoolkit
+  - Pillow>=6.2.0
+  - pandas
+  - structlog
+  - pip:
+    - pytorch-lightning
+    - torchsummary
