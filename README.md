@@ -17,7 +17,7 @@ Conference
  
 ## Description   
 
-Neural network teleportation using dark mathematical magic. 
+Neural network teleportation using mathematical magic. 
 
 ## How to run   
 First, install dependencies   
@@ -30,7 +30,7 @@ cd neuralteleportation
 conda env create -f neuralteleportation.yml
 
 # activate the environment so that we install the project's package in it
-conda activate camus
+conda activate neuralteleportation
 pip install -e .
 
 ```
