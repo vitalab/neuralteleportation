@@ -40,8 +40,7 @@ def test_reset_weights(use_bias=True):
     assert not np.allclose(w1, w2)
 
 
-
 if __name__ == '__main__':
     test_set_weights()
-    test_change_of_basis()
-    test_reset_weights()
+    # test_change_of_basis()
+    # test_reset_weights()

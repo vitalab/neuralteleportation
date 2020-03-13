@@ -17,7 +17,7 @@ def patch_module(module: torch.nn.Module, inplace: bool = True) -> torch.nn.Modu
 def _patch_cob_layers(module: torch.nn.Module) -> None:
     """
     Recursively iterate over the children of a module and replace them if
-    they are a dropout layer. This function operates in-place.
+    they are a Cob layer. This function operates in-place.
     """
 
     for name, child in module.named_children():

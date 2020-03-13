@@ -4,6 +4,7 @@ from neuralteleportation.model import NeuralTeleportationModel
 
 def test_patch_modulde():
     test_input  = torch.rand((1,10))
+
     test_module = torch.nn.Sequential(
         torch.nn.Linear(10, 5),
         torch.nn.ReLU(),
@@ -12,9 +13,6 @@ def test_patch_modulde():
     )
 
     cob_module = patch_module(test_module)
-
-    print(test_module)
-    print(cob_module)
 
 
     # assert not any(

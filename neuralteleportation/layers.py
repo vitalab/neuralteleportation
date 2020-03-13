@@ -107,20 +107,39 @@ class AbstractCOBLayer:
         raise NotImplementedError
 
     def get_nb_params(self):
-        raise NotImplementedError
+        nb_params = np.prod(self.weight.shape)
+        if self.bias is not None:
+            nb_params += np.prod(self.bias.shape)
+
+        return nb_params
 
     def get_weights(self):
-        raise NotImplementedError
+        # Maybe move this to support more layers like dropout, Batchnorm...
+        if self.bias is not None:
+            return self.weight.flatten(), self.bias.flatten()
+        else:
+            return self.weight.flatten(),
 
     def set_weights(self, weights):
-        raise NotImplementedError
+        counter = 0
+        w_shape = self.weight.shape
+        w_nb_params = np.prod(w_shape)
+        w = torch.tensor(weights[counter:counter + w_nb_params].reshape(w_shape))
+        self.weight = torch.nn.Parameter(w, requires_grad=True)
+        counter += w_nb_params
+
+        if self.bias is not None:
+            b_shape = self.bias.shape
+            b_nb_params = np.prod(b_shape)
+            b = torch.tensor(weights[counter:counter + b_nb_params].reshape(b_shape))
+            self.bias = torch.nn.Parameter(b, requires_grad=True)
 
 
 class LinearCOB(nn.Linear, AbstractCOBLayer):
 
     def apply_cob(self, prev_cob, next_cob):
 
-        if len(prev_cob) != self.in_features: # if previous layer is Conv2D
+        if len(prev_cob) != self.in_features:  # if previous layer is Conv2D
             hw = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
             for i, c in enumerate(prev_cob):

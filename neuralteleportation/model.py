@@ -12,7 +12,6 @@ class NeuralTeleportationModel(nn.Module):
     #     super(NeuralTeleportationModel, self).__init__()
     #     self.net = patch_module(network)
 
-
     def __init__(self, input_dim=784, hidden=(500,), output_dim=10, output_activation=None, use_bias=False):
         """
 
@@ -100,10 +99,11 @@ class NeuralTeleportationModel(nn.Module):
         w = []
 
         for k, layer in enumerate(self.get_supported_layers()):
-            w.append(layer.weight.flatten())
-
-            if layer.bias is not None:
-                w.append(layer.bias.flatten())
+            # w.append(layer.weight.flatten())
+            #
+            # if layer.bias is not None:
+            #     w.append(layer.bias.flatten())
+            w.extend(layer.get_weights())
 
         if flat:
             return torch.cat(w)
@@ -114,18 +114,22 @@ class NeuralTeleportationModel(nn.Module):
         counter = 0
 
         for k, layer in enumerate(self.get_supported_layers()):
-            shape = layer.weight.shape
-            nb_params = np.prod(shape)
-            w = torch.tensor(weights[counter:counter + nb_params].reshape(shape))
-            layer.weight = torch.nn.Parameter(w, requires_grad=True)
+            nb_params = layer.get_nb_params()
+            w = weights[counter:counter + nb_params]
+            layer.set_weights(w)
             counter += nb_params
-
-            if layer.bias is not None:
-                shape = layer.bias.shape
-                nb_params = np.prod(shape)
-                b = torch.tensor(weights[counter:counter + nb_params].reshape(shape))
-                layer.bias = torch.nn.Parameter(b, requires_grad=True)
-                counter += nb_params
+            # shape = layer.weight.shape
+            # nb_params = np.prod(shape)
+            # w = torch.tensor(weights[counter:counter + nb_params].reshape(shape))
+            # layer.weight = torch.nn.Parameter(w, requires_grad=True)
+            # counter += nb_params
+            #
+            # if layer.bias is not None:
+            #     shape = layer.bias.shape
+            #     nb_params = np.prod(shape)
+            #     b = torch.tensor(weights[counter:counter + nb_params].reshape(shape))
+            #     layer.bias = torch.nn.Parameter(b, requires_grad=True)
+            #     counter += nb_params
 
     def get_grad(self, data, target, loss_fn, flat=True):
         grad = []
@@ -178,8 +182,6 @@ if __name__ == '__main__':
     #     torch.nn.Linear(5, 2),
     # )
 
-
-
     cnn_model = torch.nn.Sequential(
         nn.Conv2d(1, 32, 3, 1),
         nn.ReLU(),
@@ -200,16 +202,15 @@ if __name__ == '__main__':
 
     # model = NeuralTeleportationModel(network=model)
     model = NeuralTeleportationModel(network=cnn_model)
-    #model = NeuralTeleportationModel(use_bias=False)
+    # model = NeuralTeleportationModel(use_bias=False)
 
     summary(model, (1, 28, 28))
 
     # print(model)
-    x = torch.rand((1,1,28,28))
+    x = torch.rand((1, 1, 28, 28))
     print(model(x))
     model.apply_change_of_basis()
     print(model(x))
-
 
     # summary(model, (1,28,28))
     #
@@ -222,4 +223,3 @@ if __name__ == '__main__':
     # print(model)
     # model = patch_module(model)
     # print(model)
-

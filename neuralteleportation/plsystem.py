@@ -1,15 +1,14 @@
 """
 This file defines the core research contribution
 """
-import torch
-from torch.nn import functional as F
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
 from argparse import ArgumentParser, Namespace
 from typing import Callable, Sequence
-import torch.nn as nn
+
 import pytorch_lightning as pl
-import argparse
+import torch
+import torch.nn as nn
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
 
@@ -155,9 +154,10 @@ class PlSystem(pl.LightningModule):
 
     @staticmethod
     def add_model_specific_args(parent_parser):  # pragma: no cover
-        parser = argparse.ArgumentParser(parents=[parent_parser])
+        parser = ArgumentParser(parents=[parent_parser])
         parser.add_argument('-b', '--batch-size', default=32, type=int, help='batch size')
-        parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='Initial learning rate', dest='lr')
+        parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='Initial learning rate',
+                            dest='lr')
         return parser
 
 
@@ -167,6 +167,7 @@ if __name__ == '__main__':
     from pytorch_lightning import Trainer
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.layers import Flatten
+    from neuralteleportation.layer_utils import patch_module
 
     args = ArgumentParser(add_help=False)
     args = PlSystem.add_model_specific_args(args)
@@ -194,12 +195,17 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-
     network = NeuralTeleportationModel()
+    print(network.get_weights())
     model = PlSystem(network=network, train_dataset=mnist_train, val_dataset=mnist_val,
                      test_dataset=mnist_test, hparams=params, loss_fn=nn.CrossEntropyLoss(), metrics=[accuracy])
 
-    # most basic trainer, uses good defaults
-    trainer = Trainer(max_nb_epochs=10)
+    model = patch_module(model)
 
+    print(model)
+
+    # most basic trainer, uses good defaults
+    trainer = Trainer(max_nb_epochs=1)
     trainer.fit(model)
+
+    print(network.get_weights())

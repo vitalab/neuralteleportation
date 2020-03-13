@@ -16,7 +16,7 @@ dependencies:
   - pytorch
   - torchvision
   - cudatoolkit
-  - Pillow>=6.2.0
+  - Pillow==6.1.0
   - pandas
   - structlog
   - pip:
