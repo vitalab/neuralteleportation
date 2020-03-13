@@ -157,8 +157,7 @@ class PlSystem(pl.LightningModule):
     def add_model_specific_args(parent_parser):  # pragma: no cover
         parser = argparse.ArgumentParser(parents=[parent_parser])
         parser.add_argument('-b', '--batch-size', default=32, type=int, help='batch size')
-        parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, help='Initial learning rate', dest='lr')
-        parser.add_argument('--name', default=None, type=str, help='Path to save model')
+        parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='Initial learning rate', dest='lr')
         return parser
 
 
@@ -167,6 +166,7 @@ if __name__ == '__main__':
     from neuralteleportation.model import NeuralTeleportationModel
     from pytorch_lightning import Trainer
     from neuralteleportation.metrics import accuracy
+    from neuralteleportation.layers import Flatten
 
     args = ArgumentParser(add_help=False)
     args = PlSystem.add_model_specific_args(args)
@@ -176,9 +176,28 @@ if __name__ == '__main__':
     mnist_val = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
     mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
 
-    network = NeuralTeleportationModel(output_activation=nn.LogSoftmax())
+    cnn_model = torch.nn.Sequential(
+        nn.Conv2d(1, 32, 3, 1),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, 3, stride=2),
+        nn.ReLU(),
+        Flatten(),
+        nn.Linear(9216, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
+    )
+
+    model = torch.nn.Sequential(
+        Flatten(),
+        nn.Linear(784, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
+    )
+
+
+    network = NeuralTeleportationModel()
     model = PlSystem(network=network, train_dataset=mnist_train, val_dataset=mnist_val,
-                     test_dataset=mnist_test, hparams=params, loss_fn=F.nll_loss, metrics=[accuracy])
+                     test_dataset=mnist_test, hparams=params, loss_fn=nn.CrossEntropyLoss(), metrics=[accuracy])
 
     # most basic trainer, uses good defaults
     trainer = Trainer(max_nb_epochs=10)

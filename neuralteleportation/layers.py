@@ -106,18 +106,26 @@ class AbstractCOBLayer:
     def get_input_cob(self):
         raise NotImplementedError
 
+    def get_nb_params(self):
+        raise NotImplementedError
+
+    def get_weights(self):
+        raise NotImplementedError
+
+    def set_weights(self, weights):
+        raise NotImplementedError
+
 
 class LinearCOB(nn.Linear, AbstractCOBLayer):
 
     def apply_cob(self, prev_cob, next_cob):
 
-        if len(prev_cob) != self.in_features:
-            # Must be flatten after conv2d
-            hw = self.in_features / len(prev_cob)  # size of feature maps
-            cob = np.zeros_like(self.in_features)
+        if len(prev_cob) != self.in_features: # if previous layer is Conv2D
+            hw = self.in_features // len(prev_cob)  # size of feature maps
+            cob = []
             for i, c in enumerate(prev_cob):
-                cob[i:i + hw] = c
-            prev_cob = cob
+                cob.extend(np.repeat(c, repeats=hw).tolist())
+            prev_cob = np.array(cob)
 
         w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32)
         self.weight = nn.Parameter(self.weight * w, requires_grad=True)
@@ -127,7 +135,6 @@ class LinearCOB(nn.Linear, AbstractCOBLayer):
 
     def get_cob(self, basis_range=10):
         """
-
         Returns:
             cob for the output neurons
         """

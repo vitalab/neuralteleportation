@@ -8,6 +8,11 @@ from neuralteleportation.layer_utils import patch_module
 class NeuralTeleportationModel(nn.Module):
     SUPPORTED_LAYERS = [LinearCOB, Conv2DCOB]
 
+    # def __init__(self, network):
+    #     super(NeuralTeleportationModel, self).__init__()
+    #     self.net = patch_module(network)
+
+
     def __init__(self, input_dim=784, hidden=(500,), output_dim=10, output_activation=None, use_bias=False):
         """
 
@@ -51,16 +56,12 @@ class NeuralTeleportationModel(nn.Module):
         """
           Returns list of np.arrays of change of basis per neuron
         """
-        # cob.append(np.ones(self.layers[0]))
-        # for i in range(1, len(self.layers) - 1):
-        #     cob.append(get_random_cob(basis_range, size=self.layers[i]))
-        # cob.append(np.ones(self.layers[-1]))
 
         cob = []
         layers = self.get_supported_layers()
         cob.append(layers[0].get_input_cob())
         for i in range(len(layers) - 1):  # Hidden layers
-            cob.append(layers[i].get_cob(range=basis_range))
+            cob.append(layers[i].get_cob(basis_range=basis_range))
         cob.append(layers[-1].get_output_cob())
 
         return cob
@@ -101,7 +102,7 @@ class NeuralTeleportationModel(nn.Module):
         for k, layer in enumerate(self.get_supported_layers()):
             w.append(layer.weight.flatten())
 
-            if self.use_bias:
+            if layer.bias is not None:
                 w.append(layer.bias.flatten())
 
         if flat:
@@ -119,7 +120,7 @@ class NeuralTeleportationModel(nn.Module):
             layer.weight = torch.nn.Parameter(w, requires_grad=True)
             counter += nb_params
 
-            if self.use_bias:
+            if layer.bias is not None:
                 shape = layer.bias.shape
                 nb_params = np.prod(shape)
                 b = torch.tensor(weights[counter:counter + nb_params].reshape(shape))
@@ -135,7 +136,7 @@ class NeuralTeleportationModel(nn.Module):
         for k, layer in enumerate(self.get_supported_layers()):
             grad.append(layer.weight.grad.flatten())
 
-            if self.use_bias:
+            if layer.bias is not None:
                 grad.append(layer.bias.grad.flatten())
 
         if flat:
@@ -143,29 +144,12 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return grad
 
-    # def apply_change_of_basis(self, cob_range=10, device='cpu'):
-    #     layers = self.get_supported_layers()
-    #
-    #     cob = layers[0].get_input_cob()
-    #     for layer in layers:
-    #         cob = layer.apply_cob(prev_cob=cob)
-
-    # def get_change_of_basis(self, basis_range=10):
-    #     """
-    #       Returns list of np.arrays of change of basis per neuron
-    #     """
-    #     cob = []
-    #
-    #     layers = self.get_supported_layers()
-    #     cob.append(layers[0].get_input_cob())
-    #     for layer in layers:
-    #         cob.append(layer.generate_cob())
-    #
-    #     return cob
-
 
 if __name__ == '__main__':
-    model = NeuralTeleportationModel(4, (10,), 4)
+    from torchsummary import summary
+
+    # model = NeuralTeleportationModel(4, (10,), 4)
+    #
     # print(model)
     # x = torch.rand(size=(1,4))
     # pred1 = model(x).detach().numpy()
@@ -185,15 +169,57 @@ if __name__ == '__main__':
     #
     # print(pred1)
     # print(pred2)
+    #
+    #
+    # test_module = torch.nn.Sequential(
+    #     torch.nn.Linear(10, 5),
+    #     torch.nn.ReLU(),
+    #     torch.nn.Dropout(p=0.5),
+    #     torch.nn.Linear(5, 2),
+    # )
 
-    test_module = torch.nn.Sequential(
-        torch.nn.Linear(10, 5),
-        torch.nn.ReLU(),
-        torch.nn.Dropout(p=0.5),
-        torch.nn.Linear(5, 2),
+
+
+    cnn_model = torch.nn.Sequential(
+        nn.Conv2d(1, 32, 3, 1),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, 3, stride=2),
+        nn.ReLU(),
+        Flatten(),
+        nn.Linear(9216, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
     )
 
-    cob_module = patch_module(test_module)
+    model = torch.nn.Sequential(
+        Flatten(),
+        nn.Linear(784, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
+    )
 
-    print(test_module)
-    print(cob_module)
+    # model = NeuralTeleportationModel(network=model)
+    model = NeuralTeleportationModel(network=cnn_model)
+    #model = NeuralTeleportationModel(use_bias=False)
+
+    summary(model, (1, 28, 28))
+
+    # print(model)
+    x = torch.rand((1,1,28,28))
+    print(model(x))
+    model.apply_change_of_basis()
+    print(model(x))
+
+
+    # summary(model, (1,28,28))
+    #
+    #
+    # cob_module = patch_module(test_module)
+    #
+    # print(test_module)
+    # print(cob_module)
+    #
+    # print(model)
+    # model = patch_module(model)
+    # print(model)
+
