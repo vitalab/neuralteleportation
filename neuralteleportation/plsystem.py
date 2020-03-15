@@ -10,6 +10,8 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
+from collections import defaultdict
+import pandas as pd
 
 
 class PlSystem(pl.LightningModule):
@@ -143,12 +145,10 @@ class PlSystem(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size)
 
-    @pl.data_loader
     def val_dataloader(self):
         if self.val_dataset:
             return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size)
 
-    @pl.data_loader
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.hparams.batch_size)
 
@@ -159,6 +159,24 @@ class PlSystem(pl.LightningModule):
         parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='Initial learning rate',
                             dest='lr')
         return parser
+
+    def test_on_dataset(self, dataset, device='cpu'):
+        test_loader = DataLoader(dataset, batch_size=self.hparams.batch_size)
+        self.eval()
+        results = defaultdict(list)
+        with torch.no_grad():
+            for data, target in test_loader:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                results['loss'].append(self.loss_fn(output, target).item())
+
+                if self.metrics is not None:
+                    batch_results = self.compute_metrics(y=target, y_hat=output, to_tensor=False)
+                    for k in batch_results.keys():
+                        results[k].append(batch_results[k])
+
+        results = pd.DataFrame(results)
+        return dict(results.mean())
 
 
 if __name__ == '__main__':
@@ -196,16 +214,19 @@ if __name__ == '__main__':
     )
 
     network = NeuralTeleportationModel()
-    print(network.get_weights())
     model = PlSystem(network=network, train_dataset=mnist_train, val_dataset=mnist_val,
                      test_dataset=mnist_test, hparams=params, loss_fn=nn.CrossEntropyLoss(), metrics=[accuracy])
 
-    model = patch_module(model)
+    # model = patch_module(model)
+    #
+    # print(model)
+    #
+    # # most basic trainer, uses good defaults
+    #trainer = Trainer(max_nb_epochs=1)
+    #trainer.fit(model)
+    #
+    # print(network.get_weights())
 
-    print(model)
 
-    # most basic trainer, uses good defaults
-    trainer = Trainer(max_nb_epochs=1)
-    trainer.fit(model)
-
-    print(network.get_weights())
+    print(next(model.parameters()).is_cuda)
+    print(model.test_on_dataset(mnist_test))

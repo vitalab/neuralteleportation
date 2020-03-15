@@ -1,18 +1,21 @@
 import torch
 import torch.optim as optim
+from collections import defaultdict
+import pandas as pd
 
 
-def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32, device='cpu'):
+def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
+          device='cpu'):
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
-    if val_dataset:
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
 
     for epoch in range(1, epochs + 1):
         train_step(model, criterion, optimizer, train_loader, epoch, device=device)
-        test(model, criterion, metrics, val_loader, device=device)
+        if val_dataset:
+            val_res = test(model, criterion, metrics, val_dataset, device=device)
+            print("Validation: {}".format(val_res))
 
 
 def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
@@ -20,7 +23,7 @@ def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model.net(data)
+        output = model(data)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
@@ -30,21 +33,23 @@ def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
                        100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(model, criterion, metrics, test_loader, device='cpu'):
+def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
     model.eval()
-    test_loss = 0
+    results = defaultdict(list)
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += criterion(output, target, reduction='sum').item()  # sum up batch loss
+            results['loss'].append(criterion(output, target).item())
 
-            # if metrics is not None:
-            #     metric_results = compute_metrics(metrics, y=target, y_hat=output)
+            if metrics is not None:
+                batch_results = compute_metrics(metrics, y=target, y_hat=output, to_tensor=False)
+                for k in batch_results.keys():
+                    results[k].append(batch_results[k])
 
-    test_loss /= len(test_loader.dataset)
-
-    return test_loss
+    results = pd.DataFrame(results)
+    return dict(results.mean())
 
 
 def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
@@ -54,5 +59,34 @@ def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
         if to_tensor:
             m = torch.tensor(m)
         results[prefix + metric.__name__] = m
-
     return results
+
+
+if __name__ == '__main__':
+    from torchvision.datasets import MNIST
+    from argparse import ArgumentParser
+    import torchvision.transforms as transforms
+    from neuralteleportation.model import NeuralTeleportationModel
+    from pytorch_lightning import Trainer
+    from neuralteleportation.metrics import accuracy
+    from neuralteleportation.layers import Flatten
+    from neuralteleportation.layer_utils import patch_module
+    import torch.nn as nn
+
+    mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
+    mnist_val = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+    mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+
+    model = torch.nn.Sequential(
+        Flatten(),
+        nn.Linear(784, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
+    )
+
+    optim = torch.optim.Adam(model.parameters())
+    metrics = [accuracy]
+    loss = nn.CrossEntropyLoss()
+    train(model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+          epochs=1)
+    print(test(model, loss, metrics, mnist_test))

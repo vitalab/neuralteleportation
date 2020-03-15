@@ -41,7 +41,6 @@ class NeuralTeleportationModel(nn.Module):
 
         # Output layers
         self.net.add_module('output_layer', LinearCOB(self.layers[-2], self.layers[-1], bias=use_bias))
-        # self.net.add_module('output_layer', LinearCOB(self.layers[-2], self.layers[-1], bias=use_bias, output=True))
         if output_activation:
             self.net.add_module('output_activation', output_activation)
 
