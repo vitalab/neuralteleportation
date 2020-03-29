@@ -67,7 +67,7 @@ class NeuralTeleportationModel(nn.Module):
     def get_supported_layers(self):
         return [l for l in self.net.children() if self.is_layer_supported(l)]
 
-    def apply_change_of_basis(self, cob_range=10, device='cpu'):
+    def teleport(self, cob_range=10):
         """
           Applies change of basis to each of the linear layer weights
         """
@@ -208,7 +208,7 @@ if __name__ == '__main__':
     # print(model)
     x = torch.rand((1, 1, 28, 28))
     print(model(x))
-    model.apply_change_of_basis()
+    model.teleport()
     print(model(x))
 
     # summary(model, (1,28,28))

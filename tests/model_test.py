@@ -22,7 +22,7 @@ def test_change_of_basis(use_bias=False, input_size=784):
     pred1 = model(x).detach().numpy()
     w1 = model.get_weights().detach().numpy()
 
-    model.apply_change_of_basis()
+    model.teleport()
 
     pred2 = model(x).detach().numpy()
     w2 = model.get_weights().detach().numpy()
