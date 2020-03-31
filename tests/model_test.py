@@ -16,7 +16,7 @@ def test_set_weights(use_bias=True):
     assert np.allclose(w1, w3)
 
 
-def test_change_of_basis(use_bias=False, input_size=784):
+def test_teleport(use_bias=False, input_size=784):
     model = NeuralTeleportationModel(input_dim=input_size, use_bias=use_bias)
     x = torch.rand((1, 784))
     pred1 = model(x).detach().numpy()
@@ -42,5 +42,5 @@ def test_reset_weights(use_bias=True):
 
 if __name__ == '__main__':
     test_set_weights()
-    # test_change_of_basis()
-    # test_reset_weights()
+    test_teleport()
+    test_reset_weights()

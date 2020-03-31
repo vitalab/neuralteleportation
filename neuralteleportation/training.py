@@ -1,7 +1,8 @@
+from collections import defaultdict
+
+import pandas as pd
 import torch
 import torch.optim as optim
-from collections import defaultdict
-import pandas as pd
 
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
@@ -64,13 +65,9 @@ def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
 
 if __name__ == '__main__':
     from torchvision.datasets import MNIST
-    from argparse import ArgumentParser
     import torchvision.transforms as transforms
-    from neuralteleportation.model import NeuralTeleportationModel
-    from pytorch_lightning import Trainer
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.layers import Flatten
-    from neuralteleportation.layer_utils import patch_module
     import torch.nn as nn
 
     mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())

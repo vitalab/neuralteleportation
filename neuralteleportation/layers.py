@@ -179,7 +179,7 @@ class Conv2DCOB(nn.Conv2d, AbstractCOBLayer):
     def get_cob(self, basis_range=10):
         """
         Returns:
-            cob for the output neurons
+            cob for the output feature maps.
         """
         return get_random_cob(range=basis_range, size=self.out_channels)
 
