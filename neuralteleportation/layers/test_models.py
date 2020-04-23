@@ -59,29 +59,65 @@ class ResidualNet(nn.Module):
         return x
 
 
+class ResidualNet2(nn.Module):
+    def __init__(self):
+        super(ResidualNet2, self).__init__()
+        self.conv1 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
+        self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.conv3 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.conv4 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3)
+        self.relu1 = ReLUCOB()
+        self.relu2 = ReLUCOB()
+        self.relu3 = ReLUCOB()
+        self.relu4 = ReLUCOB()
+        self.add1 = Add()
+        self.add2 = Add()
+        self.flatten = Flatten()
+        self.fc1 = LinearCOB(2028, 10)
+
+        self.relu5 = ReLUCOB()
+
+    def forward(self, x):
+        x1 = self.relu1(self.conv1(x))
+        x2 = self.relu2(self.conv2(x1))
+
+        # x2 += x1
+        x2 = self.add1(x1, x2)
+        x2 = self.relu5(x2)
+        x3 = self.relu3(self.conv3(x2))
+        x3 = self.add2(x1, x3)
+
+        x4 = self.conv4(x3)
+        x = self.flatten(x4)
+        x = self.relu4(self.fc1(x))
+        return x
+
+
 class DenseNet(nn.Module):
     def __init__(self):
         super(DenseNet, self).__init__()
         self.conv1 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
         self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
         self.conv3 = Conv2dCOB(in_channels=6, out_channels=3, kernel_size=3, padding=1)
-        self.conv4 = Conv2dCOB(in_channels=6, out_channels=3, kernel_size=3, padding=1)
+        self.conv4 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
         self.relu1 = ReLUCOB()
         self.relu2 = ReLUCOB()
         self.relu3 = ReLUCOB()
+        self.relu4 = ReLUCOB()
         self.concat1 = Concat()
-        self.concat2 = Concat()
+        self.flatten = Flatten()
+        self.fc1 = LinearCOB(2352, 10)
 
     def forward(self, x):
         x1 = self.relu1(self.conv1(x))
         x2 = self.relu2(self.conv2(x1))
 
-        # x2 = torch.cat([x1, x2], dim=1)
+        # x2 += x1
         x2 = self.concat1(x1, x2)
+
         x3 = self.relu3(self.conv3(x2))
-
-        # x3 = torch.cat([x1, x3], dim=1)
-        x3 = self.concat2(x1, x3)
         x4 = self.conv4(x3)
+        x = self.flatten(x4)
+        x = self.relu4(self.fc1(x))
 
-        return x4
+        return x
