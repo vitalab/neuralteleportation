@@ -9,7 +9,8 @@ class NeuralTeleportationModel(nn.Module):
     def __init__(self, network, sample_input):
         super(NeuralTeleportationModel, self).__init__()
         self.net = network
-        self.graph = NetworkGrapher(model, sample_input)
+        self.grapher = NetworkGrapher(model, sample_input)
+        self.network_graph = self.grapher.get_graph()
 
     def forward(self, x):
         return self.net(x)
@@ -20,7 +21,7 @@ class NeuralTeleportationModel(nn.Module):
         """
 
         network_cob = []  # The full network change of basis will be the length of the number of layers of the network.
-        layers = self.graph.ordered_layers
+        layers = self.grapher.ordered_layers
         print(layers)
 
         network_cob.append(layers[0].get_input_cob())
@@ -61,9 +62,14 @@ class NeuralTeleportationModel(nn.Module):
                    of basis of previous connected layers.
                 '''
                 print("Concat")
-                connection_layer_index = self.graph.graph[i - 1]['in'][0]
-                connection_layer_cob = network_cob[connection_layer_index]
-                current_cob = np.concatenate((connection_layer_cob, current_cob))
+                previous_layer_indexes = self.graph.graph[i]['in']
+                print(previous_layer_indexes)
+                current_cob = np.concatenate([network_cob[j] for j in previous_layer_indexes])
+                print(current_cob.shape)
+
+                # connection_layer_index = self.graph.graph[i - 1]['in'][0]
+                # connection_layer_cob = network_cob[connection_layer_index]
+                # current_cob = np.concatenate((connection_layer_cob, current_cob))
 
             network_cob.append(current_cob)
 
@@ -89,7 +95,7 @@ class NeuralTeleportationModel(nn.Module):
         self.apply(reset)
 
     def get_neuron_layers(self):
-        return [l for l in self.graph.ordered_layers if isinstance(l, NeuronLayerMixin)]
+        return [l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)]
 
     def get_weights(self, flat: bool = True):
         """
@@ -142,17 +148,19 @@ if __name__ == '__main__':
     from torchsummary import summary
     from neuralteleportation.layers.test_models import *
 
-    model = ResidualNet2()
+    # model = ResidualNet2()
+    # model = SplitConcatModel()
+    model = Net()
     sample_input = torch.rand((1, 1, 28, 28))
     model = NeuralTeleportationModel(network=model, sample_input=sample_input)
-    summary(model, (1, 28, 28))
+    # summary(model, (1, 28, 28))
 
-    model.graph.plot()
+    model.grapher.plot()
 
     cob = model.get_change_of_basis()
     print(cob)
     print(len(cob))
-    print(len(model.graph.graph))
+    print(len(model.grapher.graph))
 
     # print(model)
     x = torch.rand((1, 1, 28, 28))

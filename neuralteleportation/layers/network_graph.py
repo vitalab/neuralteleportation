@@ -87,7 +87,12 @@ class NetworkGrapher:
         # print(layers)
 
         print("Reformat")
-        layers = self.reformat_layers(layers)
+        if len(layers) != len(self.ordered_layers):
+            raise ValueError("Length of layer dict must be same length as ordered layers from model."
+                             "Probably because operations were used in model.forward."
+                             "Change these operations to nn.Module.")
+
+        layers = self.reformat_layers(layers, self.ordered_layers)
         # print(layers)
         self.print_graph(layers)
 
@@ -106,9 +111,9 @@ class NetworkGrapher:
                 layer['idx'],
                 layer['out']))
 
-    def reformat_layers(self, layers):
+    @staticmethod
+    def reformat_layers(layers, module_list):
         new_layers = []
-        modules = self.get_ordered_layers()
 
         for i, k in enumerate(layers):
             outputs = []
@@ -118,7 +123,7 @@ class NetworkGrapher:
 
             new_layers.append({'idx': i,
                                'out': outputs,
-                               'module': modules[i]})
+                               'module': module_list[i]})
 
         for i, k in enumerate(new_layers):
             inputs = []
