@@ -130,14 +130,14 @@ class DenseNet2(nn.Module):
         self.conv1 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
         self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
         self.conv3 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
-        self.conv4 = Conv2dCOB(in_channels=9, out_channels=3, kernel_size=3, padding=1)
+        self.conv4 = Conv2dCOB(in_channels=9, out_channels=1, kernel_size=3, padding=1)
         self.relu1 = ReLUCOB()
         self.relu2 = ReLUCOB()
         self.relu3 = ReLUCOB()
-        self.relu4 = ReLUCOB()
+        # self.relu4 = ReLUCOB()
         self.concat1 = Concat()
-        self.flatten = Flatten()
-        self.fc1 = LinearCOB(2352, 10)
+        # self.flatten = Flatten()
+        # self.fc1 = LinearCOB(2352, 10)
 
     def forward(self, x):
         x1 = self.relu1(self.conv1(x))
@@ -146,11 +146,23 @@ class DenseNet2(nn.Module):
         x3 = self.relu3(self.conv3(x2))
         x3 = self.concat1([x1, x2, x3])
         x4 = self.conv4(x3)
-        x = self.flatten(x4)
-        x = self.relu4(self.fc1(x))
+        # x = self.flatten(x4)
+        # x = self.relu4(self.fc1(x))
+
+        return x4
+
+
+class CombinedModule(nn.Module):
+    def __init__(self):
+        super(CombinedModule, self).__init__()
+        self.resnet = ResidualNet()
+        self.densenet = DenseNet2()
+
+    def forward(self, x):
+        x = self.densenet(x)
+        x = self.resnet(x)
 
         return x
-
 
 class SplitConcatModel(nn.Module):
     def __init__(self):
@@ -177,5 +189,3 @@ class SplitConcatModel(nn.Module):
         x3 = self.conv3(x2)
 
         return x3
-
-nn.BatchNorm2d(out_ch)

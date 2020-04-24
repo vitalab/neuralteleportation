@@ -10,7 +10,7 @@ class NeuralTeleportationModel(nn.Module):
         super(NeuralTeleportationModel, self).__init__()
         self.net = network
         self.grapher = NetworkGrapher(model, sample_input)
-        self.network_graph = self.grapher.get_graph()
+        self.graph = self.grapher.get_graph()
 
     def forward(self, x):
         return self.net(x)
@@ -19,24 +19,19 @@ class NeuralTeleportationModel(nn.Module):
         """
           Returns list of np.arrays of change of basis per neuron
         """
-
-        network_cob = []  # The full network change of basis will be the length of the number of layers of the network.
-        layers = self.grapher.ordered_layers
-        print(layers)
-
-        network_cob.append(layers[0].get_input_cob())
+        self.graph[0]['prev_cob'] = self.graph[0]['module'].get_input_cob()
 
         current_cob = None  # Cob for last neuron layer to be applied to non-neuron layers ie. Activations
         next_cob = None  # Cob obtained from residual connections to be applied to flowing neuron-layers
 
-        for i, layer in enumerate(layers):
-            if isinstance(layer, NeuronLayerMixin):
+        for i, layer in enumerate(self.graph):
+            if isinstance(layer['module'], NeuronLayerMixin):
                 # Check if this is the last neuron layer
-                if not np.array([isinstance(l, NeuronLayerMixin) for l in layers[i + 1:]]).any():
+                if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
                     print("LAST NEURON LAYER")
                     if next_cob is not None:
                         raise ValueError("Last layer cannot be connected to previous layer, it must be ones")
-                    current_cob = layer.get_output_cob()
+                    current_cob = layer['module'].get_output_cob()
 
                 # Check  if there was a residual connection
                 elif next_cob is not None:
@@ -44,42 +39,51 @@ class NeuralTeleportationModel(nn.Module):
                     current_cob = next_cob
                     next_cob = None
                 else:
-                    current_cob = layer.get_cob()
+                    current_cob = layer['module'].get_cob()
 
-            if isinstance(layer, Add):
+            if isinstance(layer['module'], Add):
                 '''If the layer is an addition layer, two operations must occur
-                    * Get the cob from the residual connection -> residual_cob. 
+                    * Get the cob from the residual connection -> residual_cob.
                     * Get the cob from the previous layer -> prev_cob
                     1. The addition layer must scale the input -> y = x1 + x2*residual_cob/prev_cob
                     2. The next neuron layer must have the same cob as the residual_cob
                 '''
-                connection_layer_index = self.grapher.graph[i - 1]['in'][0]
-                next_cob = network_cob[connection_layer_index]
+                print("ADD")
+                connection_layer_index = layer['in'][0]
+                print(connection_layer_index)
+                next_cob = self.graph[connection_layer_index - 1]['cob']
+                print(next_cob)
                 current_cob = next_cob
 
-            if isinstance(layer, Concat):
-                '''If the layer is concatenation the change of basis for this layer is the concatenation of all change 
+            if isinstance(layer['module'], Concat):
+                '''If the layer is concatenation the change of basis for this layer is the concatenation of all change
                    of basis of previous connected layers.
                 '''
                 print("Concat")
-                previous_layer_indexes = self.grapher.graph[i]['in']
+                previous_layer_indexes = self.graph[i]['in']
                 print(previous_layer_indexes)
-                current_cob = np.concatenate([network_cob[j] for j in previous_layer_indexes])
+                current_cob = np.concatenate([self.graph[j]['cob'] for j in previous_layer_indexes])
                 print(current_cob.shape)
 
-            network_cob.append(current_cob)
+            if i > 0:
+                if isinstance(layer['module'], Add):
+                    input_layer_index = self.graph[i]['in'][1]  # Get previous layer to apply to input.
+                    # layer['prev_cob'] = self.graph[i-1]['cob']
+                else:
+                    input_layer_index = self.graph[i]['in'][0]  # only merge layers should have two inputs
+                layer['prev_cob'] = self.graph[input_layer_index]['cob']
 
-        return network_cob
+            layer['cob'] = current_cob
 
     def teleport(self, cob_range=10):
         """
           Applies change of basis to each of the linear layer weights
         """
-        cob = self.get_change_of_basis(cob_range)
+        # cob = self.get_change_of_basis(cob_range)
 
-        for k, layer in enumerate(self.grapher.ordered_layers):
-            print(k, ',', layer.__class__.__name__, " , ", cob[k], ', ', cob[k + 1])
-            layer.apply_cob(prev_cob=cob[k], next_cob=cob[k + 1])
+        for k, layer in enumerate(self.graph):
+            print(k, ',', layer['module'].__class__.__name__, " , ", layer['prev_cob'], ', ', layer['cob'])
+            layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def reset_weights(self):
         """Reset all layers."""
@@ -144,10 +148,13 @@ if __name__ == '__main__':
     from torchsummary import summary
     from neuralteleportation.layers.test_models import *
     import random
+    import torchvision.models as models
 
-    # np.random.seed(1337)
-    # random.seed(1337)
-    # torch.manual_seed(1337)
+    # seed = 0
+    #
+    # np.random.seed(seed)
+    # random.seed(seed)
+    # torch.manual_seed(seed)
 
     # model = CombinedModule()
     # model = SplitConcatModel()
@@ -158,19 +165,20 @@ if __name__ == '__main__':
 
     # model.grapher.plot()
 
-    cob = model.get_change_of_basis()
-    print(cob)
-    print(len(cob))
-    print(len(model.grapher.graph))
+    model.get_change_of_basis()
 
     # print(model)
     x = torch.rand((1, 1, 28, 28))
     pred1 = model(x)
+    w1 = model.get_weights()
     print(model(x))
     print(model(x).shape)
     model.teleport()
     pred2 = model(x)
     print(model(x))
     print(model(x).shape)
+    w2 = model.get_weights()
 
     print(np.allclose(pred1.detach().numpy(), pred2.detach().numpy()))
+    print((pred1 - pred2).sum())
+    print((w1 - w2).sum())
