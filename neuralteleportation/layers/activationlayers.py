@@ -5,8 +5,8 @@ from neuralteleportation.layers.layers_v3 import ActivationLayerMixin
 
 
 class ReLUCOB(nn.ReLU, ActivationLayerMixin):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.cob = None
 
     def apply_cob(self, prev_cob, next_cob):

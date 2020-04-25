@@ -40,6 +40,13 @@ To test that the project was installed successfully, you can try the following c
 from neuralteleportation import Whatever   
 ``` 
 
+
+## Known Limitations
+
+* Can't use opperations in the foward method (only nn.Modules)
+* Can't reuse modules more than once (Causes error in graph creation and if the layer have teleportation parameters)
+
+
 ### Citation   
 ```
 @article{YourName,

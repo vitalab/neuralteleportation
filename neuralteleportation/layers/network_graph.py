@@ -90,7 +90,8 @@ class NetworkGrapher:
         if len(layers) != len(self.ordered_layers):
             raise ValueError("Length of layer dict must be same length as ordered layers from model."
                              "Probably because operations were used in model.forward."
-                             "Change these operations to nn.Module.")
+                             "Change these operations to nn.Module."
+                             "OR because same layer was used more than once!")
 
         layers = self.reformat_layers(layers, self.ordered_layers)
         # print(layers)
@@ -254,14 +255,14 @@ class NetworkGrapher:
         for i, l in enumerate(layers):
             G.add_node(i)
             pos[i] = [x, y]
-            x += 1
+            x += 10
 
         for i, l in enumerate(layers):
             for j in l['out']:
                 G.add_edge(i, j)
 
-        nx.draw_networkx_labels(G, pos, labels, font_size=8)
-        nx.draw_networkx_nodes(G, pos, node_color='y', node_size=100)
+        nx.draw_networkx_labels(G, pos, labels, font_size=1)
+        nx.draw_networkx_nodes(G, pos, node_color='y', node_size=1)
         nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5, connectionstyle='arc3, rad=0.5')
         plt.show()
 

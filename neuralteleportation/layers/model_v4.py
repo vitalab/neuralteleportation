@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
+
+from neuralteleportation.layers.models.resnet import resnet18
+from neuralteleportation.layers.models.unet import UNet
 from neuralteleportation.layers.network_graph import NetworkGrapher
 from neuralteleportation.layers.layers_v3 import NeuronLayerMixin, MergeLayersMixin
 
@@ -33,7 +36,7 @@ class NeuralTeleportationModel(nn.Module):
                         raise ValueError("Last layer cannot be connected to previous layer, it must be ones")
                     current_cob = layer['module'].get_output_cob()
 
-                # Check  if there was a residual connection
+                # # Check  if there was a residual connection
                 elif next_cob is not None:
                     print("Next COB")
                     current_cob = next_cob
@@ -49,11 +52,13 @@ class NeuralTeleportationModel(nn.Module):
                     2. The next neuron layer must have the same cob as the residual_cob
                 '''
                 print("ADD")
+                # TODO GET LAYER THAT IS NOT i-1
                 connection_layer_index = layer['in'][0]
-                print(connection_layer_index)
+                # print(connection_layer_index)
                 next_cob = self.graph[connection_layer_index - 1]['cob']
-                print(next_cob)
+                # print(next_cob)
                 current_cob = next_cob
+                # current_cob = self.graph[connection_layer_index - 1]['cob']
 
             if isinstance(layer['module'], Concat):
                 '''If the layer is concatenation the change of basis for this layer is the concatenation of all change
@@ -66,6 +71,7 @@ class NeuralTeleportationModel(nn.Module):
                 print(current_cob.shape)
 
             if i > 0:
+                # TODO make constant for all layers, look for layer i-1
                 if isinstance(layer['module'], Add):
                     input_layer_index = self.graph[i]['in'][1]  # Get previous layer to apply to input.
                     # layer['prev_cob'] = self.graph[i-1]['cob']
@@ -82,7 +88,7 @@ class NeuralTeleportationModel(nn.Module):
         # cob = self.get_change_of_basis(cob_range)
 
         for k, layer in enumerate(self.graph):
-            print(k, ',', layer['module'].__class__.__name__, " , ", layer['prev_cob'], ', ', layer['cob'])
+            print(k, ',', layer['module'].__class__.__name__, " , ", layer['prev_cob'].shape, ', ', layer['cob'].shape)
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def reset_weights(self):
@@ -158,27 +164,41 @@ if __name__ == '__main__':
 
     # model = CombinedModule()
     # model = SplitConcatModel()
+    # model = DenseNet2()
     model = ResidualNet()
-    sample_input = torch.rand((1, 1, 28, 28))
+
+    # model = ConvTransposeNet()
+    sample_input_shape = (1, 1, 28, 28)
+
+    # model = UNet(input_channels=1, output_channels=4, bilinear=False)
+    # sample_input_shape = (1, 1, 256, 256)
+
+    # sample_input_shape = (1, 3, 224, 224)
+
+    sample_input = torch.rand(sample_input_shape)
     model = NeuralTeleportationModel(network=model, sample_input=sample_input)
-    # summary(model, (1, 28, 28))
+    # try:
+    # summary(model, sample_input_shape[1:])
+    # except:
+    #     print("SUMMARY FAILED")
 
     # model.grapher.plot()
 
     model.get_change_of_basis()
 
     # print(model)
-    x = torch.rand((1, 1, 28, 28))
-    pred1 = model(x)
+
+    pred1 = model(sample_input)
     w1 = model.get_weights()
-    print(model(x))
-    print(model(x).shape)
+    print(model(sample_input))
+    print(model(sample_input).shape)
     model.teleport()
-    pred2 = model(x)
-    print(model(x))
-    print(model(x).shape)
+    pred2 = model(sample_input)
+    print(model(sample_input))
+    print(model(sample_input).shape)
     w2 = model.get_weights()
 
     print(np.allclose(pred1.detach().numpy(), pred2.detach().numpy()))
     print((pred1 - pred2).sum())
+    print((pred1 - pred2))
     print((w1 - w2).sum())

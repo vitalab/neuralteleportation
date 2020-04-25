@@ -40,12 +40,24 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
 class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
 
     def apply_cob(self, prev_cob, next_cob):
-        shape = self.weight.shape
-        for i in range(shape[0]):
-            if self.bias is not None:
-                self.bias[i] *= next_cob[i]
-            for j in range(shape[1]):
-                self.weight[i, j] *= next_cob[i] / prev_cob[j]
+        w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32)[..., None, None]
+
+        # print('Prev cob shape: ', prev_cob.shape)
+        # print('Next cob shape: ', next_cob.shape)
+        # print('Weight shape: ', self.weight.shape, ', w shape: ', w.shape)
+
+
+        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+
+        if self.bias is not None:
+            b = torch.tensor(next_cob, dtype=torch.float32)
+            # print('bias shape: ', self.bias.shape, ', b shape: ', b.shape)
+            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+        # for i in range(shape[0]):
+        #     if self.bias is not None:
+        #         self.bias[i] *= next_cob[i]
+        #     for j in range(shape[1]):
+        #         self.weight[i, j] *= next_cob[i] / prev_cob[j]
 
     def get_cob(self, basis_range=10):
         """
@@ -59,3 +71,54 @@ class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
 
     def get_output_cob(self):
         return np.ones(shape=self.out_channels)
+
+
+class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
+
+    def apply_cob(self, prev_cob, next_cob):
+        w = torch.tensor(next_cob[None, ...] / prev_cob[..., None], dtype=torch.float32)[..., None, None]
+
+        # print('Prev cob shape: ', prev_cob.shape)
+        # print('Next cob shape: ', next_cob.shape)
+        # print('Weight shape: ', self.weight.shape, ', w shape: ', w.shape)
+
+
+        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+
+        if self.bias is not None:
+            b = torch.tensor(next_cob, dtype=torch.float32)
+            # print('bias shape: ', self.bias.shape, ', b shape: ', b.shape)
+            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+
+        # weight = self.weight.permute(dims=(1, 0, 2, 3))
+        # print("permute :", weight.shape)
+        # shape = weight.shape
+        # for i in range(shape[0]):
+        #     if self.bias is not None:
+        #         self.bias[i] *= next_cob[i]
+        #     for j in range(shape[1]):
+        #         weight[i, j] *= next_cob[i] / prev_cob[j]
+        #
+        # self.weight = torch.nn.Parameter(weight.permute(dims=(1, 0, 2, 3)), requires_grad=True)
+
+    def get_cob(self, basis_range=10):
+        """
+        Returns:
+            cob for the output feature maps.
+        """
+        return get_random_cob(range=basis_range, size=self.out_channels)
+
+    def get_input_cob(self):
+        return np.ones(shape=self.in_channels)
+
+    def get_output_cob(self):
+        return np.ones(shape=self.out_channels)
+
+
+if __name__ == '__main__':
+
+    conv = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3)
+    convtranspose = nn.ConvTranspose2d(in_channels=256, out_channels=512, kernel_size=3)
+
+    print(conv.weight.shape)
+    print(convtranspose.weight.shape)
