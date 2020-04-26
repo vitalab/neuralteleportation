@@ -2,7 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.models.resnet import resnet18
+from neuralteleportation.layers.mergelayers import Concat, Add
+from neuralteleportation.layers.models.resnet import resnet18, BasicBlock
 from neuralteleportation.layers.models.unet import UNet
 from neuralteleportation.layers.network_graph import NetworkGrapher
 from neuralteleportation.layers.layers_v3 import NeuronLayerMixin, MergeLayersMixin
@@ -12,7 +13,7 @@ class NeuralTeleportationModel(nn.Module):
     def __init__(self, network, sample_input):
         super(NeuralTeleportationModel, self).__init__()
         self.net = network
-        self.grapher = NetworkGrapher(model, sample_input)
+        self.grapher = NetworkGrapher(network, sample_input)
         self.graph = self.grapher.get_graph()
 
     def forward(self, x):
@@ -22,7 +23,7 @@ class NeuralTeleportationModel(nn.Module):
         """
           Returns list of np.arrays of change of basis per neuron
         """
-        self.graph[0]['prev_cob'] = self.graph[0]['module'].get_input_cob()
+        # self.graph[0]['prev_cob'] = self.graph[0]['module'].get_input_cob()
 
         current_cob = None  # Cob for last neuron layer to be applied to non-neuron layers ie. Activations
         next_cob = None  # Cob obtained from residual connections to be applied to flowing neuron-layers
@@ -32,14 +33,22 @@ class NeuralTeleportationModel(nn.Module):
                 # Check if this is the last neuron layer
                 if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
                     print("LAST NEURON LAYER")
-                    if next_cob is not None:
-                        raise ValueError("Last layer cannot be connected to previous layer, it must be ones")
+                    # if next_cob is not None:
+                    #     raise ValueError("Last layer cannot be connected to previous layer, it must be ones")
                     current_cob = layer['module'].get_output_cob()
+                elif not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[:i]]).any():
+                    print("First NEURON LAYER")
+                    initial_cob = layer['module'].get_input_cob()
+                    for l in self.graph[:i]:
+                        l['prev_cob'] = initial_cob
+                        l['cob'] = initial_cob
+                    current_cob = layer['module'].get_cob()
 
                 # # Check  if there was a residual connection
                 elif next_cob is not None:
                     print("Next COB")
-                    current_cob = next_cob
+                    # current_cob = next_cob
+                    current_cob = layer['module'].get_cob()
                     next_cob = None
                 else:
                     current_cob = layer['module'].get_cob()
@@ -53,9 +62,23 @@ class NeuralTeleportationModel(nn.Module):
                 '''
                 print("ADD")
                 # TODO GET LAYER THAT IS NOT i-1
-                connection_layer_index = layer['in'][0]
+                # connection_layer_index = layer['in'][0]
+                # connection_layer_index = next((x for x in layer['in'] if x != i-1), None)
+                connection_layer_index = min(layer['in'])
+                print('connection_layer_index: ', connection_layer_index)
+
+                if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
+                    '''If there is no layer after, previous layer must be ones. '''
+                    raise ValueError("NOT SUPPORTED YET: Must have neuron layer after residual connection")
+                    # current_cob = self.graph[connection_layer_index - 1]['module'].get_output_cob()
+                    # self.graph[connection_layer_index - 1]['cob'] = current_cob
+                    # print(self.graph[connection_layer_index - 1]['module'])
+                    # print("ADD IS LAST LAYER")
+                # else:
                 # print(connection_layer_index)
-                next_cob = self.graph[connection_layer_index - 1]['cob']
+
+                next_cob = self.graph[connection_layer_index]['cob']
+                print(self.graph[connection_layer_index]['module'])
                 # print(next_cob)
                 current_cob = next_cob
                 # current_cob = self.graph[connection_layer_index - 1]['cob']
@@ -71,12 +94,15 @@ class NeuralTeleportationModel(nn.Module):
                 print(current_cob.shape)
 
             if i > 0:
-                # TODO make constant for all layers, look for layer i-1
-                if isinstance(layer['module'], Add):
-                    input_layer_index = self.graph[i]['in'][1]  # Get previous layer to apply to input.
-                    # layer['prev_cob'] = self.graph[i-1]['cob']
-                else:
-                    input_layer_index = self.graph[i]['in'][0]  # only merge layers should have two inputs
+                # # TODO make constant for all layers, look for layer i-1
+                # if isinstance(layer['module'], Add):
+                #     input_layer_index = self.graph[i]['in'][1]  # Get previous layer to apply to input.
+                #     # layer['prev_cob'] = self.graph[i-1]['cob']
+                # else:
+                #     input_layer_index = self.graph[i]['in'][0]  # only merge layers should have two inputs
+                # print(i, ', ', layer['module'])
+                # input_layer_index = next((x for x in layer['in'] if x == i - 1), layer['in'][0]) # if multiple inputs, get input that is i-1 else get the first input
+                input_layer_index = max(layer['in']) # if multiple inputs, get input that is i-1 else get the first input
                 layer['prev_cob'] = self.graph[input_layer_index]['cob']
 
             layer['cob'] = current_cob
@@ -85,10 +111,11 @@ class NeuralTeleportationModel(nn.Module):
         """
           Applies change of basis to each of the linear layer weights
         """
-        # cob = self.get_change_of_basis(cob_range)
+        self.get_change_of_basis(cob_range)
 
         for k, layer in enumerate(self.graph):
-            print(k, ',', layer['module'].__class__.__name__, " , ", layer['prev_cob'].shape, ', ', layer['cob'].shape)
+            # print(k, ',', layer['module'].__class__.__name__, " , ", layer['prev_cob'].shape, ', ', layer['cob'].shape)
+            print(k, ',', layer['module'].__class__.__name__, " , ", layer['prev_cob'], ', ', layer['cob'])
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def reset_weights(self):
@@ -101,6 +128,8 @@ class NeuralTeleportationModel(nn.Module):
         self.apply(reset)
 
     def get_neuron_layers(self):
+        # print(self.grapher.ordered_layers)
+        # print([l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)])
         return [l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)]
 
     def get_weights(self, flat: bool = True):
@@ -137,7 +166,6 @@ class NeuralTeleportationModel(nn.Module):
         output = self.net(data)
         loss = loss_fn(output, target)
         loss.backward()
-
         for k, layer in enumerate(self.get_neuron_layers()):
             grad.append(layer.weight.grad.flatten())
 
@@ -165,14 +193,17 @@ if __name__ == '__main__':
     # model = CombinedModule()
     # model = SplitConcatModel()
     # model = DenseNet2()
-    model = ResidualNet()
+    # model = ResidualNet2()
+    # model = ResidualNet5()
 
     # model = ConvTransposeNet()
+    model = ResidualNet()
     sample_input_shape = (1, 1, 28, 28)
 
     # model = UNet(input_channels=1, output_channels=4, bilinear=False)
     # sample_input_shape = (1, 1, 256, 256)
 
+    # model = resnet18(pretrained=False)
     # sample_input_shape = (1, 3, 224, 224)
 
     sample_input = torch.rand(sample_input_shape)
@@ -182,23 +213,31 @@ if __name__ == '__main__':
     # except:
     #     print("SUMMARY FAILED")
 
-    # model.grapher.plot()
-
     model.get_change_of_basis()
 
     # print(model)
 
     pred1 = model(sample_input)
     w1 = model.get_weights()
-    print(model(sample_input))
+    # print(model(sample_input))
     print(model(sample_input).shape)
-    model.teleport()
+    model.teleport(cob_range=1000)
     pred2 = model(sample_input)
-    print(model(sample_input))
+    # print(model(sample_input))
     print(model(sample_input).shape)
     w2 = model.get_weights()
 
     print(np.allclose(pred1.detach().numpy(), pred2.detach().numpy()))
-    print((pred1 - pred2).sum())
-    print((pred1 - pred2))
-    print((w1 - w2).sum())
+    print((pred1 - pred2).mean())
+    # print((pred1 - pred2))
+    print((w1 - w2).abs().mean())
+    print(w1[0:10])
+    print(w2[0:10])
+
+    print("Prediction")
+    print(pred1.flatten()[0:10])
+    print(pred2.flatten()[0:10])
+
+    print(model.get_weights().shape)
+
+    model.grapher.plot()

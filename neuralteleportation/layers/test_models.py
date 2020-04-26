@@ -154,6 +154,102 @@ class ResidualNet2(nn.Module):
         return x
 
 
+class ResidualNet3(nn.Module):
+    """
+    This resnet has no conv after the add. We therefore need to set the change of basis of the previous residual layer
+    to ones because it is the ouput cob
+    """
+
+    def __init__(self):
+        super(ResidualNet3, self).__init__()
+        self.conv1 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
+        self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.relu1 = ReLUCOB()
+        self.relu2 = ReLUCOB()
+        self.add1 = Add()
+        self.relu3 = ReLUCOB()
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.relu2(self.conv2(x1))
+
+        # x2 += x1
+        x2 = self.add1(x1, x2)
+        x2 = self.relu3(x2)
+
+        return x2
+
+class ResidualNet4(nn.Module):
+    """
+    This resnet has no conv before resisdual connection.
+    """
+
+    def __init__(self):
+        super(ResidualNet4, self).__init__()
+        self.conv0 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
+        self.conv1 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.conv3 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.relu1 = ReLUCOB()
+        self.relu2 = ReLUCOB()
+        self.add1 = Add()
+        self.relu3 = ReLUCOB()
+
+    def forward(self, x):
+        x = self.conv0(x)
+        identity = x
+
+        x1 = self.conv1(x)
+        x2 = self.relu2(self.conv2(x1))
+
+        # x2 += x1
+        x2 = self.add1(identity, x2)
+        x3 = self.conv3(x2)
+        x3 = self.relu3(x3)
+
+        return x2
+
+class ResidualNet5(nn.Module):
+    """
+    This resnet has no operation in the residual connection.
+    TODO FIX THE ORDERING OF OPERATIONS BEFORE RESIDUAL CONNECTION
+    """
+
+    def __init__(self):
+        super(ResidualNet5, self).__init__()
+        nb_channels = 3
+        self.conv1 = Conv2dCOB(in_channels=1, out_channels=nb_channels, kernel_size=3, padding=1)
+        self.conv2 = Conv2dCOB(in_channels=nb_channels, out_channels=nb_channels, kernel_size=3, padding=1)
+        self.conv3 = Conv2dCOB(in_channels=nb_channels, out_channels=nb_channels, kernel_size=3, padding=1)
+        self.conv4 = Conv2dCOB(in_channels=nb_channels, out_channels=nb_channels, kernel_size=3)
+        self.conv11 = Conv2dCOB(in_channels=nb_channels, out_channels=nb_channels, kernel_size=3, padding=1)
+        self.relu1 = ReLUCOB()
+        self.relu2 = ReLUCOB()
+        self.relu3 = ReLUCOB()
+        self.relu4 = ReLUCOB()
+        self.add1 = Add()
+        self.add2 = Add()
+
+        self.relu5 = ReLUCOB()
+
+    def forward(self, x):
+        x1 = self.relu1(self.conv1(x))
+        x11 = self.relu4(self.conv11(x1))
+
+        x2 = self.relu2(self.conv2(x1))
+        x3 = self.relu3(self.conv3(x2))
+
+        # x11 = self.relu4(self.conv11(x1))
+
+
+
+        x3 = self.add2(x11, x3)
+
+        x4 = self.conv4(x3)
+        return x4
+
+
+
 class DenseNet(nn.Module):
     def __init__(self):
         super(DenseNet, self).__init__()

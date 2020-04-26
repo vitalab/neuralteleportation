@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+
 # from torch.utils import load_state_dict_from_url
 
 
@@ -10,7 +11,8 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 from torch.hub import load_state_dict_from_url
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.layers_v3 import BatchNorm2dCOB, MaxPool2dCOB, AdaptiveAvgPool2dCOB, FlattenCOB
+from neuralteleportation.layers.layers_v3 import BatchNorm2dCOB, MaxPool2dCOB, AdaptiveAvgPool2dCOB, FlattenCOB, \
+    AvgPool2dCOB
 from neuralteleportation.layers.mergelayers import Add
 from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB
 
@@ -45,7 +47,7 @@ class BasicBlock(nn.Module):
                  base_width=64, dilation=1, norm_layer=None):
         super(BasicBlock, self).__init__()
         if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
+            norm_layer = BatchNorm2dCOB
         if groups != 1 or base_width != 64:
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
@@ -54,12 +56,13 @@ class BasicBlock(nn.Module):
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
         self.relu1 = ReLUCOB(inplace=True)
-        self.relu2 = ReLUCOB(inplace=True)
         self.conv2 = conv3x3(planes, planes)
+        self.conv3 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
-        self.stride = stride
         self.add = Add()
+        self.relu2 = ReLUCOB(inplace=True)
+        self.stride = stride
 
     def forward(self, x):
         identity = x
@@ -72,10 +75,12 @@ class BasicBlock(nn.Module):
         out = self.bn2(out)
 
         if self.downsample is not None:
+            print("DOWNSAMPLES FORWARD")
             identity = self.downsample(x)
-
-        # out += identity
+        #
+        # # out += identity
         out = self.add(identity, out)
+        # out = self.conv3(out)
         out = self.relu2(out)
 
         return out
@@ -107,6 +112,9 @@ class Bottleneck(nn.Module):
     def forward(self, x):
         identity = x
 
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu1(out)
@@ -117,9 +125,6 @@ class Bottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
 
         # out += identity
         out = self.add(identity, out)
@@ -154,6 +159,11 @@ class ResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = ReLUCOB(inplace=True)
         self.maxpool = MaxPool2dCOB(kernel_size=3, stride=2, padding=1)
+
+        # self.layer1 = self._make_layer(block, 64, layers[0])
+        # self.layer2 = self._make_layer(block, 128, 1, stride=2,
+        #                                dilate=replace_stride_with_dilation[0])
+
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
@@ -162,11 +172,12 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = AdaptiveAvgPool2dCOB((1, 1))
-        # self.fc = LinearCOB(512 * block.expansion, num_classes)
+        self.fc = LinearCOB(512 * block.expansion, num_classes)
         self.flatten = FlattenCOB()
-        self.fc = LinearCOB(512 * block.expansion, 128)
-        self.fc2 = LinearCOB(128, num_classes)
-        self.relu2 = ReLUCOB(inplace=True)
+
+
+        self.conv_extra = Conv2dCOB(128, 2, kernel_size=7, stride=2, padding=3,
+                               bias=False)
 
         for m in self.modules():
             if isinstance(m, Conv2dCOB):
@@ -217,15 +228,16 @@ class ResNet(nn.Module):
 
         x = self.layer1(x)
         x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        # x = self.layer3(x)
+        # x = self.layer4(x)
+        x = self.conv_extra(x)
 
-        x = self.avgpool(x)
-        x = self.flatten(x)
-        x = self.fc(x)
-        # TODO remove dependency for this by remove restriction for no addition to last layer.
-        x = self.relu2(x)
-        x = self.fc2(x)
+        # x = self.avgpool(x)
+        # x = self.flatten(x)
+        # x = self.fc(x)
+        # # TODO remove dependency for this by remove restriction for no addition to last layer.
+        # x = self.relu2(x)
+        # x = self.fc2(x)
 
         return x
 
@@ -361,3 +373,11 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
     kwargs['width_per_group'] = 64 * 2
     return _resnet('wide_resnet101_2', Bottleneck, [3, 4, 23, 3],
                    pretrained, progress, **kwargs)
+
+
+if __name__ == '__main__':
+    from torchsummary import summary
+
+    resnet = resnet18()
+
+    summary(resnet, (3, 224, 224), device='cpu')

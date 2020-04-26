@@ -34,6 +34,7 @@ class Add(nn.Module, MergeLayersMixin):
 
         next_cob_shape = (input2.shape[1],) + tuple([1 for _ in range(input2.dim() - 2)])
         self.next_cob = self.next_cob.view(next_cob_shape).float()
+        # print("Add, ", self.prev_cob.flatten(), ', ', self.next_cob.flatten())
 
         return torch.add(input1, self.next_cob * input2 / self.prev_cob)
         # return input1 + self.next_cob * input2 / self.prev_cob

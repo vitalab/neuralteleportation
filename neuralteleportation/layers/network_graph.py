@@ -242,7 +242,7 @@ class NetworkGrapher:
 
         return layers
 
-    def plot(self):
+    def plot(self, block=True):
         layers = self.get_graph()
 
         labels = {i: l['module'].__class__.__name__ for i, l in enumerate(layers)}
@@ -261,10 +261,10 @@ class NetworkGrapher:
             for j in l['out']:
                 G.add_edge(i, j)
 
-        nx.draw_networkx_labels(G, pos, labels, font_size=1)
-        nx.draw_networkx_nodes(G, pos, node_color='y', node_size=1)
+        nx.draw_networkx_labels(G, pos, labels, font_size=5)
+        nx.draw_networkx_nodes(G, pos, node_color='y', node_size=100)
         nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5, connectionstyle='arc3, rad=0.5')
-        plt.show()
+        plt.show(block=block)
 
 
 class Net(nn.Module):

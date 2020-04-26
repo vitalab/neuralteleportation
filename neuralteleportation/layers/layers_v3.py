@@ -51,8 +51,24 @@ class MaxPool2dCOB(nn.MaxPool2d, NeuralTeleportationLayerMixin):
 
 
 class AdaptiveAvgPool2dCOB(nn.AdaptiveAvgPool2d, NeuralTeleportationLayerMixin):
+    # def apply_cob(self, prev_cob, next_cob):
+    #     pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cob = None
+
     def apply_cob(self, prev_cob, next_cob):
-        pass
+        self.cob = torch.tensor(prev_cob)
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        if self.cob is None:
+            self.cob = torch.ones(input.shape[1])
+
+        cob_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
+        self.cob = self.cob.view(cob_shape).float()
+
+        return self.cob * super().forward(input / self.cob)
 
 
 class AvgPool2dCOB(nn.AvgPool2d, NeuralTeleportationLayerMixin):
@@ -128,8 +144,8 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
         self.prev_cob = torch.tensor(prev_cob)
         self.next_cob = torch.tensor(next_cob)
 
-        print(self.running_mean.shape)
-        print(self.running_var.shape)
+        # print(self.running_mean.shape)
+        # print(self.running_var.shape)
 
         # print(self.weight.shape)
         # print(self.bias.shape)
