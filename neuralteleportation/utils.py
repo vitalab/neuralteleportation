@@ -19,6 +19,7 @@ def get_random_positive_cob(range: int, size: int) -> np.ndarray:
 
     return cob
 
+
 def get_random_cob(range: int, size: int) -> np.ndarray:
     """
         Return random change of basis between -range and range.
@@ -31,6 +32,5 @@ def get_random_cob(range: int, size: int) -> np.ndarray:
         ndarray of size size.
     """
 
-    return np.random.uniform(low=-range, high=range, size=size).astype(np.float)
-
-
+    return np.random.uniform(low=-range, high=range, size=size).astype(np.float) + 1
+    # return np.random.normal(loc=1, scale=0.00001, size=size).astype(np.float)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.layers_v3 import ActivationLayerMixin
+from neuralteleportation.layers.neuralteleportationlayers import ActivationLayerMixin
 
 
 class ReLUCOB(nn.ReLU, ActivationLayerMixin):

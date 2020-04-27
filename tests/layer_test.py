@@ -8,15 +8,10 @@ def test_patch_modulde():
     test_module = torch.nn.Sequential(
         torch.nn.Linear(10, 5),
         torch.nn.ReLU(),
-        torch.nn.Dropout(p=0.5),
         torch.nn.Linear(5, 2),
     )
 
     cob_module = patch_module(test_module, inplace=False)
-
-    assert not any(
-        type(module) in [nn.Linear, nn.Conv2d] for module in test_module.modules()
-    )
 
     assert not any(
         type(module) in [nn.Linear, nn.Conv2d] for module in cob_module.modules()

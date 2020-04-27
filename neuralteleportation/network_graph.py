@@ -86,7 +86,7 @@ class NetworkGrapher:
         # print(len(layers))
         # print(layers)
 
-        print("Reformat")
+        # print("Reformat")
         if len(layers) != len(self.ordered_layers):
             raise ValueError("Length of layer dict must be same length as ordered layers from model."
                              "Probably because operations were used in model.forward."
@@ -95,9 +95,9 @@ class NetworkGrapher:
 
         layers = self.reformat_layers(layers, self.ordered_layers)
         # print(layers)
-        self.print_graph(layers)
+        # self.print_graph(layers)
 
-        print(len(layers))
+        # print(len(layers))
 
         return layers
 
@@ -267,90 +267,10 @@ class NetworkGrapher:
         plt.show(block=block)
 
 
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5)
-        self.pool1 = nn.MaxPool2d(2, 2)
-        self.pool2 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 4 * 4, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-        self.flatten = Flatten()
-        self.relu1 = nn.ReLU()
-        self.relu2 = nn.ReLU()
-        self.relu3 = nn.ReLU()
-        self.relu4 = nn.ReLU()
-
-    def forward(self, x):
-        x = self.pool1(self.relu1(self.conv1(x)))
-        x = self.pool2(self.relu2(self.conv2(x)))
-        x = self.flatten(x)
-        x = self.relu3(self.fc1(x))
-        x = self.relu4(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-
-class ResidualNet(nn.Module):
-    def __init__(self):
-        super(ResidualNet, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3)
-        self.relu1 = nn.ReLU()
-        self.relu2 = nn.ReLU()
-        self.relu3 = nn.ReLU()
-        self.add = Add()
-
-    def forward(self, x):
-        x1 = self.relu1(self.conv1(x))
-        x2 = self.relu2(self.conv2(x1))
-        print(x1.shape)
-        print(x2.shape)
-
-        # x2 += x1
-        x2 = self.add(x1, x2)
-
-        x3 = self.relu3(self.conv3(x2))
-        return x3
-
-
-class DenseNet(nn.Module):
-    def __init__(self):
-        super(DenseNet, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(in_channels=6, out_channels=3, kernel_size=3, padding=1)
-        self.conv4 = nn.Conv2d(in_channels=6, out_channels=3, kernel_size=3, padding=1)
-        self.relu1 = nn.ReLU()
-        self.relu2 = nn.ReLU()
-        self.relu3 = nn.ReLU()
-        self.relu4 = nn.ReLU()
-        self.concat1 = Concat()
-        self.concat2 = Concat()
-
-    def forward(self, x):
-        x1 = self.relu1(self.conv1(x))
-        x2 = self.relu2(self.conv2(x1))
-        print(x1.shape)
-        print(x2.shape)
-
-        # x2 = torch.cat([x1, x2], dim=1)
-        x2 = self.concat1(x1, x2)
-        x3 = self.relu3(self.conv3(x2))
-
-        # x3 = torch.cat([x1, x3], dim=1)
-        x3 = self.concat2(x1, x3)
-        x4 = self.relu4(self.conv4(x3))
-
-        return x4
-
 
 if __name__ == '__main__':
     from torchsummary import summary
-
+    from neuralteleportation.models.test_models.test_models import ResidualNet
     # model = models.resnet18()
     # x = torch.rand((1, 3, 224, 224))
     # summary(model, (3, 224, 224), device='cpu')

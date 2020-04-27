@@ -45,7 +45,7 @@ from neuralteleportation import Whatever
 
 * Can't use opperations in the foward method (only nn.Modules)
 * Can't reuse modules more than once (Causes error in graph creation and if the layer have teleportation parameters)
-
+* Order of the operations can cause problems with teleporting residual layers. (Will be fixed/improved)
 
 ### Citation   
 ```

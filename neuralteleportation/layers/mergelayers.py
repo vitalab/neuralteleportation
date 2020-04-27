@@ -2,12 +2,12 @@ from typing import Union, Tuple, List
 
 import torch.nn as nn
 import torch
-from neuralteleportation.layers.layers_v3 import MergeLayersMixin
+from neuralteleportation.layers.neuralteleportationlayers import MergeLayersMixin
 
 
 class Concat(nn.Module, MergeLayersMixin):
-    def forward(self, tensors: Union[Tuple[torch.Tensor, ...], List[torch.Tensor]], dim: Union[str, None] = 1):
-        return torch.cat(tensors, dim=dim)
+    def forward(self, *args, dim: Union[str, None] = 1):
+        return torch.cat(list(args), dim=dim)
 
     def apply_cob(self, prev_cob, next_cob):
         pass

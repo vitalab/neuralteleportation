@@ -1,11 +1,10 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.layers_v3 import BatchNorm2dCOB, MaxPool2dCOB, UpsampleCOB
 from neuralteleportation.layers.mergelayers import Concat
+from neuralteleportation.layers.neuralteleportationlayers import BatchNorm2dCOB
 from neuralteleportation.layers.neuronlayers import Conv2dCOB, ConvTranspose2dCOB
+from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, UpsampleCOB
 
 
 class UNet(nn.Module):
@@ -118,14 +117,20 @@ class Up(nn.Module):
         # x1 = F.pad(x1, [diff_w // 2, diff_w - diff_w // 2, diff_h // 2, diff_h - diff_h // 2])
 
         # Concatenate along the channels axis
-        x = self.cat([x2, x1], dim=1)
-        print(x.shape)
+        x = self.cat(x2, x1, dim=1)
+
         return self.conv(x)
 
 
 if __name__ == '__main__':
     from torchsummary import summary
+    from tests.model_test import test_teleport
 
     model = UNet(input_channels=1, output_channels=4, bilinear=False)
 
-    summary(model, (1, 256, 256), device='cpu')
+    # summary(model, (1, 256, 256), device='cpu')
+
+    test_teleport(model, (1, 1, 256, 256))
+
+
+

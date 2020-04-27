@@ -1,16 +1,16 @@
-import torch.nn as nn
-from neuralteleportation.layers.layers_v3 import NeuronLayerMixin
-import torch
-
-from neuralteleportation.utils import get_random_cob
 import numpy as np
+import torch
+import torch.nn as nn
+
+from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
+from neuralteleportation.utils import get_random_cob
 
 
 class LinearCOB(nn.Linear, NeuronLayerMixin):
 
     def apply_cob(self, prev_cob, next_cob):
 
-        if len(prev_cob) != self.in_features:  # if previous layer is Conv2D
+        if len(prev_cob) != self.in_features:  # if previous layer is Conv2D, duplicate cob for each feature map.
             hw = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
             for i, c in enumerate(prev_cob):
@@ -113,12 +113,3 @@ class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
 
     def get_output_cob(self):
         return np.ones(shape=self.out_channels)
-
-
-if __name__ == '__main__':
-
-    conv = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3)
-    convtranspose = nn.ConvTranspose2d(in_channels=256, out_channels=512, kernel_size=3)
-
-    print(conv.weight.shape)
-    print(convtranspose.weight.shape)

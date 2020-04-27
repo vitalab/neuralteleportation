@@ -1,16 +1,19 @@
-import numpy as np
-from neuralteleportation.model import NeuralTeleportationModel
-from neuralteleportation.training import test
-from tqdm import tqdm
-from torchvision.datasets import MNIST
-import torchvision.transforms as transforms
-from neuralteleportation.metrics import accuracy
-from neuralteleportation.layers import Flatten
-import torch.nn as nn
-import torch
-from matplotlib import pyplot as plt
-
 from _collections import defaultdict
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torchvision.transforms as transforms
+from matplotlib import pyplot as plt
+from torchvision.datasets import MNIST
+from tqdm import tqdm
+
+from neuralteleportation.layers.activationlayers import ReLUCOB
+from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
+from neuralteleportation.layers.neuronlayers import LinearCOB
+from neuralteleportation.metrics import accuracy
+from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
+from neuralteleportation.training import test
 
 mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
 mnist_val = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
@@ -47,8 +50,18 @@ def get_colors(alphas):
     return c.tolist()
 
 
+net = nn.Sequential(FlattenCOB(),
+                    LinearCOB(784, 128),
+                    ReLUCOB(),
+                    LinearCOB(128, 128),
+                    ReLUCOB(),
+                    LinearCOB(128, 10),
+                    )
 
-model = NeuralTeleportationModel()
+# net = Net()
+
+sample_input_shape = (1, 1, 28, 28)
+model = NeuralTeleportationModel(network=net, input_shape=sample_input_shape)
 print(model)
 
 w1 = model.get_weights()
@@ -62,7 +75,7 @@ print(w2)
 
 distance = torch.dist(w1, w2)
 
-alphas = np.arange(-1, 2, 0.01)
+alphas = np.arange(-1, 2, 0.1)
 colors = get_colors(alphas)
 improvement_key = 'accuracy'
 
@@ -99,4 +112,4 @@ for e in range(10):
         axs[i].set_title(k)
         axs[i].scatter(alphas, results[k], c=colors)
 
-    plt.show(block=False)
+    plt.show(block=True)

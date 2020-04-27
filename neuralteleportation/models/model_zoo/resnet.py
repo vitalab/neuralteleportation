@@ -11,8 +11,8 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 from torch.hub import load_state_dict_from_url
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.layers_v3 import BatchNorm2dCOB, MaxPool2dCOB, AdaptiveAvgPool2dCOB, FlattenCOB, \
-    AvgPool2dCOB
+from neuralteleportation.layers.neuralteleportationlayers import BatchNorm2dCOB, FlattenCOB
+from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
 from neuralteleportation.layers.mergelayers import Add
 from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB
 
@@ -75,7 +75,6 @@ class BasicBlock(nn.Module):
         out = self.bn2(out)
 
         if self.downsample is not None:
-            print("DOWNSAMPLES FORWARD")
             identity = self.downsample(x)
         #
         # # out += identity
@@ -377,7 +376,11 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
 
 if __name__ == '__main__':
     from torchsummary import summary
+    from tests.model_test import test_teleport
 
     resnet = resnet18()
-
     summary(resnet, (3, 224, 224), device='cpu')
+
+    test_teleport(resnet, (1, 3, 224, 224))
+
+
