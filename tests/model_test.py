@@ -29,6 +29,9 @@ def test_teleport(network, input_shape=(1, 1, 28, 28)):
 
     diff_average = (w1 - w2).mean()
 
+    print(pred1.flatten()[:10])
+    print(pred2.flatten()[:10])
+
     assert not np.allclose(w1, w2)
     assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
 

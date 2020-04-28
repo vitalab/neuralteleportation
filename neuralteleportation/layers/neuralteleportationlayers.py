@@ -59,6 +59,16 @@ class FlattenCOB(Flatten, NeuralTeleportationLayerMixin):
         pass
 
 
+class DropoutCOB(nn.Dropout, NeuralTeleportationLayerMixin):
+    def apply_cob(self, prev_cob, next_cob):
+        pass
+
+
+class Dropout2dCOB(nn.Dropout2d, NeuralTeleportationLayerMixin):
+    def apply_cob(self, prev_cob, next_cob):
+        pass
+
+
 class ActivationLayerMixin(NeuralTeleportationLayerMixin):
     def __init__(self):
         self.cob = None
