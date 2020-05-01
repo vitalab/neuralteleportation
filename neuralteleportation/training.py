@@ -3,7 +3,7 @@ from collections import defaultdict
 import pandas as pd
 import torch
 import torch.optim as optim
-
+from tqdm import tqdm
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
           device='cpu'):
@@ -39,7 +39,7 @@ def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
     model.eval()
     results = defaultdict(list)
     with torch.no_grad():
-        for data, target in test_loader:
+        for i, (data, target) in tqdm(enumerate(test_loader)):
             data, target = data.to(device), target.to(device)
             output = model(data)
             results['loss'].append(criterion(output, target).item())

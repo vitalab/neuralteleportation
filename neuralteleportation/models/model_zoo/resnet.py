@@ -65,6 +65,9 @@ class BasicBlock(nn.Module):
     def forward(self, x):
         identity = x
 
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu1(out)
@@ -72,12 +75,8 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        if self.downsample is not None:
-            identity = self.downsample(x)
-        #
         # # out += identity
         out = self.add(identity, out)
-        # out = self.conv3(out)
         out = self.relu2(out)
 
         return out
@@ -157,10 +156,6 @@ class ResNet(nn.Module):
         self.relu = ReLUCOB(inplace=True)
         self.maxpool = MaxPool2dCOB(kernel_size=3, stride=2, padding=1)
 
-        # self.layer1 = self._make_layer(block, 64, layers[0])
-        # self.layer2 = self._make_layer(block, 128, 1, stride=2,
-        #                                dilate=replace_stride_with_dilation[0])
-
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
@@ -172,9 +167,6 @@ class ResNet(nn.Module):
         self.fc = LinearCOB(512 * block.expansion, num_classes)
         self.flatten = FlattenCOB()
 
-
-        self.conv_extra = Conv2dCOB(128, 2, kernel_size=7, stride=2, padding=3,
-                               bias=False)
 
         for m in self.modules():
             if isinstance(m, Conv2dCOB):
@@ -225,16 +217,12 @@ class ResNet(nn.Module):
 
         x = self.layer1(x)
         x = self.layer2(x)
-        # x = self.layer3(x)
-        # x = self.layer4(x)
-        x = self.conv_extra(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
 
-        # x = self.avgpool(x)
-        # x = self.flatten(x)
-        # x = self.fc(x)
-        # # TODO remove dependency for this by remove restriction for no addition to last layer.
-        # x = self.relu2(x)
-        # x = self.fc2(x)
+        x = self.avgpool(x)
+        x = self.flatten(x)
+        x = self.fc(x)
 
         return x
 
@@ -374,11 +362,35 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
 
 if __name__ == '__main__':
     from torchsummary import summary
-    from tests.model_test import test_teleport
+    # from tests.model_test import test_teleport
+    from torch.utils.data import DataLoader
+    from torchvision import transforms
+    from torchvision.datasets import MNIST
+    from neuralteleportation.metrics import accuracy
+    from neuralteleportation.training import test
+    from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
-    resnet = resnet18()
-    summary(resnet, (3, 224, 224), device='cpu')
+    mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.Compose([transforms.Resize((224, 224)),
+                                                                                         transforms.ToTensor()]))
 
-    test_teleport(resnet, (1, 3, 224, 224))
+    loss = nn.CrossEntropyLoss()
+    metrics = [accuracy]
+
+    resnet = resnet18(num_classes=10)
+    # summary(resnet, (3, 224, 224), device='cpu')
+    # test_teleport(resnet, (1, 3, 224, 224))
+
+    resnet.conv1 = Conv2dCOB(1, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+
+    resnet = resnet.cuda()
+
+    model = NeuralTeleportationModel(network=resnet, input_shape=(1, 1, 224, 224), device='cuda')
+    print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'),)
+    model.teleport()
+    print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'))
+
+
+
 
 

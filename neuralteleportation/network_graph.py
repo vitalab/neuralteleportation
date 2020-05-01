@@ -7,8 +7,7 @@ import torchvision.models as models
 from torch.nn.modules import Flatten
 from _collections import defaultdict
 import numpy as np
-import cv2
-import networkx as nx
+
 from matplotlib import pyplot as plt
 from torchvision.models import ResNet
 
@@ -243,6 +242,7 @@ class NetworkGrapher:
         return layers
 
     def plot(self, block=True):
+        import networkx as nx
         layers = self.get_graph()
 
         labels = {i: l['module'].__class__.__name__ for i, l in enumerate(layers)}

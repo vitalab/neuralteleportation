@@ -17,11 +17,12 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
                 cob.extend(np.repeat(c, repeats=hw).tolist())
             prev_cob = np.array(cob)
 
-        w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32)
+        w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32).type_as(self.weight)
         self.weight = nn.Parameter(self.weight * w, requires_grad=True)
 
         if self.bias is not None:
-            self.bias = torch.nn.Parameter(self.bias * torch.tensor(next_cob, dtype=torch.float32), requires_grad=True)
+            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
+            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
 
     def get_cob(self, basis_range=10):
         """
@@ -46,11 +47,10 @@ class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
         # print('Next cob shape: ', next_cob.shape)
         # print('Weight shape: ', self.weight.shape, ', w shape: ', w.shape)
 
-
-        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+        self.weight = nn.Parameter(self.weight * w.type_as(self.weight), requires_grad=True)
 
         if self.bias is not None:
-            b = torch.tensor(next_cob, dtype=torch.float32)
+            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
             # print('bias shape: ', self.bias.shape, ', b shape: ', b.shape)
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
         # for i in range(shape[0]):
@@ -81,7 +81,6 @@ class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
         # print('Prev cob shape: ', prev_cob.shape)
         # print('Next cob shape: ', next_cob.shape)
         # print('Weight shape: ', self.weight.shape, ', w shape: ', w.shape)
-
 
         self.weight = nn.Parameter(self.weight * w, requires_grad=True)
 

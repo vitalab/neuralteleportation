@@ -17,6 +17,6 @@ class ReLUCOB(nn.ReLU, ActivationLayerMixin):
             self.cob = torch.ones(input.shape[1])
 
         cob_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-        self.cob = self.cob.view(cob_shape).float()
+        self.cob = self.cob.view(cob_shape).float().type_as(input)
 
         return self.cob * super().forward(input / self.cob)

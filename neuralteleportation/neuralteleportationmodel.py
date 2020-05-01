@@ -8,9 +8,9 @@ from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixi
 
 
 class NeuralTeleportationModel(nn.Module):
-    def __init__(self, network, input_shape):
+    def __init__(self, network, input_shape, device='cpu'):
         super(NeuralTeleportationModel, self).__init__()
-        sample_input = torch.rand(input_shape)
+        sample_input = torch.rand(input_shape).to(device)
         self.net = network
         self.grapher = NetworkGrapher(network, sample_input)
         self.graph = self.grapher.get_graph()
@@ -163,7 +163,10 @@ class NeuralTeleportationModel(nn.Module):
             layer.set_weights(w)
             counter += nb_params
 
-    def get_grad(self, data, target, loss_fn, flat=True):
+    def get_grad(self, data, target, loss_fn, flat=True, zero_grad=True):
+        if zero_grad:
+            self.net.zero_grad()
+
         grad = []
         output = self.net(data)
         loss = loss_fn(output, target)
@@ -178,6 +181,14 @@ class NeuralTeleportationModel(nn.Module):
             return torch.cat(grad)
         else:
             return grad
+
+    def get_cob(self):
+        cob = []
+        cob.append(self.graph[0]['prev_cob'])
+        for i, layer in enumerate(self.graph):
+            cob.append(layer['cob'])
+
+        return cob
 
 
 if __name__ == '__main__':
@@ -212,12 +223,20 @@ if __name__ == '__main__':
 
     sample_input = torch.rand(sample_input_shape)
     model = NeuralTeleportationModel(network=model, input_shape=sample_input_shape)
+
+
+
     # try:
     # summary(model, sample_input_shape[1:])
     # except:
     #     print("SUMMARY FAILED")
 
     model.get_change_of_basis()
+    print(model.get_cob())
+    print(len(model.get_cob()))
+    print(len(set(model.get_cob())))
+    exit(0)
+
 
     # print(model)
 

@@ -99,11 +99,11 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
         # print(self.weight.shape)
         # print(self.bias.shape)
 
-        w = torch.tensor(next_cob, dtype=torch.float32)
+        w = torch.tensor(next_cob, dtype=torch.float32).type_as(self.weight)
         self.weight = nn.Parameter(self.weight * w, requires_grad=True)
         # self.running_var = nn.Parameter(self.running_var * w, requires_grad=False)
 
-        b = torch.tensor(next_cob, dtype=torch.float32)
+        b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
         # self.running_mean = torch.nn.Parameter(self.running_mean * b, requires_grad=False)
 
         if self.bias is not None:
@@ -132,10 +132,10 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
             self.next_cob = torch.ones(input.shape[1])
 
         cob1_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-        self.prev_cob = self.prev_cob.view(cob1_shape).float()
+        self.prev_cob = self.prev_cob.view(cob1_shape).float().type_as(input)
 
         next_cob_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-        self.next_cob = self.next_cob.view(next_cob_shape).float()
+        self.next_cob = self.next_cob.view(next_cob_shape).float().type_as(input)
 
         return super().forward(input / self.prev_cob)
 
