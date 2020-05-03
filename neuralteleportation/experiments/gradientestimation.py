@@ -51,44 +51,63 @@ if TRAIN:
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
     train(model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=5, device=device)
+          epochs=2, device=device)
 
 net.eval()
 w1 = model.get_weights()
-model.teleport(cob_range=0.0001)
+model.teleport(cob_range=0.000001)
 # model.teleport(cob_range=1.5)
 w2 = model.get_weights()
 distance = torch.dist(w1, w2)
 print("Distance between weights: {}".format(distance))
-tangent = w1 - w2
+tangent = (w1-w2) / torch.norm(w1 - w2)
+random_tangent = torch.rand(tangent.shape)
+random_tangent = random_tangent / torch.norm(random_tangent)
+print(tangent)
+print(random_tangent)
+
 
 batch_sizes = [8, 16, 32, 64, 128, 256, 512, 1024]
 dot_results = []
+random_dot_results = []
 num_itters = 100
 for b in batch_sizes:
     d = []
+    d_random = []
     for n in tqdm(range(num_itters)):
         data_loader = DataLoader(mnist_test, batch_size=b, shuffle=True)
         data, target = next(iter(data_loader))
         data, target = data.to(device), target.to(device)
         grad = model.get_grad(data, target, loss)
+        grad = grad / torch.norm(grad)
         dot = tangent.dot(grad).abs()
+        dot_rand = random_tangent.dot(grad).abs()
         d.append(dot.cpu().detach().numpy())
+        d_random.append(dot_rand.cpu().detach().numpy())
+
     d = np.array(d)
+    d_random = np.array(d_random)
     dot_results.append(d)
-    print("Batch size: {} - Dot product between tangent and gradient: {}".format(b, d.mean()))
+    random_dot_results.append(d_random)
+    print("Batch size: {} - Dot product between tangent and gradient: {}, random: {}".format(b,
+                                                                                             d.mean(),
+                                                                                             d_random.mean()))
 
 
 dot_results = np.array(dot_results)
+random_dot_results = np.array(random_dot_results)
 print(dot_results.shape)
-
+print(dot_results.std(axis=-1))
 
 plt.figure()
 plt.title("Dot product between tangent and gradient ({})".format('trained' if TRAIN else 'untrained'))
-plt.errorbar(batch_sizes, dot_results.mean(axis=-1), yerr=dot_results.std(axis=-1)*2, fmt='o', ecolor='g', capsize=2)
+plt.errorbar(batch_sizes, dot_results.mean(axis=-1), yerr=dot_results.std(axis=-1)*2, fmt='o', ecolor='g', capsize=2, label='tangent', c='b')
+# plt.errorbar(batch_sizes, random_dot_results.mean(axis=-1), yerr=random_dot_results.std(axis=-1)*2, fmt='o', ecolor='g', capsize=2, label='random', c='r')
+# plt.scatter(batch_sizes, random_dot_results.mean(axis=-1), label='random', c='r')
 # plt.xscale("log")
 plt.xlabel('Batch size')
 plt.ylabel("Dot product result")
 plt.xticks(batch_sizes, batch_sizes)
+plt.legend()
 plt.show()
 

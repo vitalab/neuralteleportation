@@ -1,10 +1,12 @@
 import torch.nn as nn
+import torch
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import BatchNorm2dCOB, FlattenCOB
+from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
 from neuralteleportation.layers.poolinglayers import AdaptiveAvgPool2dCOB, MaxPool2dCOB, AvgPool2dCOB
 from neuralteleportation.layers.mergelayers import Add, Concat
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, ConvTranspose2dCOB
+from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, ConvTranspose2dCOB, BatchNorm2dCOB, \
+    BatchNorm1dCOB
 
 
 class Net(nn.Module):
@@ -120,10 +122,25 @@ class ConvTransposeNet(nn.Module):
         return x
 
 
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = torch.nn.Sequential(
+            FlattenCOB(),
+            LinearCOB(784, 128),
+            BatchNorm1dCOB(128),
+            ReLUCOB(),
+            LinearCOB(128, 10)
+        )
+
+    def forward(self, input):
+        return self.net(input)
+
+
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    models = [Net, Net2, Net3, Net4, ConvTransposeNet]
+    models = [Net, Net2, Net3, Net4, ConvTransposeNet, MLP]
     input_shape = (1, 1, 28, 28)
 
     for model in models:

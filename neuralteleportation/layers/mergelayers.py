@@ -1,12 +1,13 @@
-from typing import Union, Tuple, List
+from typing import Union
 
-import torch.nn as nn
 import torch
+import torch.nn as nn
+
 from neuralteleportation.layers.neuralteleportationlayers import MergeLayersMixin
 
 
 class Concat(nn.Module, MergeLayersMixin):
-    def forward(self, *args, dim: Union[str, None] = 1):
+    def forward(self, *args, dim: Union[int, None] = 1):
         return torch.cat(list(args), dim=dim)
 
     def apply_cob(self, prev_cob, next_cob):
@@ -34,7 +35,5 @@ class Add(nn.Module, MergeLayersMixin):
 
         next_cob_shape = (input2.shape[1],) + tuple([1 for _ in range(input2.dim() - 2)])
         self.next_cob = self.next_cob.view(next_cob_shape).float().type_as(input1)
-        # print("Add, ", self.prev_cob.flatten(), ', ', self.next_cob.flatten())
 
         return torch.add(input1, self.next_cob * input2 / self.prev_cob)
-        # return input1 + self.next_cob * input2 / self.prev_cob

@@ -2,8 +2,7 @@ import torch.nn as nn
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
 from neuralteleportation.layers.mergelayers import Concat
-from neuralteleportation.layers.neuralteleportationlayers import BatchNorm2dCOB
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, ConvTranspose2dCOB
+from neuralteleportation.layers.neuronlayers import Conv2dCOB, ConvTranspose2dCOB, BatchNorm2dCOB
 from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, UpsampleCOB
 
 

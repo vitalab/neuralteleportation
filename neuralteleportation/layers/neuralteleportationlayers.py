@@ -28,7 +28,6 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         return nb_params
 
     def get_weights(self):
-        # Maybe move this to support more layers like dropout, Batchnorm...
         if self.bias is not None:
             return self.weight.flatten(), self.bias.flatten()
         else:
@@ -80,73 +79,3 @@ class ActivationLayerMixin(NeuralTeleportationLayerMixin):
         if not self.cob:
             self.cob = torch.ones(input.shape[1])
         return self.cob * super().forward(input / self.cob)
-
-
-class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
-    def __init__(self, num_features: int):
-        super().__init__(num_features)
-        self.prev_cob = None
-        self.next_cob = None
-
-    def apply_cob(self, prev_cob, next_cob):
-
-        self.prev_cob = torch.tensor(prev_cob)
-        self.next_cob = torch.tensor(next_cob)
-
-        # print(self.running_mean.shape)
-        # print(self.running_var.shape)
-
-        # print(self.weight.shape)
-        # print(self.bias.shape)
-
-        w = torch.tensor(next_cob, dtype=torch.float32).type_as(self.weight)
-        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
-        # self.running_var = nn.Parameter(self.running_var * w, requires_grad=False)
-
-        b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
-        # self.running_mean = torch.nn.Parameter(self.running_mean * b, requires_grad=False)
-
-        if self.bias is not None:
-            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
-
-        # print(self.weight.shape)
-        # print(self.bias.shape)
-
-    def get_cob(self, basis_range=10):
-        """
-        Returns:
-            cob for the output neurons
-        """
-        return get_random_cob(range=basis_range, size=self.num_features)
-
-    def get_input_cob(self):
-        return np.ones(shape=self.num_features)
-
-    def get_output_cob(self):
-        return np.ones(shape=self.num_features)
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        if self.prev_cob is None:
-            self.prev_cob = torch.ones(input.shape[1])
-        if self.next_cob is None:
-            self.next_cob = torch.ones(input.shape[1])
-
-        cob1_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-        self.prev_cob = self.prev_cob.view(cob1_shape).float().type_as(input)
-
-        next_cob_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-        self.next_cob = self.next_cob.view(next_cob_shape).float().type_as(input)
-
-        return super().forward(input / self.prev_cob)
-
-
-if __name__ == '__main__':
-    layer = BatchNorm2dCOB(5)
-
-    print(layer.get_weights())
-    cob = layer.get_cob()
-    prev_cob = layer.get_input_cob()
-    print(cob)
-    print(prev_cob)
-    layer.apply_cob(cob, prev_cob)
-    print(layer.get_weights())

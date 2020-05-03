@@ -22,3 +22,4 @@ dependencies:
   - pip:
     - pytorch-lightning
     - torchsummary
+    - networkx

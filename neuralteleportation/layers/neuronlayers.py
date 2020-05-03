@@ -42,22 +42,11 @@ class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
 
     def apply_cob(self, prev_cob, next_cob):
         w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32)[..., None, None]
-
-        # print('Prev cob shape: ', prev_cob.shape)
-        # print('Next cob shape: ', next_cob.shape)
-        # print('Weight shape: ', self.weight.shape, ', w shape: ', w.shape)
-
         self.weight = nn.Parameter(self.weight * w.type_as(self.weight), requires_grad=True)
 
         if self.bias is not None:
             b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
-            # print('bias shape: ', self.bias.shape, ', b shape: ', b.shape)
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
-        # for i in range(shape[0]):
-        #     if self.bias is not None:
-        #         self.bias[i] *= next_cob[i]
-        #     for j in range(shape[1]):
-        #         self.weight[i, j] *= next_cob[i] / prev_cob[j]
 
     def get_cob(self, basis_range=10):
         """
@@ -77,28 +66,11 @@ class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
 
     def apply_cob(self, prev_cob, next_cob):
         w = torch.tensor(next_cob[None, ...] / prev_cob[..., None], dtype=torch.float32)[..., None, None]
-
-        # print('Prev cob shape: ', prev_cob.shape)
-        # print('Next cob shape: ', next_cob.shape)
-        # print('Weight shape: ', self.weight.shape, ', w shape: ', w.shape)
-
         self.weight = nn.Parameter(self.weight * w, requires_grad=True)
 
         if self.bias is not None:
             b = torch.tensor(next_cob, dtype=torch.float32)
-            # print('bias shape: ', self.bias.shape, ', b shape: ', b.shape)
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
-
-        # weight = self.weight.permute(dims=(1, 0, 2, 3))
-        # print("permute :", weight.shape)
-        # shape = weight.shape
-        # for i in range(shape[0]):
-        #     if self.bias is not None:
-        #         self.bias[i] *= next_cob[i]
-        #     for j in range(shape[1]):
-        #         weight[i, j] *= next_cob[i] / prev_cob[j]
-        #
-        # self.weight = torch.nn.Parameter(weight.permute(dims=(1, 0, 2, 3)), requires_grad=True)
 
     def get_cob(self, basis_range=10):
         """
@@ -112,3 +84,85 @@ class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
 
     def get_output_cob(self):
         return np.ones(shape=self.out_channels)
+
+
+class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
+    def __init__(self, num_features: int):
+        super().__init__(num_features)
+        self.prev_cob = None
+        self.next_cob = None
+
+    def apply_cob(self, prev_cob, next_cob):
+
+        self.prev_cob = torch.tensor(prev_cob)
+        self.next_cob = torch.tensor(next_cob)
+
+        w = torch.tensor(next_cob, dtype=torch.float32).type_as(self.weight)
+        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+
+        if self.bias is not None:
+            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
+            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+
+    def get_cob(self, basis_range=10):
+        """
+        Returns:
+            cob for the output neurons
+        """
+        return get_random_cob(range=basis_range, size=self.num_features)
+
+    def get_input_cob(self):
+        return np.ones(shape=self.num_features)
+
+    def get_output_cob(self):
+        return np.ones(shape=self.num_features)
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        if self.prev_cob is None:
+            self.prev_cob = torch.ones(input.shape[1])
+
+        cob1_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
+        self.prev_cob = self.prev_cob.view(cob1_shape).float().type_as(input)
+
+        return super().forward(input / self.prev_cob)
+
+
+class BatchNorm1dCOB(nn.BatchNorm1d, NeuronLayerMixin):
+    def __init__(self, num_features: int):
+        super().__init__(num_features)
+        self.prev_cob = None
+        self.next_cob = None
+
+    def apply_cob(self, prev_cob, next_cob):
+
+        self.prev_cob = torch.tensor(prev_cob)
+        self.next_cob = torch.tensor(next_cob)
+
+        w = torch.tensor(next_cob, dtype=torch.float32).type_as(self.weight)
+        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+
+        if self.bias is not None:
+            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
+            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+
+    def get_cob(self, basis_range=10):
+        """
+        Returns:
+            cob for the output neurons
+        """
+        return get_random_cob(range=basis_range, size=self.num_features)
+
+    def get_input_cob(self):
+        return np.ones(shape=self.num_features)
+
+    def get_output_cob(self):
+        return np.ones(shape=self.num_features)
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        if self.prev_cob is None:
+            self.prev_cob = torch.ones(input.shape[1])
+
+        # cob1_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
+        # self.prev_cob = self.prev_cob.view(cob1_shape).float().type_as(input)
+
+        return super().forward(input / self.prev_cob)

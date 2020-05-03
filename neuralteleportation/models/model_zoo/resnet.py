@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
            'wide_resnet50_2', 'wide_resnet101_2']
@@ -9,10 +8,10 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 from torch.hub import load_state_dict_from_url
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import BatchNorm2dCOB, FlattenCOB
+from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
 from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
 from neuralteleportation.layers.mergelayers import Add
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB
+from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -75,7 +74,7 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        # # out += identity
+        # out += identity
         out = self.add(identity, out)
         out = self.relu2(out)
 
@@ -166,7 +165,6 @@ class ResNet(nn.Module):
         self.avgpool = AdaptiveAvgPool2dCOB((1, 1))
         self.fc = LinearCOB(512 * block.expansion, num_classes)
         self.flatten = FlattenCOB()
-
 
         for m in self.modules():
             if isinstance(m, Conv2dCOB):
@@ -381,16 +379,11 @@ if __name__ == '__main__':
     # test_teleport(resnet, (1, 3, 224, 224))
 
     resnet.conv1 = Conv2dCOB(1, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
+                             bias=False)
 
     resnet = resnet.cuda()
 
     model = NeuralTeleportationModel(network=resnet, input_shape=(1, 1, 224, 224), device='cuda')
-    print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'),)
+    print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'), )
     model.teleport()
     print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'))
-
-
-
-
-

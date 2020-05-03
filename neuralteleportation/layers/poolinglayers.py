@@ -6,6 +6,7 @@ from neuralteleportation.utils import get_random_cob
 import numpy as np
 from torch.nn.modules import Flatten
 
+
 class MaxPool2dCOB(nn.MaxPool2d, NeuralTeleportationLayerMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -48,6 +49,7 @@ class AdaptiveAvgPool2dCOB(nn.AdaptiveAvgPool2d, NeuralTeleportationLayerMixin):
 class AvgPool2dCOB(nn.AvgPool2d, NeuralTeleportationLayerMixin):
     def apply_cob(self, prev_cob, next_cob):
         pass
+
 
 class UpsampleCOB(nn.Upsample, NeuralTeleportationLayerMixin):
     def __init__(self, *args, **kwargs):
