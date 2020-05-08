@@ -28,8 +28,6 @@ net = nn.Sequential(FlattenCOB(),
                     LinearCOB(128, 10),
                     )
 
-# net = Net()
-
 sample_input_shape = (1, 1, 28, 28)
 model = NeuralTeleportationModel(network=net, input_shape=sample_input_shape)
 
@@ -52,7 +50,7 @@ for i in range(20):
     print("Weighted gradient {}".format(grad_norm / w.sum()))
 
     model.set_weights(w0)
-    model.teleport()
+    model.random_teleport()
 
 
 

@@ -7,7 +7,8 @@ import torch
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
 from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import LinearCOB, Conv2dCOB, ConvTranspose2dCOB, BatchNorm1dCOB, BatchNorm2dCOB
+from neuralteleportation.layers.neuronlayers import LinearCOB, Conv2dCOB, ConvTranspose2dCOB, BatchNorm1dCOB, \
+    BatchNorm2dCOB
 from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AvgPool2dCOB
 
 COB_LAYER_DICT = {nn.Linear: LinearCOB,
@@ -33,6 +34,7 @@ def patch_module(module: torch.nn.Module, inplace: bool = True) -> torch.nn.Modu
 def _get_args_dict(fn, args, kwargs):
     args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
     return {**dict(zip(args_names, args)), **kwargs}
+
 
 def _patch_cob_layers(module: torch.nn.Module) -> None:
     """

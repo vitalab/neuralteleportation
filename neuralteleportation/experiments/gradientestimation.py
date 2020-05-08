@@ -55,16 +55,13 @@ if TRAIN:
 
 net.eval()
 w1 = model.get_weights()
-model.teleport(cob_range=0.000001)
-# model.teleport(cob_range=1.5)
+model.random_teleport(cob_range=0.000001)
 w2 = model.get_weights()
 distance = torch.dist(w1, w2)
 print("Distance between weights: {}".format(distance))
 tangent = (w1-w2) / torch.norm(w1 - w2)
 random_tangent = torch.rand(tangent.shape)
 random_tangent = random_tangent / torch.norm(random_tangent)
-print(tangent)
-print(random_tangent)
 
 
 batch_sizes = [8, 16, 32, 64, 128, 256, 512, 1024]

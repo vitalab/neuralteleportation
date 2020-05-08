@@ -56,9 +56,10 @@ class NetworkGrapher:
         Returns:
             network graph : [{'in': [], 'idx': [], 'out' = [], 'module' nn.Module}, ... ]
         """
-        trace, out = torch.jit.get_trace_graph(self.network, self.sample_input)
 
-        graph = self.dump_pytorch_graph(trace.graph())
+        trace = torch.jit.trace(self.network, (self.sample_input,))
+
+        graph = self.dump_pytorch_graph(trace.inlined_graph)
 
         # remove empty keys
         graph = {k: v for k, v in graph.items() if k}
@@ -83,12 +84,12 @@ class NetworkGrapher:
         return graph
 
     @staticmethod
-    def dump_pytorch_graph(graph) -> Dict:
+    def dump_pytorch_graph(inlined_graph) -> Dict:
         """List all the nodes in a PyTorch graph."""
 
         layers = defaultdict(lambda: defaultdict(list))
 
-        for i, node in enumerate(graph.nodes()):
+        for i, node in enumerate(inlined_graph.nodes()):
             layers[node.scopeName()]['in'].extend([i.unique() for i in node.inputs()])
             layers[node.scopeName()]['out'].extend([i.unique() for i in node.outputs()])
 
@@ -246,12 +247,13 @@ class NetworkGrapher:
     def print_jit_graph(self):
         """List all the nodes in a PyTorch graph."""
 
-        trace, out = torch.jit.get_trace_graph(self.network, self.sample_input)
+        trace = torch.jit.trace(self.network, (self.sample_input,))
+        inlined_graph = trace.inlined_graph
 
         f = "{} {:25} {:40}   {} -> {}"
         print(f.format("index", "kind", "scopeName", "inputs", "outputs"))
 
-        for i, node in enumerate(trace.graph().nodes()):
+        for i, node in enumerate(inlined_graph.nodes()):
             print(f.format(i, node.kind(), node.scopeName(),
                            [i.unique() for i in node.inputs()],
                            [i.unique() for i in node.outputs()]
@@ -260,9 +262,10 @@ class NetworkGrapher:
 
 if __name__ == '__main__':
     from torchsummary import summary
-    from neuralteleportation.models.test_models.residual_models import ResidualNet
+    from neuralteleportation.models.test_models.residual_models import ResidualNet, ResidualNet2
+    from neuralteleportation.models.test_models.test_models import Net
 
-    model = ResidualNet()
+    model = ResidualNet2()
     x = torch.rand((1, 1, 28, 28))
     summary(model, (1, 28, 28), device='cpu')
 
