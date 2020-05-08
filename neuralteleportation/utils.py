@@ -31,7 +31,4 @@ def get_random_cob(range: int, size: int) -> np.ndarray:
     Returns:
         ndarray of size size.
     """
-    # return np.ones(size).astype(np.float) * 0.1
-
     return np.random.uniform(low=-range, high=range, size=size).astype(np.float) + 1
-    # return np.random.normal(loc=1, scale=0.00001, size=size).astype(np.float)

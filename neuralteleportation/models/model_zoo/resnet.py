@@ -132,7 +132,7 @@ class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None):
+                 norm_layer=None, input_channels=3):
         super(ResNet, self).__init__()
         if norm_layer is None:
             norm_layer = BatchNorm2dCOB
@@ -149,7 +149,7 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = Conv2dCOB(3, self.inplanes, kernel_size=7, stride=2, padding=3,
+        self.conv1 = Conv2dCOB(input_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = ReLUCOB(inplace=True)
@@ -360,7 +360,7 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
 
 if __name__ == '__main__':
     from torchsummary import summary
-    # from tests.model_test import test_teleport
+    from tests.model_test import test_teleport
     from torch.utils.data import DataLoader
     from torchvision import transforms
     from torchvision.datasets import MNIST
@@ -374,16 +374,7 @@ if __name__ == '__main__':
     loss = nn.CrossEntropyLoss()
     metrics = [accuracy]
 
-    resnet = resnet18(num_classes=10)
-    # summary(resnet, (3, 224, 224), device='cpu')
-    # test_teleport(resnet, (1, 3, 224, 224))
+    resnet = resnet18(num_classes=10, input_channels=1)
+    summary(resnet, (1, 224, 224), device='cpu')
+    test_teleport(resnet, (1, 1, 224, 224))
 
-    resnet.conv1 = Conv2dCOB(1, 64, kernel_size=7, stride=2, padding=3,
-                             bias=False)
-
-    resnet = resnet.cuda()
-
-    model = NeuralTeleportationModel(network=resnet, input_shape=(1, 1, 224, 224), device='cuda')
-    print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'), )
-    model.teleport()
-    print(test(resnet, loss, metrics, mnist_test, 512, device='cuda'))

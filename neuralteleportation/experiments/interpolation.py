@@ -66,7 +66,7 @@ print(model)
 
 w1 = model.get_weights()
 print(test(model, loss, metrics, mnist_test))
-model.teleport()
+model.random_teleport()
 w2 = model.get_weights()
 print(test(model, loss, metrics, mnist_test))
 
@@ -83,7 +83,7 @@ improvement_key = 'accuracy'
 for e in range(10):
     results = defaultdict(list)
 
-    model.teleport()
+    model.random_teleport()
     w2 = model.get_weights()
 
     best_weights = w1

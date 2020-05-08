@@ -63,9 +63,9 @@ class VGG(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-def make_layers(cfg, batch_norm=False):
+def make_layers(cfg, batch_norm=False, input_channels=3):
     layers = []
-    in_channels = 3
+    in_channels = input_channels
     for v in cfg:
         if v == 'M':
             layers += [MaxPool2dCOB(kernel_size=2, stride=2)]
@@ -193,4 +193,4 @@ if __name__ == '__main__':
     vgg = vgg16(pretrained=True)
     vgg.eval()
     summary(vgg, (3, 224, 224), device='cpu')
-    test_teleport(vgg, (1, 3, 224, 224))
+    test_teleport(vgg, (1, 3, 224, 224), verbose=True)

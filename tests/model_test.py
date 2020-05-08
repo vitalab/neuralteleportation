@@ -16,21 +16,23 @@ def test_set_weights(network, input_shape=(1, 1, 28, 28)):
     assert np.allclose(w1, w3)
 
 
-def test_teleport(network, input_shape=(1, 1, 28, 28)):
+def test_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape)
     pred1 = model(x).detach().numpy()
     w1 = model.get_weights().detach().numpy()
 
-    model.teleport()
+    model.random_teleport()
 
     pred2 = model(x).detach().numpy()
     w2 = model.get_weights().detach().numpy()
 
     diff_average = (w1 - w2).mean()
 
-    print(pred1.flatten()[:10])
-    print(pred2.flatten()[:10])
+    if verbose:
+        print("Sample outputs: ")
+        print("Pre teleportation: ", pred1.flatten()[:10])
+        print("Post teleportation: ", pred2.flatten()[:10])
 
     assert not np.allclose(w1, w2)
     assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
