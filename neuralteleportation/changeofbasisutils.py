@@ -22,7 +22,7 @@ def get_random_positive_cob(range: int, size: int) -> np.ndarray:
 
 def get_random_cob(range: int, size: int) -> np.ndarray:
     """
-        Return random change of basis between -range and range.
+        Return random change of basis between -range+1 and range+1.
 
     Args:
         range (int): range for the change of basis.

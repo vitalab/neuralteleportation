@@ -19,6 +19,7 @@ dependencies:
   - Pillow==6.1.0
   - pandas
   - structlog
+  - packaging
   - pip:
     - pytorch-lightning
     - torchsummary

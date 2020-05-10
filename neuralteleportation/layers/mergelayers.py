@@ -3,10 +3,33 @@ from typing import Union
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.neuralteleportationlayers import MergeLayersMixin
+from neuralteleportation.layers.neuralteleportationlayers import NeuralTeleportationLayerMixin
+
+
+class MergeLayersMixin(NeuralTeleportationLayerMixin):
+    pass
 
 
 class Concat(nn.Module, MergeLayersMixin):
+    """
+    Implementation of concatenation layer for teleportation.
+    This wraps torch.cat
+
+    IMPORTANT NOTE: The order of parameters to the forward method is important. Input1 must be computed
+    before input2 in the network containing this layer. This is because this layers change of basis in the
+    concatenation of the previous layers in the order determined by the graph. The forward method must respect that
+    order.
+
+    Example:
+        Class network(nn.Module):
+            def forward(x):
+                x1 = layer1(x) #Computed First
+                x2 = layer2(x1) #Computed second
+
+                x3 = self.Concat(x1, x2) # x1 comes before x2.
+
+    """
+
     def forward(self, *args, dim: Union[int, None] = 1):
         return torch.cat(list(args), dim=dim)
 
@@ -15,6 +38,23 @@ class Concat(nn.Module, MergeLayersMixin):
 
 
 class Add(nn.Module, MergeLayersMixin):
+    """
+        Implementation of Add layer for teleportation.
+        This is equivalent to += in the forward method.
+
+        IMPORTANT NOTE: The order of parameters to the forward method is important. Input1 must be computed
+        before input2 in the network containing this layer. This is because we must apply the change of basis of
+        the previous layer in the forward method.
+
+        Example:
+            Class network(nn.Module):
+                def forward(x):
+                    x1 = layer1(x) #Computed First
+                    x2 = layer2(x1) #Computed second
+
+                    x3 = Add(x1, x2) # x1 comes before x2.
+
+    """
     def __init__(self):
         super().__init__()
         self.prev_cob = None

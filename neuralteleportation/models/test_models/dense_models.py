@@ -46,10 +46,7 @@ class DenseNet2(nn.Module):
         self.relu1 = ReLUCOB()
         self.relu2 = ReLUCOB()
         self.relu3 = ReLUCOB()
-        # self.relu4 = ReLUCOB()
         self.concat1 = Concat()
-        # self.flatten = FlattenCOB()
-        # self.fc1 = LinearCOB(2352, 10)
 
     def forward(self, x):
         x1 = self.relu1(self.conv1(x))
@@ -58,8 +55,6 @@ class DenseNet2(nn.Module):
         x3 = self.relu3(self.conv3(x2))
         x3 = self.concat1(x1, x2, x3)
         x4 = self.conv4(x3)
-        # x = self.flatten(x4)
-        # x = self.relu4(self.fc1(x))
 
         return x4
 
@@ -89,6 +84,7 @@ class SplitConcatModel(nn.Module):
         x3 = self.conv3(x2)
 
         return x3
+
 
 class DenseNet3(nn.Module):
     def __init__(self):
@@ -123,17 +119,47 @@ class DenseNet3(nn.Module):
         return x
 
 
+class DenseNet4(nn.Module):
+    """
+    This model will fail the tests. The Inputs to the concat layer are not in the right order.
+    """
+
+    def __init__(self):
+        super(DenseNet4, self).__init__()
+        self.conv1 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
+        self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
+        self.conv3 = Conv2dCOB(in_channels=6, out_channels=3, kernel_size=3, padding=1)
+        self.relu1 = ReLUCOB()
+        self.relu2 = ReLUCOB()
+        self.relu3 = ReLUCOB()
+        self.concat1 = Concat()
+
+    def forward(self, x):
+        x1 = self.relu1(self.conv1(x))
+        x2 = self.relu2(self.conv2(x1))
+
+        # x2 += x1
+        x2 = self.concat1(x2, x1)
+
+        x3 = self.relu3(self.conv3(x2))
+
+        return x3
+
+
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    models = [DenseNet, DenseNet2, DenseNet3, SplitConcatModel]
+    models = [DenseNet, DenseNet2, DenseNet3, SplitConcatModel, DenseNet4]
     input_shape = (1, 1, 28, 28)
 
     for model in models:
+        model = model()
+        print("-----------------------------------------------------------")
+        print("Testing model: {}".format(model.__class__.__name__))
         try:
-            diff_avg = test_teleport(model(), input_shape)
-            print("{} model passed with avg diff: {}".format(model, diff_avg))
+            diff_avg = test_teleport(model, input_shape, verbose=True)
+            print("{} model passed with avg diff: {}".format(model.__class__.__name__, diff_avg))
         except Exception as e:
-            print("Teleportation failed for model: {} with error {}".format(model, e))
+            print("Teleportation failed for model: {} with error {}".format(model.__class__.__name__, e))
 
     print("All tests are done")

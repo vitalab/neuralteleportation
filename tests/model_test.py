@@ -51,7 +51,7 @@ def test_reset_weights(network, input_shape=(1, 1, 28, 28)):
 if __name__ == '__main__':
     import torch.nn as nn
     from torch.nn.modules import Flatten
-    from neuralteleportation.layer_utils import patch_module
+    from neuralteleportation.layers.layer_utils import patch_module
 
     cnn_model = torch.nn.Sequential(
         nn.Conv2d(1, 32, 3, 1),

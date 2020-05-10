@@ -95,6 +95,7 @@ class ResidualNet3(nn.Module):
 
         return x2
 
+
 class ResidualNet4(nn.Module):
     """
     This resnet has no conv before resisdual connection.
@@ -125,10 +126,10 @@ class ResidualNet4(nn.Module):
 
         return x2
 
+
 class ResidualNet5(nn.Module):
     """
     This resnet has no operation in the residual connection.
-    TODO FIX THE ORDERING OF OPERATIONS BEFORE RESIDUAL CONNECTION
     """
 
     def __init__(self):
@@ -162,6 +163,7 @@ class ResidualNet5(nn.Module):
         x4 = self.conv4(x3)
         return x4
 
+
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
@@ -169,10 +171,12 @@ if __name__ == '__main__':
     input_shape = (1, 1, 28, 28)
 
     for model in models:
+        model = model()
+        print("Testing model: {}".format(model.__class__.__name__))
         try:
-            diff_avg = test_teleport(model(), input_shape)
-            print("{} model passed with avg diff: {}".format(model, diff_avg))
+            diff_avg = test_teleport(model, input_shape)
+            print("{} model passed with avg diff: {}".format(model.__class__.__name__, diff_avg))
         except Exception as e:
-            print("Teleportation failed for model: {} with error {}".format(model, e))
+            print("Teleportation failed for model: {} with error {}".format(model.__class__.__name__, e))
 
     print("All tests are done")

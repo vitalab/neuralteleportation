@@ -11,6 +11,7 @@ from neuralteleportation.layers.neuronlayers import LinearCOB, Conv2dCOB, ConvTr
     BatchNorm2dCOB
 from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AvgPool2dCOB
 
+# Mapping from nn.Modules to COB layers.
 COB_LAYER_DICT = {nn.Linear: LinearCOB,
                   nn.Conv2d: Conv2dCOB,
                   nn.ReLU: ReLUCOB,
@@ -32,6 +33,9 @@ def patch_module(module: torch.nn.Module, inplace: bool = True) -> torch.nn.Modu
 
 
 def _get_args_dict(fn, args, kwargs):
+    """
+        Get args in the form of a dict to re-create exactly the same layers.
+    """
     args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
     return {**dict(zip(args_names, args)), **kwargs}
 

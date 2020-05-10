@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layer_utils import patch_module
+from neuralteleportation.layers.layer_utils import patch_module
 
 
 def test_patch_modulde():

@@ -1,13 +1,23 @@
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.neuralteleportationlayers import ActivationLayerMixin
+from neuralteleportation.layers.neuralteleportationlayers import NeuralTeleportationLayerMixin
+
+
+class ActivationLayerMixin(NeuralTeleportationLayerMixin):
+    cob = None
+
+    def apply_cob(self, prev_cob, next_cob):
+        self.cob = prev_cob
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        if not self.cob:
+            self.cob = torch.ones(input.shape[1])
+        return self.cob * super().forward(input / self.cob)
 
 
 class ReLUCOB(nn.ReLU, ActivationLayerMixin):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.cob = None
+    cob = None
 
     def apply_cob(self, prev_cob, next_cob):
         self.cob = torch.tensor(prev_cob)
