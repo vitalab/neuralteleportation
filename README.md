@@ -1,19 +1,4 @@
----   
-<div align="center">    
- 
 # Neural Teleportation    
-
-<!---
-[![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539)
-[![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)  
-
-ARXIV   
-[![Paper](http://img.shields.io/badge/arxiv-math.co:1480.1111-B31B1B.svg)](https://www.nature.com/articles/nature14539)
-
-Conference   
--->   
-</div>
-
  
 ## Description   
 
@@ -40,19 +25,27 @@ To test that the project was installed successfully, you can try the following c
 from neuralteleportation import Whatever   
 ``` 
 
+## Repository content
+
+This repository contains the code necessary to teleport a neural network. 
+
+* [neuralteleportation](neuralteleportation) : contains the main classes for network teleportation. 
+* [layers](neuralteleportation/layers): contains the classes necessary for teleporting individual layers. 
+* [models](neuralteleportation/models): contains frequently used models such as Resnet, VGG...
+* [experiments](neuralteleportation/experiments): contains experiments using teleportation. 
+* [tests](tests): contains black-box tests for network teleportation. 
 
 ## Known Limitations
 
 * Can't use opperations in the foward method (only nn.Modules)
-* Can't reuse modules more than once (Causes error in graph creation and if the layer have teleportation parameters)
-* Order of the operations can cause problems with teleporting residual layers. (Will be fixed/improved)
+* Can't use nn.modules more than once (causes error in graph creation and if the layer have teleportation parameters)
+* The order of layers is important when using Skip connections and residual connections. 
+The first input must be computed in the netork before the second input. The following example illustrates how to use these layers.
+```python
+class network(nn.Module):
+    def forward(x):
+        x1 = layer1(x) # Computed first
+        x2 = layer2(x1) # Computed second
 
-### Citation   
-```
-@article{YourName,
-  title={Your Title},
-  author={Your team},
-  journal={Location},
-  year={Year}
-}
-```   
+        x3 = Add(x1, x2) # x1 comes before x2.
+``` 

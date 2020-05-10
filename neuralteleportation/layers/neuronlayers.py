@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
-from neuralteleportation.utils import get_random_cob
+from neuralteleportation.changeofbasisutils import get_random_cob
 
 
 class LinearCOB(nn.Linear, NeuronLayerMixin):
@@ -11,10 +11,10 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
     def apply_cob(self, prev_cob, next_cob):
 
         if len(prev_cob) != self.in_features:  # if previous layer is Conv2D, duplicate cob for each feature map.
-            hw = self.in_features // len(prev_cob)  # size of feature maps
+            feature_map_size = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
             for i, c in enumerate(prev_cob):
-                cob.extend(np.repeat(c, repeats=hw).tolist())
+                cob.extend(np.repeat(c, repeats=feature_map_size).tolist())
             prev_cob = np.array(cob)
 
         w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32).type_as(self.weight)
@@ -25,10 +25,6 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
 
     def get_cob(self, basis_range=10):
-        """
-        Returns:
-            cob for the output neurons
-        """
         return get_random_cob(range=basis_range, size=self.out_features)
 
     def get_input_cob(self):
@@ -93,7 +89,6 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
         self.next_cob = None
 
     def apply_cob(self, prev_cob, next_cob):
-
         self.prev_cob = torch.tensor(prev_cob)
         self.next_cob = torch.tensor(next_cob)
 
@@ -161,8 +156,5 @@ class BatchNorm1dCOB(nn.BatchNorm1d, NeuronLayerMixin):
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         if self.prev_cob is None:
             self.prev_cob = torch.ones(input.shape[1])
-
-        # cob1_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-        # self.prev_cob = self.prev_cob.view(cob1_shape).float().type_as(input)
 
         return super().forward(input / self.prev_cob)

@@ -1,26 +1,37 @@
+from typing import Tuple, Callable, Union, List
+
 import numpy as np
 import torch
 import torch.nn as nn
-import structlog
 
 from neuralteleportation.layers.mergelayers import Concat, Add
+from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
-from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin, MergeLayersMixin
 
 
 class NeuralTeleportationModel(nn.Module):
-    def __init__(self, network, input_shape, device='cpu'):
-        super(NeuralTeleportationModel, self).__init__()
+    """
+        NeuralTelportationModel allows the teleportation of a nn.Module.
 
-        sample_input = torch.rand(input_shape).to(device)
+    Args:
+        network (nn.Module):  Network to be wrapped for teleportation.
+        input_shape (tuple: input shape used to compute the network graph.
+    """
+
+    def __init__(self, network: nn.Module, input_shape: Tuple) -> None:
+        super(NeuralTeleportationModel, self).__init__()
         self.network = network
+
+        device = next(self.network.parameters()).device
+        sample_input = torch.rand(input_shape).to(device)
+
         self.grapher = NetworkGrapher(network, sample_input)
         self.graph = self.grapher.get_graph()
 
     def forward(self, x):
         return self.network(x)
 
-    def get_change_of_basis(self, basis_range=10):
+    def get_random_change_of_basis(self, basis_range=10):
         """
           Compute random change of basis for every layer in the network.
         """
@@ -47,7 +58,7 @@ class NeuralTeleportationModel(nn.Module):
                     current_cob = layer['module'].get_cob(basis_range=basis_range)
 
             if isinstance(layer['module'], Add):
-                connection_layer_index = min(layer['in'])
+                connection_layer_index = min(layer['in'])  # Get the first layer
 
                 if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
                     '''If there is no layer after, previous layer must be ones. '''
@@ -71,9 +82,9 @@ class NeuralTeleportationModel(nn.Module):
 
     def random_teleport(self, cob_range=10):
         """
-          Applies change of basis to each of the network layers.
+          Applies random change of basis to each of the network layers.
         """
-        self.get_change_of_basis(cob_range)
+        self.get_random_change_of_basis(cob_range)
 
         for k, layer in enumerate(self.graph):
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
@@ -87,14 +98,22 @@ class NeuralTeleportationModel(nn.Module):
 
         self.apply(reset)
 
-    def get_neuron_layers(self):
+    def get_neuron_layers(self) -> List:
+        """
+            Get the layer in the network that contain weights (therefore change of basis)
+
+        Returns:
+            List of nn.Modules
+        """
         return [l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)]
 
-    def get_weights(self, concat: bool = True):
+    def get_weights(self, concat: bool = True) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
             Return model weights
+
         Args:
-            concat: bool, if true weights are returned as concatenated torch tensor
+            concat (bool): if true weights are returned as concatenated torch tensor,
+                            else in the form of a list of Tensors
 
         Returns:
             torch.Tensor or list containing model weights
@@ -110,8 +129,13 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return w
 
-    def set_weights(self, weights):
+    def set_weights(self, weights: Union[torch.Tensor, np.ndarray]):
+        """
+            Set weights to the network.
 
+        Args:
+            weights (Union[torch.Tensor, np.ndarray]): weights to set.
+        """
         counter = 0
         for k, layer in enumerate(self.get_neuron_layers()):
             nb_params = layer.get_nb_params()
@@ -119,7 +143,22 @@ class NeuralTeleportationModel(nn.Module):
             layer.set_weights(w)
             counter += nb_params
 
-    def get_grad(self, data, target, loss_fn, concat=True, zero_grad=True):
+    def get_grad(self, data: torch.Tensor, target: torch.Tensor, loss_fn: Callable,
+                 concat: bool = True, zero_grad: bool=True) -> Union[torch.Tensor, List[torch.Tensor]]:
+        """
+            Return model gradients for data, target and loss function.
+        Args:
+            data (torch.Tensor): input data for the network
+            target (torch.Tensor): target ouput
+            loss_fn (Callable):
+            concat (bool): if true weights are returned as concatenated torch tensor,
+                            else in the form of a list of Tensors
+            zero_grad (bool): if true gradients are reset before computing them on new data.
+
+        Returns:
+            torch.Tensor or list containing model weights
+
+        """
         if zero_grad:
             self.network.zero_grad()
 
@@ -138,7 +177,13 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return grad
 
-    def get_cob(self):
+    def get_cob(self) -> List:
+        """
+            Get change of basis for network.
+
+        Returns:
+            List of change of basis for each layer.
+        """
         cob = []
         cob.append(self.graph[0]['prev_cob'])
         for i, layer in enumerate(self.graph):
@@ -157,8 +202,9 @@ if __name__ == '__main__':
     model = resnet18(pretrained=False)
     sample_input_shape = (1, 3, 224, 224)
 
-    sample_input = torch.rand(sample_input_shape)
     model = NeuralTeleportationModel(network=model, input_shape=sample_input_shape)
+
+    sample_input = torch.rand(sample_input_shape)
 
     pred1 = model(sample_input)
     w1 = model.get_weights()
@@ -166,7 +212,7 @@ if __name__ == '__main__':
     pred2 = model(sample_input)
     w2 = model.get_weights()
 
-    print("All close: ", np.allclose(pred1.detach().numpy(), pred2.detach().numpy()))
+    print("Predictions all close: ", np.allclose(pred1.detach().numpy(), pred2.detach().numpy()))
     print("Average difference between predictions: ", (pred1 - pred2).mean())
     print("Average difference between weights : ", (w1 - w2).abs().mean())
     print("Sample weights: ")
