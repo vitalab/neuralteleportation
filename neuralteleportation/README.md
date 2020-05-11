@@ -9,7 +9,7 @@ these two files.
 
 To teleport one has two options. 
 
-1. If the model is a simple model (no residual conenctions or skip connections), one define a model with standard 
+1. If the model is a simple model (no residual connections or skip connections), one define a model with standard
 nn.Modules and use the  [```patch_module()```](layers/layer_utils.py). 
 ```python
 model = torch.nn.Sequential(
