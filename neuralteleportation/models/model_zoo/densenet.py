@@ -8,6 +8,12 @@ from torch.hub import load_state_dict_from_url
 from torch import Tensor
 from torch.jit.annotations import List
 
+from neuralteleportation.layers.activationlayers import ReLUCOB
+from neuralteleportation.layers.neuronlayers import BatchNorm2dCOB,LinearCOB,Conv2dCOB
+from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB, DropoutCOB
+from neuralteleportation.layers.mergelayers import Add, Concat
+from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
+
 
 
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
@@ -19,26 +25,27 @@ model_urls = {
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
 
-
 class _DenseLayer(nn.Module):
     def __init__(self, num_input_features, growth_rate, bn_size, drop_rate, memory_efficient=False):
         super(_DenseLayer, self).__init__()
-        self.add_module('norm1', nn.BatchNorm2d(num_input_features)),
-        self.add_module('relu1', nn.ReLU(inplace=True)),
-        self.add_module('conv1', nn.Conv2d(num_input_features, bn_size *
+        self.add_module('norm1', BatchNorm2dCOB(num_input_features)),
+        self.add_module('relu1', ReLUCOB(inplace=True)),
+        self.add_module('conv1', Conv2dCOB(num_input_features, bn_size *
                                            growth_rate, kernel_size=1, stride=1,
                                            bias=False)),
-        self.add_module('norm2', nn.BatchNorm2d(bn_size * growth_rate)),
-        self.add_module('relu2', nn.ReLU(inplace=True)),
-        self.add_module('conv2', nn.Conv2d(bn_size * growth_rate, growth_rate,
+        self.add_module('norm2', BatchNorm2dCOB(bn_size * growth_rate)),
+        self.add_module('relu2', ReLUCOB(inplace=True)),
+        self.add_module('conv2', Conv2dCOB(bn_size * growth_rate, growth_rate,
                                            kernel_size=3, stride=1, padding=1,
                                            bias=False)),
         self.drop_rate = float(drop_rate)
         self.memory_efficient = memory_efficient
+        self.concat = Concat()
+        self.dropout = DropoutCOB(self.drop_rate)
 
     def bn_function(self, inputs):
         # type: (List[Tensor]) -> Tensor
-        concated_features = torch.cat(inputs, 1)
+        concated_features = self.concat(*inputs)
         bottleneck_output = self.conv1(self.relu1(self.norm1(concated_features)))  # noqa: T484
         return bottleneck_output
 
@@ -86,8 +93,7 @@ class _DenseLayer(nn.Module):
 
         new_features = self.conv2(self.relu2(self.norm2(bottleneck_output)))
         if self.drop_rate > 0:
-            new_features = F.dropout(new_features, p=self.drop_rate,
-                                     training=self.training)
+            new_features = self.dropout(new_features)
         return new_features
 
 
@@ -96,6 +102,7 @@ class _DenseBlock(nn.ModuleDict):
 
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate, memory_efficient=False):
         super(_DenseBlock, self).__init__()
+        self.layers = {}
         for i in range(num_layers):
             layer = _DenseLayer(
                 num_input_features + i * growth_rate,
@@ -104,24 +111,26 @@ class _DenseBlock(nn.ModuleDict):
                 drop_rate=drop_rate,
                 memory_efficient=memory_efficient,
             )
-            self.add_module('denselayer%d' % (i + 1), layer)
+            # self.add_module('denselayer%d' % (i + 1), layer)
+            self.layers['denselayer%d' % (i + 1)] = layer
+        self.concat = Concat()
 
     def forward(self, init_features):
         features = [init_features]
-        for name, layer in self.items():
+        for name, layer in self.layers.items():
             new_features = layer(features)
             features.append(new_features)
-        return torch.cat(features, 1)
+        return self.concat(*features, dim=1)
 
 
 class _Transition(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
         super(_Transition, self).__init__()
-        self.add_module('norm', nn.BatchNorm2d(num_input_features))
-        self.add_module('relu', nn.ReLU(inplace=True))
-        self.add_module('conv', nn.Conv2d(num_input_features, num_output_features,
+        self.add_module('norm', BatchNorm2dCOB(num_input_features))
+        self.add_module('relu', ReLUCOB(inplace=True))
+        self.add_module('conv', Conv2dCOB(num_input_features, num_output_features,
                                           kernel_size=1, stride=1, bias=False))
-        self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
+        self.add_module('pool', AvgPool2dCOB(kernel_size=2, stride=2))
 
 
 class DenseNet(nn.Module):
@@ -147,11 +156,11 @@ class DenseNet(nn.Module):
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
-            ('conv0', nn.Conv2d(3, num_init_features, kernel_size=7, stride=2,
+            ('conv0', Conv2dCOB(3, num_init_features, kernel_size=7, stride=2,
                                 padding=3, bias=False)),
-            ('norm0', nn.BatchNorm2d(num_init_features)),
-            ('relu0', nn.ReLU(inplace=True)),
-            ('pool0', nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
+            ('norm0', BatchNorm2dCOB(num_init_features)),
+            ('relu0', ReLUCOB(inplace=True)),
+            ('pool0', MaxPool2dCOB(kernel_size=3, stride=2, padding=1)),
         ]))
 
         # Each denseblock
@@ -174,26 +183,31 @@ class DenseNet(nn.Module):
                 num_features = num_features // 2
 
         # Final batch norm
-        self.features.add_module('norm5', nn.BatchNorm2d(num_features))
+        self.features.add_module('norm5', BatchNorm2dCOB(num_features))
+
+        # Flatten layer
+        self.relu = ReLUCOB(inplace=True)
+        self.adaptive_avg_pool2d = AdaptiveAvgPool2dCOB((1, 1))
+        self.flatten = FlattenCOB()
 
         # Linear layer
-        self.classifier = nn.Linear(num_features, num_classes)
+        self.classifier = LinearCOB(num_features, num_classes)
 
         # Official init from torch repo.
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, Conv2dCOB):
                 nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, BatchNorm2dCOB):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
+            elif isinstance(m, LinearCOB):
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         features = self.features(x)
-        out = F.relu(features, inplace=True)
-        out = F.adaptive_avg_pool2d(out, (1, 1))
-        out = torch.flatten(out, 1)
+        out = self.relu(features)
+        out = self.adaptive_avg_pool2d(out)
+        out = self.flatten(out)
         out = self.classifier(out)
         return out
 
@@ -278,3 +292,16 @@ def densenet201(pretrained=False, progress=True, **kwargs):
     """
     return _densenet('densenet201', 32, (6, 12, 48, 32), 64, pretrained, progress,
                      **kwargs)
+
+if __name__ == '__main__':
+    from torchsummary import summary
+    from tests.model_test import test_teleport
+    from torchvision.models import densenet121 as realdensenet121
+
+    densenet = densenet121()
+    print(densenet)
+    # x = torch.rand((1, 3, 224, 224))
+    # densenet(x)
+    # densenet(x)
+    
+    test_teleport(densenet, (1, 3, 224, 224), verbose=True)
