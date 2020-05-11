@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.datasets import MNIST
+from torchvision.datasets import MNIST,ImageNet, CIFAR10
 
 from neuralteleportation.layers.layer_utils import patch_module
 from neuralteleportation.training import train
@@ -20,26 +20,66 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 
 from tqdm import tqdm
 
+import argparse
+
+def argument_parser():
+    '''
+    simple argument parser for the experiement.
+
+    Ex: python layerhooking.py --batch_size 10 --epochs 5 --model densenet
+    '''
+    parser = argparse.ArgumentParser(description='Simple argument parser for the layer hook experiment.')
+    parser.add_argument("--batch_size",type=int, default=100)
+    parser.add_argument("--epochs",type=int, default=5)
+    parser.add_argument("--model",type=str,default="mnist_densenet",choices=['mnist_densenet',
+                                                                            'densenet',
+                                                                            'resnet',
+                                                                            'vggnet',
+                                                                            'unet',])
+    parser.add_argument("--dataset",type=str,default="cifar10",choices=["mnist",
+                                                                     "imagenet",
+                                                                     "cifar10"])
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
     
     # Hook Callback example, it can be anything.
     def hookCallback(self, input, output):
+        '''
+        small callback that prints the first outputed image to a pyplot figure.
+        '''
         np_out = output.detach().cpu().numpy()
         plt.figure()
         plt.imshow(np_out[0,0,:,:])
         plt.colorbar()
     
-    batch_size = 100
-    epochs = 1
+    argparse = argument_parser()
+
+    batch_size = argparse.batch_size
+    epochs = argparse.epochs
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
 
+    dataset_train = None
+    dataset_test = None
+    num_of_classes = None
     transform = transforms.ToTensor()
-    dataset_train = MNIST('/tmp', train=True, download=True, transform=transform)
-    dataset_test = MNIST('/tmp', train=False, download=True, transform=transform)
+    if argparse.dataset == "mnist":
+        dataset_train = MNIST('/tmp', train=True, download=True, transform=transform)
+        dataset_test = MNIST('/tmp', train=False, download=True, transform=transform)
+        num_of_classes = 10
+    elif argparse.dataset == "cifar10":
+        dataset_train = CIFAR10('/tmp', train=True, download=True, transform=transform)
+        dataset_test = CIFAR10('/tmp', train=False, download=True, transform=transform)
+        num_of_classes = 10
+
+    # Get the width and height of the image, then get the dimension of pixels values
+    w,h = dataset_test.data.shape[1:3]
+    dims = 1 if len(dataset_test.data.shape) < 4 else dataset_test.data.shape[3]
 
     test_img = torch.as_tensor(dataset_test[0][0])
     test_img = torch.unsqueeze(test_img,0)
@@ -47,10 +87,20 @@ if __name__ == "__main__":
 
     data_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
 
-    # Create a model that takes as input MNIST images and train it.
-    model = MNIST_DenseNet()
+    model = None
+    if argparse.model=='mnist_densenet':
+        model = MNIST_DenseNet(in_channels=dims)
+    elif argparse.model=='densenet':
+        model = DenseNet()
+    elif argparse.model=='resnet':
+        model = ResNet()
+    elif argparse.model=='vggnet':
+        model = VGG()
+    elif argparse.model=='unet':
+        model = UNet()
+
     model = model.to(device=device)
-    model = NeuralTeleportationModel(network=model, input_shape=(batch_size,1,28,28))
+    model = NeuralTeleportationModel(network=model, input_shape=(batch_size,dims,w,h))
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
@@ -77,7 +127,7 @@ if __name__ == "__main__":
     
     # We do a forward propagation to illustrate the example.
     with torch.no_grad():
-        ones = torch.ones((1,1,28,28)).to(device)
+        ones = torch.ones((1,dims,w,h)).to(device)
         ones_output = model(ones)
         img_output = model(test_img)
                 
@@ -91,7 +141,7 @@ if __name__ == "__main__":
         print()
         print("=========Prediction Differences=========")
         print("Diff of x: torch.ones(): ",ones_diff.cpu().numpy())
-        print("Diff of x: image of a 7: ", img_diff.cpu().numpy())
+        print("Diff of x: image: ", img_diff.cpu().numpy())
         print()
 
         ones_prediction = torch.max(ones_output, 1)

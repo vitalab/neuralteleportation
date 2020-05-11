@@ -7,9 +7,9 @@ from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB
 
 
 class DenseNet(nn.Module):
-    def __init__(self):
+    def __init__(self,in_channels=3):
         super(DenseNet, self).__init__()
-        self.conv1 = Conv2dCOB(in_channels=1, out_channels=3, kernel_size=3, padding=1)
+        self.conv1 = Conv2dCOB(in_channels=in_channels, out_channels=3, kernel_size=3, padding=1)
         self.conv2 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
         self.conv3 = Conv2dCOB(in_channels=6, out_channels=3, kernel_size=3, padding=1)
         self.conv4 = Conv2dCOB(in_channels=3, out_channels=3, kernel_size=3, padding=1)
@@ -19,7 +19,7 @@ class DenseNet(nn.Module):
         self.relu4 = ReLUCOB()
         self.concat1 = Concat()
         self.flatten = FlattenCOB()
-        self.fc1 = LinearCOB(2352, 10)
+        self.fc1 = LinearCOB(3072, 10)
 
     def forward(self, x):
         x1 = self.relu1(self.conv1(x))
