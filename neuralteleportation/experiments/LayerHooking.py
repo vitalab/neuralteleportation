@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import MNIST
 
-from neuralteleportation.layer_utils import patch_module
+from neuralteleportation.layers.layer_utils import patch_module
 from neuralteleportation.training import train
 from neuralteleportation.models.test_models.dense_models import DenseNet as MNIST_DenseNet
 from neuralteleportation.models.model_zoo.densenet import DenseNet
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         plt.colorbar()
     
     batch_size = 100
-    epochs = 5
+    epochs = 1
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -47,12 +47,11 @@ if __name__ == "__main__":
 
     data_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
 
-    # Create a model and train it.
+    # Create a model that takes as input MNIST images and train it.
     model = MNIST_DenseNet()
     model = model.to(device=device)
-    model = NeuralTeleportationModel(network=model, input_shape=(batch_size,1,28,28), device=device)
+    model = NeuralTeleportationModel(network=model, input_shape=(batch_size,1,28,28))
 
-    # Train the model.
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
     for e in range(epochs):
