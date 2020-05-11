@@ -10,7 +10,11 @@ from torchvision.datasets import MNIST
 
 from neuralteleportation.layer_utils import patch_module
 from neuralteleportation.training import train
-from neuralteleportation.models.test_models.dense_models import DenseNet
+from neuralteleportation.models.test_models.dense_models import DenseNet as MNIST_DenseNet
+from neuralteleportation.models.model_zoo.densenet import DenseNet
+from neuralteleportation.models.model_zoo.resnet import *
+from neuralteleportation.models.model_zoo.vgg import *
+from neuralteleportation.models.model_zoo.unet import *
 from neuralteleportation.layerhook import LayerHook
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
@@ -34,23 +38,23 @@ if __name__ == "__main__":
         device = torch.device('cpu')
 
     transform = transforms.ToTensor()
-    mnist_train = MNIST('/tmp', train=True, download=True, transform=transform)
-    mnist_test = MNIST('/tmp', train=False, download=True, transform=transform)
+    dataset_train = MNIST('/tmp', train=True, download=True, transform=transform)
+    dataset_test = MNIST('/tmp', train=False, download=True, transform=transform)
 
-    test_img = torch.as_tensor(mnist_test[0][0])
+    test_img = torch.as_tensor(dataset_test[0][0])
     test_img = torch.unsqueeze(test_img,0)
     test_img = test_img.to(device=device)
 
-    data_loader = DataLoader(mnist_train, batch_size=batch_size, shuffle=True)
+    data_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
 
     # Create a model and train it.
-    model = DenseNet()
+    model = MNIST_DenseNet()
     model = model.to(device=device)
     model = NeuralTeleportationModel(network=model, input_shape=(batch_size,1,28,28), device=device)
 
+    # Train the model.
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
-    
     for e in range(epochs):
         t = tqdm(range(len(data_loader)))
         for i, d in enumerate(data_loader,0):
@@ -68,6 +72,7 @@ if __name__ == "__main__":
             t.update()
         t.close()
     
+    # Attach the hook the the
     hook = LayerHook(model)
     hook.set_hooked_layer("conv1", hookCallback)
     
