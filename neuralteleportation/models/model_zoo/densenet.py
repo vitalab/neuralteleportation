@@ -1,3 +1,5 @@
+
+
 import re
 import torch
 import torch.nn as nn
@@ -25,9 +27,10 @@ model_urls = {
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
 
-class _DenseLayer(nn.Module):
+
+class _DenseLayerCOB(nn.Module):
     def __init__(self, num_input_features, growth_rate, bn_size, drop_rate, memory_efficient=False):
-        super(_DenseLayer, self).__init__()
+        super(_DenseLayerCOB, self).__init__()
         self.add_module('norm1', BatchNorm2dCOB(num_input_features)),
         self.add_module('relu1', ReLUCOB(inplace=True)),
         self.add_module('conv1', Conv2dCOB(num_input_features, bn_size *
@@ -97,14 +100,14 @@ class _DenseLayer(nn.Module):
         return new_features
 
 
-class _DenseBlock(nn.ModuleDict):
+class _DenseBlockCOB(nn.ModuleDict):
     _version = 2
 
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate, memory_efficient=False):
-        super(_DenseBlock, self).__init__()
+        super(_DenseBlockCOB, self).__init__()
         self.layers = {}
         for i in range(num_layers):
-            layer = _DenseLayer(
+            layer = _DenseLayerCOB(
                 num_input_features + i * growth_rate,
                 growth_rate=growth_rate,
                 bn_size=bn_size,
@@ -123,9 +126,9 @@ class _DenseBlock(nn.ModuleDict):
         return self.concat(*features, dim=1)
 
 
-class _Transition(nn.Sequential):
+class _TransitionCOB(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
-        super(_Transition, self).__init__()
+        super(_TransitionCOB, self).__init__()
         self.add_module('norm', BatchNorm2dCOB(num_input_features))
         self.add_module('relu', ReLUCOB(inplace=True))
         self.add_module('conv', Conv2dCOB(num_input_features, num_output_features,
@@ -134,7 +137,7 @@ class _Transition(nn.Sequential):
 
 
 class DenseNet(nn.Module):
-    r"""Densenet-BC model class, based on
+    """Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -166,7 +169,7 @@ class DenseNet(nn.Module):
         # Each denseblock
         num_features = num_init_features
         for i, num_layers in enumerate(block_config):
-            block = _DenseBlock(
+            block = _DenseBlockCOB(
                 num_layers=num_layers,
                 num_input_features=num_features,
                 bn_size=bn_size,
@@ -177,7 +180,7 @@ class DenseNet(nn.Module):
             self.features.add_module('denseblock%d' % (i + 1), block)
             num_features = num_features + num_layers * growth_rate
             if i != len(block_config) - 1:
-                trans = _Transition(num_input_features=num_features,
+                trans = _TransitionCOB(num_input_features=num_features,
                                     num_output_features=num_features // 2)
                 self.features.add_module('transition%d' % (i + 1), trans)
                 num_features = num_features // 2
@@ -239,7 +242,7 @@ def _densenet(arch, growth_rate, block_config, num_init_features, pretrained, pr
 
 
 def densenet121(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-121 model from
+    """Densenet-121 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -253,7 +256,7 @@ def densenet121(pretrained=False, progress=True, **kwargs):
 
 
 def densenet161(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-161 model from
+    """Densenet-161 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -267,7 +270,7 @@ def densenet161(pretrained=False, progress=True, **kwargs):
 
 
 def densenet169(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-169 model from
+    """Densenet-169 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -281,7 +284,7 @@ def densenet169(pretrained=False, progress=True, **kwargs):
 
 
 def densenet201(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-201 model from
+    """Densenet-201 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -299,9 +302,5 @@ if __name__ == '__main__':
     from torchvision.models import densenet121 as realdensenet121
 
     densenet = densenet121()
-    print(densenet)
-    # x = torch.rand((1, 3, 224, 224))
-    # densenet(x)
-    # densenet(x)
-    
+    print(densenet)    
     test_teleport(densenet, (1, 3, 224, 224), verbose=True)
