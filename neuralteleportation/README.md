@@ -65,7 +65,7 @@ model = NeuralTeleportationModel(model, input_shape)
 
 ## Model zoo 
 
-The model zoo contains well-known models that we implemented in the teleportation framework. 
+The model zoo contains well-known models that we implemented with the teleportation framework. 
 The implementations come in part from [torchvision.models](https://pytorch.org/docs/stable/torchvision/models.html)
 
 ```python
