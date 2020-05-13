@@ -301,7 +301,7 @@ class NetworkGrapher:
 
 if __name__ == '__main__':
     from torchsummary import summary
-    from neuralteleportation.models.test_models.residual_models import ResidualNet2
+    from neuralteleportation.models.generic_models.residual_models import ResidualNet2
 
     model = ResidualNet2()
     x = torch.rand((1, 1, 28, 28))

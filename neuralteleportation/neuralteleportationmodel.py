@@ -193,9 +193,9 @@ class NeuralTeleportationModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from neuralteleportation.models.test_models.test_models import *
-    from neuralteleportation.models.test_models.residual_models import *
-    from neuralteleportation.models.test_models.dense_models import *
+    from neuralteleportation.models.generic_models.test_models import *
+    from neuralteleportation.models.generic_models.residual_models import *
+    from neuralteleportation.models.generic_models.dense_models import *
     from neuralteleportation.models.model_zoo.resnet import *
 
     model = resnet18(pretrained=False)
