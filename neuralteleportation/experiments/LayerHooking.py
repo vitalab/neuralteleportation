@@ -28,22 +28,11 @@ def argument_parser():
         description='Simple argument parser for the layer hook experiment.')
     parser.add_argument("--batch_size", type=int, default=100)
     parser.add_argument("--epochs", type=int, default=0)
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="resnet",
-        choices=[
-            'mnist_densenet',
-            'densenet',
-            'resnet',
-            'vggnet'])
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        default="cifar10",
-        choices=[
-            "mnist",
-            "cifar10"])
+    parser.add_argument("--model", type=str, default="resnet", choices=['mnist_densenet',
+                                                                        'densenet',
+                                                                        'resnet',
+                                                                        'vggnet'])
+    parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist","cifar10"])
     parser.add_argument("--layer_name", type=str, default="")
     return parser.parse_args()
 
