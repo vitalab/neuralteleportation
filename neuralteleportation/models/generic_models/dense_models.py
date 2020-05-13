@@ -69,11 +69,7 @@ class SplitConcatModel(nn.Module):
         self.relu1 = ReLUCOB()
         self.relu21 = ReLUCOB()
         self.relu22 = ReLUCOB()
-        # self.relu3 = ReLUCOB()
-        # self.relu4 = ReLUCOB()
         self.concat1 = Concat()
-        # self.flatten = FlattenCOB()
-        # self.fc1 = LinearCOB(2352, 10)
 
     def forward(self, x):
         x1 = self.relu1(self.conv1(x))
@@ -108,7 +104,7 @@ class DenseNet3(nn.Module):
         x11 = self.relu11(self.conv11(x1))
         x2 = self.relu2(self.conv2(x1))
 
-        # x2 += x1
+        # x2 = [x11,x2]
         x2 = self.concat1(x11, x2)
 
         x3 = self.relu3(self.conv3(x2))
@@ -138,7 +134,7 @@ class DenseNet4(nn.Module):
         x1 = self.relu1(self.conv1(x))
         x2 = self.relu2(self.conv2(x1))
 
-        # x2 += x1
+        # x2 = [x2,x1]
         x2 = self.concat1(x2, x1)
 
         x3 = self.relu3(self.conv3(x2))
