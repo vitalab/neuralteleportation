@@ -67,7 +67,7 @@ if __name__ == '__main__':
     from torchvision.datasets import MNIST
     import torchvision.transforms as transforms
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.layers import Flatten
+    # from neuralteleportation.layers import Flatten
     import torch.nn as nn
 
     mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
 
     model = torch.nn.Sequential(
-        Flatten(),
+        # Flatten(),
         nn.Linear(784, 128),
         nn.ReLU(),
         nn.Linear(128, 10)
