@@ -7,10 +7,10 @@ these two files.
 
 **One must respect the know limitations in this [README](../README.md).**
 
-To teleport one has two options. 
+To teleport, one has two options. 
 
-1. If the model is a simple model (no residual conenctions or skip connections), one define a model with standard 
-nn.Modules and use the  [```patch_module()```](layers/layer_utils.py). 
+1. If the model is a simple (no residual connections or skip connections), one define a model with standard 
+nn.Modules and use the  [```swap_model_modules_for_COB_modules()```](layers/layer_utils.py). 
 ```python
 model = torch.nn.Sequential(
     nn.Conv2d(1, 32, 3, 1),
@@ -23,12 +23,12 @@ model = torch.nn.Sequential(
     nn.Linear(128, 10)
 )
 
-model = patch_module(model)
+model = swap_model_modules_for_COB_modules(model)
 
 model = NeuralTeleportationModel(model, input_shape)
 ``` 
 
-2. IF the model has skip or residual connections, the model must be constructed using the COB layers defined in [layers](layers). 
+2. If the model has skip or residual connections, the model must be constructed using the COB layers defined in [layers](layers). 
 ```python
 class ResidualNet(nn.Module):
     def __init__(self):
@@ -65,8 +65,8 @@ model = NeuralTeleportationModel(model, input_shape)
 
 ## Model zoo 
 
-The model zoo offers frequently used implemented in the teleportation framework. 
-The implementions come in part from [torchvision.models](https://pytorch.org/docs/stable/torchvision/models.html)
+The model zoo contains well-known models that we implemented in the teleportation framework. 
+The implementations come in part from [torchvision.models](https://pytorch.org/docs/stable/torchvision/models.html)
 
 ```python
 from neuralteleportation.models.model_zoo.resnet import resnet50
