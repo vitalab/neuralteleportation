@@ -26,27 +26,27 @@ def argument_parser():
     '''
     simple argument parser for the experiement.
 
-    Ex: python layerhooking.py --batch_size 10 --epochs 5 --model densenet
+    Ex: python layerhooking.py --batch_size 10 --epochs 5 --model resenet --layer_name layer1
 
     '''
     parser = argparse.ArgumentParser(description='Simple argument parser for the layer hook experiment.')
     parser.add_argument("--batch_size",type=int, default=100)
     parser.add_argument("--epochs",type=int, default=0)
-    parser.add_argument("--model",type=str,default="densenet",choices=['mnist_densenet',
+    parser.add_argument("--model",type=str,default="resnet",choices=['mnist_densenet',
                                                                             'densenet',
                                                                             'resnet',
                                                                             'vggnet',
                                                                             'unet',])
     parser.add_argument("--dataset",type=str,default="cifar10",choices=["mnist",
-                                                                     "imagenet",
                                                                      "cifar10"])
+    parser.add_argument("--layer_name",type=str, default="layer1")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     import warnings
     
-    # Hook Callback example, it can be anything.
+    # Hook Callback example, it can be anything you want.
     def hookCallback(self, input, output):
         '''
         small callback that prints the first outputed image to a pyplot figure.
@@ -59,36 +59,31 @@ if __name__ == "__main__":
     argparse = argument_parser()
 
     batch_size = argparse.batch_size
-    epochs = argparse.epochs
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-
-    device = torch.device('cpu')
+    
     model = None
     transform = transforms.ToTensor()
-    state = None    # This is going to be passed to the layer hook.
+    hook_state = None    # This is going to be passed to the layer hook.
     
     if argparse.dataset == 'mnist' or argparse.dataset == 'cifar10':
         num_classes = 10
     else:
         raise NotImplementedError()
 
+    hook_state = (argparse.layer_name, hookCallback) 
     if argparse.model=='mnist_densenet':
         model = MNIST_DenseNet(in_channels=1)
     elif argparse.model=='densenet':
-        # raise NotImplementedError("DenseNet have not yet been changed to work with the Change of Basis")
         model = densenet121(num_classes=num_classes)
-        state = ("", hookCallback) 
     elif argparse.model=='resnet':
-        state = ("layer1", hookCallback)
         model = resnet18(input_channels=3, num_classes=num_classes)
         transform = transforms.Compose([transforms.Resize((256, 256)),transforms.ToTensor()])
     elif argparse.model=='vggnet':
         model = vgg11(num_classes=num_classes)
-        state = ("features.0", hookCallback)
     elif argparse.model=='unet':
         model = UNet(input_channels=3, output_channels=1)
         transform = transforms.Compose([transforms.Resize((256, 256)),transforms.ToTensor()])
@@ -103,9 +98,10 @@ if __name__ == "__main__":
         dataset_train = CIFAR10('/tmp', train=True, download=True, transform=transform)
         dataset_test = CIFAR10('/tmp', train=False, download=True, transform=transform)
 
-    # Get the width and height of the image, then get the dimension of pixels values
     data_train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     data_test_loader = DataLoader(dataset_test, batch_size=batch_size, shuffle=True)
+
+    # Get the width and height of the image, then get the dimension of pixels values
     w,h = dataset_test.transform.transforms[0].size if isinstance(dataset_test.transform, transforms.Compose) else dataset_test.data.shape[1:3]
     dims = 1 if len(dataset_test.data.shape) < 4 else dataset_test.data.shape[3]
 
@@ -114,33 +110,17 @@ if __name__ == "__main__":
     test_img = test_img.to(device=device)
     del dataset_train, dataset_test
 
-
     # Change the model to a teleportable model.
     model = model.to(device=device)
     model = NeuralTeleportationModel(network=model, input_shape=(batch_size,dims,w,h))
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
-    for e in range(epochs):
-        t = tqdm(range(len(data_train_loader)))
-        for i, d in enumerate(data_train_loader,0):
-            inputs, targets = d
-            inputs = inputs.to(device)
-            targets = targets.to(device)
-            output = model(inputs)
-            
-            optimizer.zero_grad()
-
-            loss = criterion(output,targets)
-            loss.backward()
-            optimizer.step()
-            t.set_postfix(loss=loss.item(),epochs=e+1)
-            t.update()
-        t.close()
+    train(model,criterion=criterion,train_dataset=data_train_loader ,optimizer=optimizer, epochs=argparse.epochs,batch_size=argparse.batch_size)
     
     # Attach the hook to a specific layer
     
-    hook = LayerHook(model, state)
+    hook = LayerHook(model, hook_state)
     
     # We do a forward propagation to illustrate the example.
     model.eval()
