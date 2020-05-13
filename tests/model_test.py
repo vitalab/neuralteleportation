@@ -33,9 +33,11 @@ def test_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
         print("Sample outputs: ")
         print("Pre teleportation: ", pred1.flatten()[:10])
         print("Post teleportation: ", pred2.flatten()[:10])
+        print("Diff weight average: ", (w1 - w2).mean())
+        print("Diff prediction average: ", (pred1 - pred2).mean())
 
     assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
+    assert not np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
 
     return diff_average
 
