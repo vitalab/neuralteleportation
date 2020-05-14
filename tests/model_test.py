@@ -27,15 +27,17 @@ def test_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
     pred2 = model(x).detach().numpy()
     w2 = model.get_weights().detach().numpy()
 
-    diff_average = (w1 - w2).mean()
+    diff_average = np.mean(np.abs((pred1 - pred2)))
 
     if verbose:
         print("Sample outputs: ")
         print("Pre teleportation: ", pred1.flatten()[:10])
         print("Post teleportation: ", pred2.flatten()[:10])
+        print("Average prediction difference: ", diff_average)
+        print("Average weight difference: ", (w1-w2).abs().mean())
 
     assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
+    assert np.allclose(pred1, pred2, atol=1e-5), "Teleporation did not work. Average difference: {}".format(diff_average)
 
     return diff_average
 
