@@ -37,7 +37,7 @@ def test_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
         print("Diff prediction average: ", (pred1 - pred2).mean())
 
     assert not np.allclose(w1, w2)
-    assert not np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
+    assert np.allclose(pred1, pred2, atol=1e-5), "Teleporation did not work. Average difference: {}".format(diff_average)
 
     return diff_average
 
