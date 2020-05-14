@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
 from neuralteleportation.changeofbasisutils import get_random_cob
+from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
 
 
 class LinearCOB(nn.Linear, NeuronLayerMixin):
