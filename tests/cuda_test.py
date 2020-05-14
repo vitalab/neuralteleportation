@@ -36,7 +36,7 @@ def test_cuda_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
 if __name__ == '__main__':
     import torch.nn as nn
     from torch.nn.modules import Flatten
-    from neuralteleportation.layers.layer_utils import patch_module
+    from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 
     cnn_model = torch.nn.Sequential(
         nn.Conv2d(1, 32, 3, 1),
@@ -49,6 +49,6 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-    cnn_model = patch_module(cnn_model)
+    cnn_model = swap_model_modules_for_COB_modules(cnn_model)
 
     test_cuda_teleport(network=cnn_model, verbose=True)

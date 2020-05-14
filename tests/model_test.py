@@ -33,9 +33,11 @@ def test_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
         print("Sample outputs: ")
         print("Pre teleportation: ", pred1.flatten()[:10])
         print("Post teleportation: ", pred2.flatten()[:10])
+        print("Diff weight average: ", (w1 - w2).mean())
+        print("Diff prediction average: ", (pred1 - pred2).mean())
 
     assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
+    assert np.allclose(pred1, pred2, atol=1e-5), "Teleporation did not work. Average difference: {}".format(diff_average)
 
     return diff_average
 
@@ -48,10 +50,11 @@ def test_reset_weights(network, input_shape=(1, 1, 28, 28)):
 
     assert not np.allclose(w1, w2)
 
+
 if __name__ == '__main__':
     import torch.nn as nn
     from torch.nn.modules import Flatten
-    from neuralteleportation.layers.layer_utils import patch_module
+    from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 
     cnn_model = torch.nn.Sequential(
         nn.Conv2d(1, 32, 3, 1),
@@ -71,8 +74,8 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-    cnn_model = patch_module(cnn_model)
-    mlp_model = patch_module(mlp_model)
+    cnn_model = swap_model_modules_for_COB_modules(cnn_model)
+    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
     test_set_weights(network=mlp_model)
     test_teleport(network=mlp_model)
@@ -81,5 +84,4 @@ if __name__ == '__main__':
     test_set_weights(network=cnn_model)
     test_teleport(network=cnn_model)
     test_reset_weights(network=cnn_model)
-
 
