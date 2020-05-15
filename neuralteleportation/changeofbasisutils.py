@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def get_random_positive_cob(range: int, size: int) -> np.ndarray:
@@ -20,15 +21,26 @@ def get_random_positive_cob(range: int, size: int) -> np.ndarray:
     return cob
 
 
-def get_random_cob(range: int, size: int) -> np.ndarray:
-    """
-        Return random change of basis between -range+1 and range+1.
+# def get_random_cob(range: int, size: int) -> np.ndarray:
+#     """
+#         Return random change of basis between -range+1 and range+1.
+#
+#     Args:
+#         range (int): range for the change of basis.
+#         size (int): size of the returned array.
+#
+#     Returns:
+#         ndarray of size size.
+#     """
+#     return np.random.uniform(low=-range, high=range, size=size).astype(np.float) + 1
 
-    Args:
-        range (int): range for the change of basis.
-        size (int): size of the returned array.
 
-    Returns:
-        ndarray of size size.
-    """
-    return np.random.uniform(low=-range, high=range, size=size).astype(np.float) + 1
+def get_random_cob(range: int, size: int, requires_grad=False):
+    x = (-range - range) * torch.rand(size) + range
+    if requires_grad:
+        x = x.requires_grad_()
+    return x
+
+if __name__ == '__main__':
+    cob = get_random_cob(10, 10, True)
+    print(cob)

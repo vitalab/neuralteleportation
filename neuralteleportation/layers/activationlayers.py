@@ -20,7 +20,7 @@ class ReLUCOB(nn.ReLU, ActivationLayerMixin):
     cob = None
 
     def apply_cob(self, prev_cob, next_cob):
-        self.cob = torch.tensor(prev_cob)
+        self.cob = prev_cob
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         if self.cob is None:

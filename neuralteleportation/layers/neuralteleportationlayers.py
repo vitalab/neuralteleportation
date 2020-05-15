@@ -42,6 +42,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
         raise NotImplementedError
 
+    @property
+    def input_cob_size(self):
+        raise NotImplementedError
+
+    @property
+    def cob_size(self):
+        raise NotImplementedError
+
     def get_nb_params(self):
         """
         Get the number of parameters in the layer (weight and bias).
@@ -78,14 +86,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         counter = 0
         w_shape = self.weight.shape
         w_nb_params = np.prod(w_shape)
-        w = torch.tensor(weights[counter:counter + w_nb_params].reshape(w_shape))
+        w = weights[counter:counter + w_nb_params].reshape(w_shape)
         self.weight = torch.nn.Parameter(w, requires_grad=True)
         counter += w_nb_params
 
         if self.bias is not None:
             b_shape = self.bias.shape
             b_nb_params = np.prod(b_shape)
-            b = torch.tensor(weights[counter:counter + b_nb_params].reshape(b_shape))
+            b = weights[counter:counter + b_nb_params].reshape(b_shape)
             self.bias = torch.nn.Parameter(b, requires_grad=True)
 
 
