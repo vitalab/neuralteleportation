@@ -1,37 +1,39 @@
 import numpy as np
 
-def get_random_cob(range: int, size: int, SamplingType='usual') -> np.ndarray:
+
+def get_random_cob(range_cob: int, size: int, sampling_type='usual') -> np.ndarray:
     """
-        Return random change of basis between -range+1 and range+1.
-        'usual' - in interval [1-range,1+range]
-        'symmetric' - equally in intervals [-1-range,-1+range] and [1-range,1+range]
-        'negative' - in interval [-1-range,-1+range]
-        'zero' - in interval [-range,range]
+        Return random change of basis between -range_cob+1 and range_cob+1.
+        'usual' - in interval [1-range_cob,1+range_cob]
+        'symmetric' - equally in intervals [-1-range_cob,-1+range_cob] and [1-range_cob,1+range_cob]
+        'negative' - in interval [-1-range_cob,-1+range_cob]
+        'zero' - in interval [-range_cob,range_cob]
 
     Args:
-        range (int): range for the change of basis. Recommended between 0 and 1, but can take any positive range. 
+        range_cob (int): range_cob for the change of basis. Recommended between 0 and 1, but can take any
+        positive range_cob.
         size (int): size of the returned array.
-	SamplingType: label for type of sampling for change of basis
+        sampling_type: label for type of sampling for change of basis
     Returns:
         ndarray of size size.
     """
-    # Change of basis in interval [1-range,1+range]
-    if SamplingType == 'usual':
-    	return np.random.uniform(low=-range, high=range, size=size).astype(np.float) + 1
-    	
-    # Change of basis in intervals [-1-range,-1+range] and [1-range,1+range]
-    elif SamplingType == 'symmetric':
-	    samples = np.random.randint(0, 2, size=size)
-	    cob = np.zeros_like(samples, dtype=np.float)
-	    cob[samples == 1] = np.random.uniform(low=-1-range, high=-1+range, size=samples.sum())
-	    cob[samples == 0] = np.random.uniform(low=1-range, high=1+range, size=(len(samples) - samples.sum()))
-	    return cob
-    	
-    # Change of basis in interval [-1-range,-1+range]
-    elif SamplingType == 'negative':
-    	return np.random.uniform(low=-range, high=range, size=size).astype(np.float) - 1
-    	
-    # Change of basis in interval [-range,range]
+    # Change of basis in interval [1-range_cob,1+range_cob]
+    if sampling_type == 'usual':
+        return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float) + 1
+
+    # Change of basis in intervals [-1-range_cob,-1+range_cob] and [1-range_cob,1+range_cob]
+    elif sampling_type == 'symmetric':
+        samples = np.random.randint(0, 2, size=size)
+        cob = np.zeros_like(samples, dtype=np.float)
+        cob[samples == 1] = np.random.uniform(low=-1-range_cob, high=-1+range_cob, size=samples.sum())
+        cob[samples == 0] = np.random.uniform(low=1-range_cob, high=1+range_cob, size=(len(samples) - samples.sum()))
+        return cob
+
+    # Change of basis in interval [-1-range_cob,-1+range_cob]
+    elif sampling_type == 'negative':
+        return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float) - 1
+
+    # Change of basis in interval [-range_cob,range_cob]
     # This will produce very big weights in the network. Use only if needed.
-    elif SamplingType == 'zero':
-    	return np.random.uniform(low=-range, high=range, size=size).astype(np.float)
+    elif sampling_type == 'zero':
+        return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float)
