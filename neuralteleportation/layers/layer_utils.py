@@ -5,11 +5,11 @@ import torch
 import torch.nn as nn
 from torch.nn.modules import Flatten
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import LinearCOB, Conv2dCOB, ConvTranspose2dCOB, BatchNorm1dCOB, \
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.neuron import LinearCOB, Conv2dCOB, ConvTranspose2dCOB, BatchNorm1dCOB, \
     BatchNorm2dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AvgPool2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, AvgPool2dCOB
 
 # Mapping from nn.Modules to COB layers.
 COB_LAYER_DICT = {nn.Linear: LinearCOB,
@@ -24,9 +24,7 @@ COB_LAYER_DICT = {nn.Linear: LinearCOB,
 
 
 def swap_model_modules_for_COB_modules(module: torch.nn.Module, inplace: bool = True) -> torch.nn.Module:
-    """
-    Replace normal layers with COB layers
-    """
+    """Replace normal layers with COB layers."""
     if not inplace:
         module = copy.deepcopy(module)
     _swap_cob_layers(module)
@@ -34,9 +32,7 @@ def swap_model_modules_for_COB_modules(module: torch.nn.Module, inplace: bool = 
 
 
 def _get_args_dict(fn, args, kwargs):
-    """
-    Get args in the form of a dict to re-create exactly the same layers.
-    """
+    """Get args in the form of a dict to re-create exactly the same layers."""
     args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
     return {**dict(zip(args_names, args)), **kwargs}
 

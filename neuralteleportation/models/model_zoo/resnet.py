@@ -6,11 +6,11 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 
 from torch.hub import load_state_dict_from_url
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB
-from neuralteleportation.layers.mergelayers import Add
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB
+from neuralteleportation.layers.merge import Add
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, BatchNorm2dCOB
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',

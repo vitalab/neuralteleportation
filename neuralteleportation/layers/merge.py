@@ -1,19 +1,14 @@
 from typing import Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.neuralteleportationlayers import NeuralTeleportationLayerMixin
+from neuralteleportation.layers.neuralteleportation import NeuralTeleportationLayerMixin
 
 
-class MergeLayersMixin(NeuralTeleportationLayerMixin):
-    pass
-
-
-class Concat(nn.Module, MergeLayersMixin):
-    """
-    Implementation of concatenation layer for teleportation.
-    This wraps torch.cat
+class Concat(NeuralTeleportationLayerMixin, nn.Module):
+    """Implementation of concatenation layer for teleportation that wraps torch.cat.
 
     IMPORTANT NOTE: The order of parameters to the forward method is important. Input1 must be computed
     before input2 in the network containing this layer. This is because this layers change of basis in the
@@ -27,40 +22,32 @@ class Concat(nn.Module, MergeLayersMixin):
                 x2 = layer2(x1) #Computed second
 
                 x3 = self.Concat(x1, x2) # x1 comes before x2.
-
     """
+
+    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
+        pass
 
     def forward(self, *args, dim: Union[int, None] = 1):
         return torch.cat(list(args), dim=dim)
 
-    def apply_cob(self, prev_cob, next_cob):
-        pass
 
+class Add(NeuralTeleportationLayerMixin, nn.Module):
+    """Implementation of Add layer for teleportation that is equivalent to += in the forward method.
 
-class Add(nn.Module, MergeLayersMixin):
+    IMPORTANT NOTE: The order of parameters to the forward method is important. Input1 must be computed
+    before input2 in the network containing this layer. This is because we must apply the change of basis of
+    the previous layer in the forward method.
+
+    Example:
+        Class network(nn.Module):
+            def forward(x):
+                x1 = layer1(x) #Computed First
+                x2 = layer2(x1) #Computed second
+
+                x3 = Add(x1, x2) # x1 comes before x2.
     """
-        Implementation of Add layer for teleportation.
-        This is equivalent to += in the forward method.
 
-        IMPORTANT NOTE: The order of parameters to the forward method is important. Input1 must be computed
-        before input2 in the network containing this layer. This is because we must apply the change of basis of
-        the previous layer in the forward method.
-
-        Example:
-            Class network(nn.Module):
-                def forward(x):
-                    x1 = layer1(x) #Computed First
-                    x2 = layer2(x1) #Computed second
-
-                    x3 = Add(x1, x2) # x1 comes before x2.
-
-    """
-    def __init__(self):
-        super().__init__()
-        self.prev_cob = None
-        self.next_cob = None
-
-    def apply_cob(self, prev_cob, next_cob):
+    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
         self.prev_cob = torch.tensor(prev_cob)
         self.next_cob = torch.tensor(next_cob)
 
