@@ -32,7 +32,7 @@ def argument_parser():
                                                                         'densenet',
                                                                         'resnet',
                                                                         'vggnet'])
-    parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist","cifar10"])
+    parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
     parser.add_argument("--layer_name", type=str, default="")
     return parser.parse_args()
 
@@ -61,10 +61,7 @@ if __name__ == "__main__":
     transform = transforms.ToTensor()
     hook_state = None    # This is going to be passed to the layer hook.
 
-    if parser.dataset == 'mnist' or parser.dataset == 'cifar10':
-        num_classes = 10
-    else:
-        raise NotImplementedError()
+    num_classes = 10
 
     hook_state = (parser.layer_name, hookCallback)
     if parser.model == 'mnist_densenet':
@@ -73,8 +70,7 @@ if __name__ == "__main__":
         model = densenet121(num_classes=num_classes)
     elif parser.model == 'resnet':
         model = resnet18(input_channels=3, num_classes=num_classes)
-        transform = transforms.Compose(
-            [transforms.Resize((256, 256)), transforms.ToTensor()])
+        transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
     elif parser.model == 'vggnet':
         model = vgg11(num_classes=num_classes)
 
@@ -82,43 +78,19 @@ if __name__ == "__main__":
     dataset_test = None
     num_of_classes = None
     if parser.dataset == "mnist":
-        dataset_train = MNIST(
-            '/tmp',
-            train=True,
-            download=True,
-            transform=transform)
-        dataset_test = MNIST(
-            '/tmp',
-            train=False,
-            download=True,
-            transform=transform)
+        dataset_train = MNIST('/tmp', train=True, download=True, transform=transform)
+        dataset_test = MNIST( '/tmp', train=False, download=True, transform=transform)
     elif parser.dataset == "cifar10":
-        dataset_train = CIFAR10(
-            '/tmp',
-            train=True,
-            download=True,
-            transform=transform)
-        dataset_test = CIFAR10(
-            '/tmp',
-            train=False,
-            download=True,
-            transform=transform)
+        dataset_train = CIFAR10('/tmp', train=True, download=True, transform=transform)
+        dataset_test = CIFAR10('/tmp', train=False, download=True, transform=transform)
 
-    data_train_loader = DataLoader(
-        dataset_train,
-        batch_size=batch_size,
-        shuffle=True)
-    data_test_loader = DataLoader(
-        dataset_test,
-        batch_size=batch_size,
-        shuffle=True)
+    data_train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    data_test_loader = DataLoader(dataset_test, batch_size=batch_size, shuffle=True)
 
     # Get the width and height of the image, then get the dimension of pixels
     # values
-    w, h = dataset_test.transform.transforms[0].size if isinstance(
-        dataset_test.transform, transforms.Compose) else dataset_test.data.shape[1:3]
-    dims = 1 if len(
-        dataset_test.data.shape) < 4 else dataset_test.data.shape[3]
+    w, h = dataset_test.transform.transforms[0].size if isinstance(dataset_test.transform, transforms.Compose) else dataset_test.data.shape[1:3]
+    dims = 1 if len(dataset_test.data.shape) < 4 else dataset_test.data.shape[3]
 
     test_img = torch.as_tensor(dataset_test[0][0])
     test_img = torch.unsqueeze(test_img, 0)
@@ -127,19 +99,16 @@ if __name__ == "__main__":
 
     # Change the model to a teleportable model.
     model = model.to(device=device)
-    model = NeuralTeleportationModel(
-        network=model, input_shape=(
-            batch_size, dims, w, h))
+    model = NeuralTeleportationModel(network=model, input_shape=(batch_size, dims, w, h))
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters())
-    train(
-        model,
-        criterion=criterion,
-        train_dataset=data_train_loader,
-        optimizer=optimizer,
-        epochs=parser.epochs,
-        batch_size=parser.batch_size)
+    train(model,
+          criterion=criterion,
+          train_dataset=data_train_loader,
+          optimizer=optimizer,
+          epochs=parser.epochs,
+          batch_size=parser.batch_size)
 
     # Attach the hook to a specific layer
     hook = LayerHook(model, hook_state)

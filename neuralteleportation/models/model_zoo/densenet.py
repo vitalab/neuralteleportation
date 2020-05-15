@@ -221,7 +221,7 @@ def _load_state_dict(model, model_url, progress):
     # They are also in the checkpoints in model_urls. This pattern is used
     # to find such keys.
     pattern = re.compile(
-        r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
+        '^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
 
     state_dict = load_state_dict_from_url(model_url, progress=progress)
     for key in list(state_dict.keys()):
@@ -295,6 +295,7 @@ def densenet201(pretrained=False, progress=True, **kwargs):
     """
     return _densenet('densenet201', 32, (6, 12, 48, 32), 64, pretrained, progress,
                      **kwargs)
+
 
 if __name__ == '__main__':
     from torchsummary import summary
