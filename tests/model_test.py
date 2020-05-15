@@ -1,6 +1,7 @@
-from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 import numpy as np
 import torch
+
+from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 
 def test_set_weights(network, input_shape=(1, 1, 28, 28)):

@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -9,7 +8,7 @@ from torch.hub import load_state_dict_from_url
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
 from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
+from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB
 from neuralteleportation.layers.mergelayers import Add
 from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
 

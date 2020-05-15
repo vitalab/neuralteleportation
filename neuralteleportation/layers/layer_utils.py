@@ -1,9 +1,9 @@
 import copy
 import inspect
 
+import torch
 import torch.nn as nn
 from torch.nn.modules import Flatten
-import torch
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
 from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB

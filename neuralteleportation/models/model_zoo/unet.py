@@ -122,7 +122,6 @@ class Up(nn.Module):
 
 
 if __name__ == '__main__':
-    from torchsummary import summary
     from tests.model_test import test_teleport
 
     model = UNet(input_channels=1, output_channels=4, bilinear=False)

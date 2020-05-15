@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
