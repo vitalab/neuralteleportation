@@ -33,14 +33,11 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28), verbose=False):
     w2 = model.get_weights().detach().numpy()
 
     diff_average = (w1 - w2).mean()
+    dot_prod = np.dot(grad, (w2 - w1))
 
-    if verbose:
-        print("Sample outputs: ")
-        print("Pre teleportation: ", pred1.flatten()[:10])
-        print("Post teleportation: ", pred2.flatten()[:10])
+    print(f'The result of the scalar product is: {dot_prod}')
 
-    # assert not np.allclose(w1, w2)
-    # assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
+    # assert np.log10(dot_prod) < -8
 
     return diff_average
 
