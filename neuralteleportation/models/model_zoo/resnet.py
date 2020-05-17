@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -9,7 +8,7 @@ from torch.hub import load_state_dict_from_url
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
 from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
+from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB
 from neuralteleportation.layers.mergelayers import Add
 from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
 
@@ -361,12 +360,9 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
 if __name__ == '__main__':
     from torchsummary import summary
     from tests.model_test import test_teleport
-    from torch.utils.data import DataLoader
     from torchvision import transforms
     from torchvision.datasets import MNIST
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training import test
-    from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
     mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.Compose([transforms.Resize((224, 224)),
                                                                                          transforms.ToTensor()]))
@@ -376,5 +372,5 @@ if __name__ == '__main__':
 
     resnet = resnet18(num_classes=10, input_channels=1)
     summary(resnet, (1, 224, 224), device='cpu')
-    test_teleport(resnet, (1, 1, 224, 224))
+    test_teleport(resnet, (1, 1, 224, 224), verbose=True)
 

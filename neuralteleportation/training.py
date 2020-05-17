@@ -5,6 +5,7 @@ import torch
 import torch.optim as optim
 from tqdm import tqdm
 
+
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
           device='cpu'):
     if optimizer is None:

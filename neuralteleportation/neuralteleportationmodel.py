@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.mergelayers import Concat, Add
 from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
 
@@ -144,7 +143,7 @@ class NeuralTeleportationModel(nn.Module):
             counter += nb_params
 
     def get_grad(self, data: torch.Tensor, target: torch.Tensor, loss_fn: Callable,
-                 concat: bool = True, zero_grad: bool=True) -> Union[torch.Tensor, List[torch.Tensor]]:
+                 concat: bool = True, zero_grad: bool = True) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
             Return model gradients for data, target and loss function.
         Args:
@@ -193,10 +192,9 @@ class NeuralTeleportationModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from neuralteleportation.models.test_models.test_models import *
-    from neuralteleportation.models.test_models.residual_models import *
-    from neuralteleportation.models.test_models.dense_models import *
-    import torchvision.models as models
+    from neuralteleportation.models.generic_models.test_models import *
+    from neuralteleportation.models.generic_models.residual_models import *
+    from neuralteleportation.models.generic_models.dense_models import *
     from neuralteleportation.models.model_zoo.resnet import *
 
     model = resnet18(pretrained=False)

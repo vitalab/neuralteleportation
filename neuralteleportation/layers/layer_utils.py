@@ -1,9 +1,9 @@
 import copy
 import inspect
 
+import torch
 import torch.nn as nn
 from torch.nn.modules import Flatten
-import torch
 
 from neuralteleportation.layers.activationlayers import ReLUCOB
 from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
@@ -23,27 +23,28 @@ COB_LAYER_DICT = {nn.Linear: LinearCOB,
                   Flatten: FlattenCOB}
 
 
-def patch_module(module: torch.nn.Module, inplace: bool = True) -> torch.nn.Module:
-    """Replace layers with COB layers
+def swap_model_modules_for_COB_modules(module: torch.nn.Module, inplace: bool = True) -> torch.nn.Module:
+    """
+    Replace normal layers with COB layers
     """
     if not inplace:
         module = copy.deepcopy(module)
-    _patch_cob_layers(module)
+    _swap_cob_layers(module)
     return module
 
 
 def _get_args_dict(fn, args, kwargs):
     """
-        Get args in the form of a dict to re-create exactly the same layers.
+    Get args in the form of a dict to re-create exactly the same layers.
     """
     args_names = fn.__code__.co_varnames[:fn.__code__.co_argcount]
     return {**dict(zip(args_names, args)), **kwargs}
 
 
-def _patch_cob_layers(module: torch.nn.Module) -> None:
+def _swap_cob_layers(module: torch.nn.Module) -> None:
     """
     Recursively iterate over the children of a module and replace them if
-    they are a Cob layer. This function operates in-place.
+    they have an equivalent Cob layer. This function operates in-place.
     """
 
     for name, child in module.named_children():
@@ -54,4 +55,4 @@ def _patch_cob_layers(module: torch.nn.Module) -> None:
             module.add_module(name, new_module)
 
         # recursively apply to child
-        _patch_cob_layers(child)
+        _swap_cob_layers(child)
