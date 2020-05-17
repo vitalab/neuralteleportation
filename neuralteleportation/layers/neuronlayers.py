@@ -25,7 +25,7 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
 
     def get_cob(self, basis_range=10):
-        return get_random_cob(range=basis_range, size=self.out_features)
+        return get_random_cob(range_cob=basis_range, size=self.out_features)
 
     def get_input_cob(self):
         return np.ones(shape=self.in_features)
@@ -49,7 +49,7 @@ class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
         Returns:
             cob for the output feature maps.
         """
-        return get_random_cob(range=basis_range, size=self.out_channels)
+        return get_random_cob(range_cob=basis_range, size=self.out_channels)
 
     def get_input_cob(self):
         return np.ones(shape=self.in_channels)
@@ -73,7 +73,7 @@ class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
         Returns:
             cob for the output feature maps.
         """
-        return get_random_cob(range=basis_range, size=self.out_channels)
+        return get_random_cob(range_cob=basis_range, size=self.out_channels)
 
     def get_input_cob(self):
         return np.ones(shape=self.in_channels)
@@ -104,7 +104,7 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
         Returns:
             cob for the output neurons
         """
-        return get_random_cob(range=basis_range, size=self.num_features)
+        return get_random_cob(range_cob=basis_range, size=self.num_features)
 
     def get_input_cob(self):
         return np.ones(shape=self.num_features)
@@ -145,7 +145,7 @@ class BatchNorm1dCOB(nn.BatchNorm1d, NeuronLayerMixin):
         Returns:
             cob for the output neurons
         """
-        return get_random_cob(range=basis_range, size=self.num_features)
+        return get_random_cob(range_cob=basis_range, size=self.num_features)
 
     def get_input_cob(self):
         return np.ones(shape=self.num_features)
