@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     # summary(model, (1, 256, 256), device='cpu')
 
-    test_teleport(model, (1, 1, 256, 256))
+    test_teleport(model, (1, 1, 256, 256), verbose=True)
 
 
 
