@@ -11,10 +11,13 @@ from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
 from neuralteleportation.layers.neuronlayers import LinearCOB
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.models.model_zoo.resnet import resnet18
+from neuralteleportation.training import train, test
+
 
 # torch.manual_seed(1234)
-from neuralteleportation.training import train, test
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+epochs = 20
+
 
 mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
 mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
@@ -37,19 +40,22 @@ class Model(nn.Module):
 
 sample_input_shape = (1, 1, 28, 28)
 
-model1 = NeuralTeleportationModel(network=Model(), input_shape=sample_input_shape)
+
+model1 = Model().to(device)
+model1 = NeuralTeleportationModel(network=model1, input_shape=sample_input_shape)
 optimizer = torch.optim.Adam(model1.parameters())
 metrics = [accuracy]
 loss = nn.CrossEntropyLoss()
 train(model1, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
-      epochs=2)
+      epochs=epochs, device=device)
 
-model2 = NeuralTeleportationModel(network=Model(), input_shape=sample_input_shape)
+model2 = Model().to(device)
+model2 = NeuralTeleportationModel(network=model2, input_shape=sample_input_shape)
 optimizer = torch.optim.Adam(model2.parameters())
 metrics = [accuracy]
 loss = nn.CrossEntropyLoss()
 train(model2, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
-      epochs=2)
+      epochs=epochs, device=device)
 
 w1 = model1.get_weights(concat=False, flatten=False, bias=False)
 
