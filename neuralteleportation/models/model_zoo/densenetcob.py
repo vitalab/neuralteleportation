@@ -19,7 +19,7 @@ from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB, Dro
 from neuralteleportation.layers.neuronlayers import BatchNorm2dCOB, LinearCOB, Conv2dCOB
 from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
 
-__all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
+__all__ = ['DenseNetCOB', 'densenet121COB', 'densenet169COB', 'densenet201COB', 'densenet161COB']
 
 model_urls = {
     'densenet121': 'https://download.pytorch.org/models/densenet121-a639ec97.pth',
@@ -28,9 +28,9 @@ model_urls = {
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
 
-class _DenseLayer(nn.Module):
+class _DenseLayerCOB(nn.Module):
     def __init__(self, num_input_features, growth_rate, bn_size, drop_rate, memory_efficient=False):
-        super(_DenseLayer, self).__init__()
+        super(_DenseLayerCOB, self).__init__()
         self.add_module('norm1', BatchNorm2dCOB(num_input_features)),
         self.add_module('relu1', ReLUCOB(inplace=True)),
         self.add_module('conv1', Conv2dCOB(num_input_features, bn_size *
@@ -100,13 +100,13 @@ class _DenseLayer(nn.Module):
         return new_features
 
 
-class _DenseBlock(nn.ModuleDict):
+class _DenseBlockCOB(nn.ModuleDict):
     _version = 2
 
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate, memory_efficient=False):
-        super(_DenseBlock, self).__init__()
+        super(_DenseBlockCOB, self).__init__()
         for i in range(num_layers):
-            layer = _DenseLayer(
+            layer = _DenseLayerCOB(
                 num_input_features + i * growth_rate,
                 growth_rate=growth_rate,
                 bn_size=bn_size,
@@ -125,9 +125,9 @@ class _DenseBlock(nn.ModuleDict):
         return self.concat(*features, dim=1)
 
 
-class _Transition(nn.Sequential):
+class _TransitionCOB(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
-        super(_Transition, self).__init__()
+        super(_TransitionCOB, self).__init__()
         self.add_module('norm', BatchNorm2dCOB(num_input_features))
         self.add_module('relu', ReLUCOB(inplace=True))
         self.add_module('conv', Conv2dCOB(num_input_features, num_output_features,
@@ -135,7 +135,7 @@ class _Transition(nn.Sequential):
         self.add_module('pool', AvgPool2dCOB(kernel_size=2, stride=2))
 
 
-class DenseNet(nn.Module):
+class DenseNetCOB(nn.Module):
     r"""Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -154,7 +154,7 @@ class DenseNet(nn.Module):
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
                  num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
 
-        super(DenseNet, self).__init__()
+        super(DenseNetCOB, self).__init__()
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
@@ -168,7 +168,7 @@ class DenseNet(nn.Module):
         # Each denseblock
         num_features = num_init_features
         for i, num_layers in enumerate(block_config):
-            block = _DenseBlock(
+            block = _DenseBlockCOB(
                 num_layers=num_layers,
                 num_input_features=num_features,
                 bn_size=bn_size,
@@ -179,8 +179,8 @@ class DenseNet(nn.Module):
             self.features.add_module('denseblock%d' % (i + 1), block)
             num_features = num_features + num_layers * growth_rate
             if i != len(block_config) - 1:
-                trans = _Transition(num_input_features=num_features,
-                                    num_output_features=num_features // 2)
+                trans = _TransitionCOB(num_input_features=num_features,
+                                       num_output_features=num_features // 2)
                 self.features.add_module('transition%d' % (i + 1), trans)
                 num_features = num_features // 2
 
@@ -232,15 +232,15 @@ def _load_state_dict(model, model_url, progress):
     model.load_state_dict(state_dict)
 
 
-def _densenet(arch, growth_rate, block_config, num_init_features, pretrained, progress,
-              **kwargs):
-    model = DenseNet(growth_rate, block_config, num_init_features, **kwargs)
+def _densenetCOB(arch, growth_rate, block_config, num_init_features, pretrained, progress,
+                 **kwargs):
+    model = DenseNetCOB(growth_rate, block_config, num_init_features, **kwargs)
     if pretrained:
         _load_state_dict(model, model_urls[arch], progress)
     return model
 
 
-def densenet121(pretrained=False, progress=True, **kwargs):
+def densenet121COB(pretrained=False, progress=True, **kwargs):
     r"""Densenet-121 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -250,11 +250,11 @@ def densenet121(pretrained=False, progress=True, **kwargs):
         memory_efficient (bool) - If True, uses checkpointing. Much more memory efficient,
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_
     """
-    return _densenet('densenet121', 32, (6, 12, 24, 16), 64, pretrained, progress,
-                     **kwargs)
+    return _densenetCOB('densenet121', 32, (6, 12, 24, 16), 64, pretrained, progress,
+                        **kwargs)
 
 
-def densenet161(pretrained=False, progress=True, **kwargs):
+def densenet161COB(pretrained=False, progress=True, **kwargs):
     r"""Densenet-161 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -264,11 +264,11 @@ def densenet161(pretrained=False, progress=True, **kwargs):
         memory_efficient (bool) - If True, uses checkpointing. Much more memory efficient,
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_
     """
-    return _densenet('densenet161', 48, (6, 12, 36, 24), 96, pretrained, progress,
-                     **kwargs)
+    return _densenetCOB('densenet161', 48, (6, 12, 36, 24), 96, pretrained, progress,
+                        **kwargs)
 
 
-def densenet169(pretrained=False, progress=True, **kwargs):
+def densenet169COB(pretrained=False, progress=True, **kwargs):
     r"""Densenet-169 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -278,11 +278,11 @@ def densenet169(pretrained=False, progress=True, **kwargs):
         memory_efficient (bool) - If True, uses checkpointing. Much more memory efficient,
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_
     """
-    return _densenet('densenet169', 32, (6, 12, 32, 32), 64, pretrained, progress,
-                     **kwargs)
+    return _densenetCOB('densenet169', 32, (6, 12, 32, 32), 64, pretrained, progress,
+                        **kwargs)
 
 
-def densenet201(pretrained=False, progress=True, **kwargs):
+def densenet201COB(pretrained=False, progress=True, **kwargs):
     r"""Densenet-201 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -292,11 +292,11 @@ def densenet201(pretrained=False, progress=True, **kwargs):
         memory_efficient (bool) - If True, uses checkpointing. Much more memory efficient,
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_
     """
-    return _densenet('densenet201', 32, (6, 12, 48, 32), 64, pretrained, progress,
-                     **kwargs)
+    return _densenetCOB('densenet201', 32, (6, 12, 48, 32), 64, pretrained, progress,
+                        **kwargs)
 
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    densenet = densenet121(pretrained=True)
+    densenet = densenet121COB(pretrained=True)
     test_teleport(densenet, (1, 3, 224, 224), verbose=True)

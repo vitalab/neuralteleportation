@@ -196,9 +196,9 @@ if __name__ == '__main__':
     from neuralteleportation.models.generic_models.test_models import *
     from neuralteleportation.models.generic_models.residual_models import *
     from neuralteleportation.models.generic_models.dense_models import *
-    from neuralteleportation.models.model_zoo.resnet import *
+    from neuralteleportation.models.model_zoo.resnetcob import *
 
-    model = resnet18(pretrained=False)
+    model = resnet18COB(pretrained=False)
     sample_input_shape = (1, 3, 224, 224)
 
     model = NeuralTeleportationModel(network=model, input_shape=sample_input_shape)

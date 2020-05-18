@@ -69,8 +69,8 @@ The model zoo contains well-known models that we implemented with the teleportat
 The implementations come in part from [torchvision.models](https://pytorch.org/docs/stable/torchvision/models.html)
 
 ```python
-from neuralteleportation.models.model_zoo.resnet import resnet50
+from neuralteleportation.models.model_zoo.resnetcob import resnet50COB
 
-model =  resnet50()
+model =  resnet50COB()
 model = NeuralTeleportationModel(model, input_shape)
 ``` 
