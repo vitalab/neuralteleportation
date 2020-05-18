@@ -9,12 +9,13 @@ from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixi
 
 
 class LinearCOB(nn.Linear, NeuronLayerMixin):
-    def __init__(self, in_features: int, out_features: int):
-        super().__init__(in_features, out_features)
+    def __init__(self, in_features: int, out_features: int, bias=True):
+        super().__init__(in_features, out_features, bias)
 
-        # Save the weights as seperate tensors to be able to compute gradients with respect to the change of basis.
+        # Save the weights as separate tensors to be able to compute gradients with respect to the change of basis.
         self.w = torch.tensor(self.weight)
-        self.b = torch.tensor(self.bias)
+        if self.bias is not None:
+            self.b = torch.tensor(self.bias)
 
     def apply_cob(self, prev_cob, next_cob):
 
@@ -28,14 +29,14 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
         w = next_cob[..., None] / prev_cob[None, ...]
         w = w.type_as(self.weight)
         self.w = torch.tensor(self.weight) * w
-        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+        self.weight = nn.Parameter(self.w, requires_grad=True)
 
         if self.bias is not None:
             b = next_cob.type_as(self.bias)
             self.b = torch.tensor(self.bias) * b
-            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+            self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
-    def get_weights(self) -> Tuple[torch.Tensor, ...]:
+    def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
         """
          Get the weights from the layer.
 
@@ -43,10 +44,16 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
             tuple of torch.Tensor
 
         """
-        if self.bias is not None:
-            return self.w.flatten(), self.b.flatten()
+        if self.bias is not None and bias:
+            if flatten:
+                return self.w.flatten(), self.b.flatten()
+            else:
+                return self.w, self.b
         else:
-            return self.w.flatten(),
+            if flatten:
+                return self.w.flatten(),
+            else:
+                return self.w,
 
     def get_cob(self, basis_range=10):
         return get_random_cob(range=basis_range, size=self.out_features)
@@ -64,6 +71,18 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
     @property
     def cob_size(self):
         return self.out_features
+
+    @staticmethod
+    def calculate_cob(weights, target_weights, prev_cob, concat=True):
+        """
+            Compute the cob to teleport from the current weights to the target_weights
+        """
+        cob = []
+        for (wi, wi_hat) in zip(weights, target_weights):
+            ti = (wi / prev_cob).dot(wi_hat) / (wi /prev_cob).dot(wi /prev_cob)
+            cob.append(ti)
+
+        return torch.tensor(cob)
 
 
 class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
@@ -88,6 +107,14 @@ class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
 
     def get_output_cob(self):
         return np.ones(shape=self.out_channels)
+
+    @property
+    def input_cob_size(self):
+        return self.in_channels
+
+    @property
+    def cob_size(self):
+        return self.out_channels
 
 
 class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
@@ -153,6 +180,14 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
 
         return super().forward(input / self.prev_cob)
 
+    @property
+    def input_cob_size(self):
+        return self.num_features
+
+    @property
+    def cob_size(self):
+        return self.num_features
+
 
 class BatchNorm1dCOB(nn.BatchNorm1d, NeuronLayerMixin):
     def __init__(self, num_features: int):
@@ -190,3 +225,19 @@ class BatchNorm1dCOB(nn.BatchNorm1d, NeuronLayerMixin):
             self.prev_cob = torch.ones(input.shape[1])
 
         return super().forward(input / self.prev_cob)
+
+    @property
+    def input_cob_size(self):
+        return self.num_features
+
+    @property
+    def cob_size(self):
+        return self.num_features
+
+
+if __name__ == '__main__':
+
+    c = nn.Conv2d(in_channels=2, out_channels=3, kernel_size=3)
+    print(c.weight.shape)
+    c = nn.ConvTranspose2d(in_channels=2, out_channels=3, kernel_size=3)
+    print(c.weight.shape)

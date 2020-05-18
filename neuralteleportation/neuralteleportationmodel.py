@@ -32,13 +32,13 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-    def generate_random_cob(self):
+    def generate_random_cob(self, cob_range=10):
         size = 0
         neuron_layers = self.get_neuron_layers()
         for i in range(len(neuron_layers) - 1):
             size += neuron_layers[i].cob_size
 
-        return get_random_cob(range=10, size=size, requires_grad=True)
+        return get_random_cob(range=cob_range, size=size, requires_grad=True)
 
     def get_random_change_of_basis(self, basis_range=10):
         """
@@ -173,7 +173,7 @@ class NeuralTeleportationModel(nn.Module):
         """
         return [l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)]
 
-    def get_weights(self, concat: bool = True) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def get_weights(self, concat: bool = True, flatten=True, bias=True) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
             Return model weights
 
@@ -188,7 +188,7 @@ class NeuralTeleportationModel(nn.Module):
         w = []
 
         for k, layer in enumerate(self.get_neuron_layers()):
-            w.extend(layer.get_weights())
+            w.extend(layer.get_weights(flatten=flatten, bias=bias))
 
         if concat:
             return torch.cat(w)
@@ -264,6 +264,22 @@ class NeuralTeleportationModel(nn.Module):
                     cob.append(layer['cob'])
                 else:
                     cob.append(layer['cob'])
+
+        if concat:
+            return torch.cat(cob)
+        else:
+            return cob
+
+    def calculate_cob(self, initial_weights, target_weights, concat=True):
+        layers = self.get_neuron_layers()
+
+        cob = [layers[0].get_input_cob()]
+        for i, layer in enumerate(layers):
+            t = layer.calculate_cob(initial_weights[i], target_weights[i], cob[-1])
+            cob.append(t)
+
+        cob.pop(0)
+        cob.pop(-1)
 
         if concat:
             return torch.cat(cob)

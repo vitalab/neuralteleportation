@@ -12,6 +12,9 @@ class NeuralTeleportationLayerMixin(object):
 
 
 class NeuronLayerMixin(NeuralTeleportationLayerMixin):
+    w: torch.Tensor
+    b: torch.Tensor
+
     def get_cob(self, basis_range=10):
         """
         Returns a random change of basis for the output features of the layer.
@@ -63,7 +66,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         return nb_params
 
-    def get_weights(self) -> Tuple[torch.Tensor, ...]:
+    def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
         """
          Get the weights from the layer.
 
@@ -71,10 +74,16 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             tuple of torch.Tensor
 
         """
-        if self.bias is not None:
-            return self.weight.flatten(), self.bias.flatten()
+        if self.bias is not None and bias:
+            if flatten:
+                return self.weight.flatten(), self.bias.flatten()
+            else:
+                return self.weight, self.bias
         else:
-            return self.weight.flatten(),
+            if flatten:
+                return self.weight.flatten(),
+            else:
+                return self.weight
 
     def set_weights(self, weights: torch.Tensor):
         """
@@ -95,6 +104,13 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             b_nb_params = np.prod(b_shape)
             b = weights[counter:counter + b_nb_params].reshape(b_shape)
             self.bias = torch.nn.Parameter(b, requires_grad=True)
+
+    @staticmethod
+    def calculate_cob(weights, target_weights, prev_cob, concat=True):
+        """
+            Compute the cob to teleport from weights to the target_weights
+        """
+        raise NotImplementedError
 
 
 class FlattenCOB(Flatten, NeuralTeleportationLayerMixin):
