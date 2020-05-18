@@ -81,6 +81,26 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             b = torch.tensor(weights[counter:counter + b_nb_params].reshape(b_shape))
             self.bias = torch.nn.Parameter(b, requires_grad=True)
 
+    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
+        w = torch.tensor(self._get_cob_weight_factor(prev_cob, next_cob)).type_as(self.weight)
+        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+
+        if self.bias is not None:
+            b = torch.tensor(next_cob).type_as(self.bias)
+            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+
+    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+        """Computes the factor to apply to the weights of the current layer to perform a change of basis.
+
+        Args:
+            prev_cob: change of basis of the previous layer.
+            next_cob: change of basis of the following layer.
+
+        Returns:
+            factors to apply to the weights of the current layer to apply the change of basis.
+        """
+        raise NotImplementedError
+
 
 class LinearCOB(NeuronLayerMixin, nn.Linear):
 
@@ -92,36 +112,30 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
                 cob.extend(np.repeat(c, repeats=feature_map_size).tolist())
             prev_cob = np.array(cob)
 
-        w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32).type_as(self.weight)
-        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+        super().apply_cob(prev_cob, next_cob)
 
-        if self.bias is not None:
-            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
-            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+        return next_cob[..., None] / prev_cob[None, ...]
 
 
-class Conv2dMixin(NeuronLayerMixin):
+class ConvMixin(NeuronLayerMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.in_features = self.in_channels
         self.out_features = self.out_channels
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        w = torch.tensor(next_cob[..., None] / prev_cob[None, ...], dtype=torch.float32)[..., None, None]
-        self.weight = nn.Parameter(self.weight * w.type_as(self.weight), requires_grad=True)
 
-        if self.bias is not None:
-            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
-            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+class Conv2dCOB(ConvMixin, nn.Conv2d):
+
+    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+        return (next_cob[..., None] / prev_cob[None, ...])[..., None, None]
 
 
-class Conv2dCOB(Conv2dMixin, nn.Conv2d):
-    pass
+class ConvTranspose2dCOB(ConvMixin, nn.ConvTranspose2d):
 
-
-class ConvTranspose2dCOB(Conv2dMixin, nn.ConvTranspose2d):
-    pass
+    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+        return (next_cob[None, ...] / prev_cob[..., None])[..., None, None]
 
 
 class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
@@ -133,14 +147,10 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
 
     def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
         self.prev_cob = torch.tensor(prev_cob)
-        self.next_cob = torch.tensor(next_cob)
+        super().apply_cob(prev_cob, next_cob)
 
-        w = torch.tensor(next_cob, dtype=torch.float32).type_as(self.weight)
-        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
-
-        if self.bias is not None:
-            b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
-            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+        return next_cob
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.base_layer().forward(self, input / self.prev_cob)
