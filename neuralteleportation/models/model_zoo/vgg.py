@@ -2,7 +2,8 @@ import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
 from neuralteleportation.layers.activation import ReLUCOB
-from neuralteleportation.layers.neuralteleportation import FlattenCOB, DropoutCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.dropout import DropoutCOB
 from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, BatchNorm2dCOB
 from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB
 

@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.nn.modules import Flatten
 
 
@@ -42,13 +41,3 @@ class FlattenCOB(NeuralTeleportationLayerMixin, Flatten):
         pass
 
 
-class DropoutCOB(NeuralTeleportationLayerMixin, nn.Dropout):
-
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        pass
-
-
-class Dropout2dCOB(NeuralTeleportationLayerMixin, nn.Dropout2d):
-
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        pass
