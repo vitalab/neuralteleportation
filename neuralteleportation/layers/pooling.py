@@ -17,6 +17,9 @@ class MaxPool2dCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.MaxPool2d)
     def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
         self.cob = torch.tensor(prev_cob)
 
+    def _forward(self, input: torch.Tensor) -> torch.Tensor:
+        return self.cob * self.base_layer().forward(self, input / self.cob)
+
 
 class AdaptiveAvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AdaptiveAvgPool2d):
     """Wrapper for the AdaptiveAvgPool2d change of basis layer.
@@ -39,8 +42,16 @@ class AvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AvgPool2d):
 
 
 class UpsampleCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.Upsample):
+    """Wrapper for the Upsample change of basis layer.
+
+    Upsampling is positive scale invariant. It is necessary to un-apply and re-apply the change of basis for the
+    opperation.
+    """
     cob_field = 'cob'
     reshape_cob = True
 
     def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
         self.cob = torch.tensor(prev_cob)
+
+    def _forward(self, input: torch.Tensor) -> torch.Tensor:
+        return self.cob * self.base_layer().forward(self, input / self.cob)
