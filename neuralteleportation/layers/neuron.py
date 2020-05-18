@@ -21,7 +21,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         Returns:
             change of basis.
         """
-        return get_random_cob(range=basis_range, size=self.out_features)
+        return get_random_cob(range_cob=basis_range, size=self.out_features)
 
     def get_output_cob(self) -> np.ndarray:
         """Get change of basis for the layer if it is an output layer.
