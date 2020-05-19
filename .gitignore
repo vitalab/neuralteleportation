@@ -128,3 +128,4 @@ neuralteleportation.egg-info/
 # Datasets
 dataset/*
 !dataset/*.sh
+!dataset/*.py
