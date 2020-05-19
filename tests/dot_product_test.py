@@ -16,30 +16,27 @@ def test_set_weights(network, input_shape=(1, 1, 28, 28)):
     assert np.allclose(w1, w3)
 
 
-def test_dot_product(network, input_shape=(1, 1, 28, 28), verbose=False):
+def test_dot_product(network, input_shape=(1, 1, 28, 28), verbose=False) -> None:
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape, dtype=torch.float)
     y = torch.rand((1, 1, 10, 10), dtype=torch.float)
-    pred1 = model(x).detach().numpy()
     w1 = model.get_weights().detach().numpy()
+    sampling_types = ['usual', 'symmetric', 'negative', 'zero']
+    red = "\033[31m"
+    reset = "\033[0m"
 
     loss_func = torch.nn.MSELoss()
 
     grad = model.get_grad(x, y, loss_func, zero_grad=False)
 
-    model.random_teleport(cob_range=0.0001)
+    for sampling_type in sampling_types:
+        model.random_teleport(cob_range=0.0001, sampling_type=sampling_type)
+        w2 = model.get_weights().detach().numpy()
 
-    pred2 = model(x).detach().numpy()
-    w2 = model.get_weights().detach().numpy()
+        dot_prod = np.dot(grad, (w2 - w1))
 
-    diff_average = (w1 - w2).mean()
-    dot_prod = np.dot(grad, (w2 - w1))
-
-    print(f'The result of the scalar product is: {dot_prod}')
-
-    # assert np.log10(dot_prod) < -8
-
-    return diff_average
+        print(f'The result of the scalar product is: {red * (not np.allclose(dot_prod, 0, atol=1e-5))}{dot_prod}'
+              f'{reset} (using {sampling_type} sampling type)')
 
 
 def test_reset_weights(network, input_shape=(1, 1, 28, 28)):

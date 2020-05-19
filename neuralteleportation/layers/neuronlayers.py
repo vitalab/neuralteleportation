@@ -24,8 +24,8 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
             b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
 
-    def get_cob(self, basis_range=10):
-        return get_random_cob(range_cob=basis_range, size=self.out_features)
+    def get_cob(self, basis_range=10, sampling_type='usual'):
+        return get_random_cob(range_cob=basis_range, size=self.out_features, sampling_type=sampling_type)
 
     def get_input_cob(self):
         return np.ones(shape=self.in_features)
@@ -44,12 +44,12 @@ class Conv2dCOB(nn.Conv2d, NeuronLayerMixin):
             b = torch.tensor(next_cob, dtype=torch.float32).type_as(self.bias)
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
 
-    def get_cob(self, basis_range=10):
+    def get_cob(self, basis_range=10, sampling_type='usual'):
         """
         Returns:
             cob for the output feature maps.
         """
-        return get_random_cob(range_cob=basis_range, size=self.out_channels)
+        return get_random_cob(range_cob=basis_range, size=self.out_channels, sampling_type=sampling_type)
 
     def get_input_cob(self):
         return np.ones(shape=self.in_channels)
@@ -73,7 +73,7 @@ class ConvTranspose2dCOB(nn.ConvTranspose2d, NeuronLayerMixin):
         Returns:
             cob for the output feature maps.
         """
-        return get_random_cob(range_cob=basis_range, size=self.out_channels)
+        return get_random_cob(range_cob=basis_range, size=self.out_channels, sampling_type='usual')
 
     def get_input_cob(self):
         return np.ones(shape=self.in_channels)
@@ -104,7 +104,7 @@ class BatchNorm2dCOB(nn.BatchNorm2d, NeuronLayerMixin):
         Returns:
             cob for the output neurons
         """
-        return get_random_cob(range_cob=basis_range, size=self.num_features)
+        return get_random_cob(range_cob=basis_range, size=self.num_features, sampling_type='usual')
 
     def get_input_cob(self):
         return np.ones(shape=self.num_features)
@@ -145,7 +145,7 @@ class BatchNorm1dCOB(nn.BatchNorm1d, NeuronLayerMixin):
         Returns:
             cob for the output neurons
         """
-        return get_random_cob(range_cob=basis_range, size=self.num_features)
+        return get_random_cob(range_cob=basis_range, size=self.num_features, sampling_type='usual')
 
     def get_input_cob(self):
         return np.ones(shape=self.num_features)
