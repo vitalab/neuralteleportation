@@ -11,20 +11,18 @@ red = "\033[31m"
 reset = "\033[0m"
 
 
-# Test the initial assignation of weights to a model
-def test_set_weights(network, input_shape=(1, 1, 28, 28)):
-    model = NeuralTeleportationModel(network, input_shape)
-    w1 = model.get_weights().detach().numpy()
-    model = NeuralTeleportationModel(network, input_shape)
-
-    model.set_weights(w1)
-    w3 = model.get_weights().detach().numpy()
-
-    assert np.allclose(w1, w3)
-
-
-# Test the dot produt between the teleporation line and the gradient for nullity
 def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
+    r"""
+    This method tests the scalar produt between the teleporation line and the gradient for nullity
+
+    Args:
+        network : the model to which we wish to assigne weights
+
+        input_shape :   the shape of the input
+                        (it will be used by the networkgrapher of the model,
+                        the values is not important for the test at hand)
+    """
+
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape, dtype=torch.float)
     y = torch.rand((1, 1, 10, 10), dtype=torch.float)
@@ -50,16 +48,8 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
               f'{red * failed}{np.round(abs(dot_prod), int(abs(np.log10(tol))))}',
               f' (!=0 => FAILED!)' * failed,
               f'{reset}',
-              f' using {sampling_type} sampling type', sep='')
-
-
-def test_reset_weights(network, input_shape=(1, 1, 28, 28)):
-    model = NeuralTeleportationModel(network, input_shape=input_shape)
-    w1 = model.get_weights().detach().numpy()
-    model.reset_weights()
-    w2 = model.get_weights().detach().numpy()
-
-    assert not np.allclose(w1, w2)
+              f' using {sampling_type} sampling type',
+              sep='')
 
 
 if __name__ == '__main__':
@@ -88,10 +78,6 @@ if __name__ == '__main__':
     cnn_model = swap_model_modules_for_COB_modules(cnn_model)
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
-    test_set_weights(network=mlp_model)
     test_dot_product(network=mlp_model)
-    test_reset_weights(network=mlp_model)
 
-    test_set_weights(network=cnn_model)
     test_dot_product(network=cnn_model)
-    test_reset_weights(network=cnn_model)
