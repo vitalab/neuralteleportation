@@ -1,3 +1,7 @@
+# This script validates that the scalar product between a line defined by a set of weights and its teleporation
+# and the gradient calculated a that point is null. It does this for many sampling types
+# (see change get_random_cob in changeofbaseutils.py)
+
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 import numpy as np
@@ -7,6 +11,7 @@ red = "\033[31m"
 reset = "\033[0m"
 
 
+# Test the initial assignation of weights to a model
 def test_set_weights(network, input_shape=(1, 1, 28, 28)):
     model = NeuralTeleportationModel(network, input_shape)
     w1 = model.get_weights().detach().numpy()
@@ -18,7 +23,8 @@ def test_set_weights(network, input_shape=(1, 1, 28, 28)):
     assert np.allclose(w1, w3)
 
 
-def test_dot_product(network, input_shape=(1, 1, 28, 28), verbose=False) -> None:
+# Test the dot produt between the teleporation line and the gradient for nullity
+def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape, dtype=torch.float)
     y = torch.rand((1, 1, 10, 10), dtype=torch.float)
@@ -33,11 +39,18 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28), verbose=False) -> None
         model.random_teleport(cob_range=0.0001, sampling_type=sampling_type)
         w2 = model.get_weights().detach().numpy()
 
-        dot_prod = np.dot(grad, (w2 - w1))
+        # Normalized scalar product
+        dot_prod = np.dot(grad, (w2 - w1))/(np.linalg.norm(grad)*np.linalg.norm((w2 - w1)))
 
-        print(f'The result of the scalar product is: '
-              f'{red * (not np.allclose(dot_prod, 0, atol=1e-5))}{dot_prod}'
-              f'{reset} using {sampling_type} sampling type')
+        # Arbitrary precision threshold for nullity comparison
+        tol = 1e-5
+        failed = (not np.allclose(dot_prod, 0, atol=tol))
+
+        print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
+              f'{red * failed}{np.round(abs(dot_prod), int(abs(np.log10(tol))))}',
+              f' (!=0 => FAILED!)' * failed,
+              f'{reset}',
+              f' using {sampling_type} sampling type', sep='')
 
 
 def test_reset_weights(network, input_shape=(1, 1, 28, 28)):
