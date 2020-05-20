@@ -2,7 +2,7 @@
 
 To teleport a Pytorch neural network (nn.Module) one must use the 
 [NeuralTeleportationModel](neuralteleportationmodel.py) class and use layers that inherit from 
-[NeuralTeleportationLayerMixin](layers/neuralteleportationlayers.py). The logic for teleportation is mainly split into 
+[NeuralTeleportationLayerMixin](layers/neuralteleportation.py). The logic for teleportation is mainly split into 
 these two files. 
 
 **One must respect the know limitations in this [README](../README.md).**

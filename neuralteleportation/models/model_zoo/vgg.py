@@ -1,10 +1,11 @@
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB, DropoutCOB
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.dropout import DropoutCOB
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, BatchNorm2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB
 
 __all__ = [
     'VGG', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',

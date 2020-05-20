@@ -4,7 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
+from neuralteleportation.layers.merge import Add, Concat
+from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
 
 
