@@ -39,9 +39,10 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
 
         # Normalized scalar product
         dot_prod = np.dot(grad, (w2 - w1))/(np.linalg.norm(grad)*np.linalg.norm((w2 - w1)))
+        angle = np.degrees(np.arccos(dot_prod))
 
         # Arbitrary precision threshold for nullity comparison
-        tol = 1e-5
+        tol = 1e-1
         failed = (not np.allclose(dot_prod, 0, atol=tol))
 
         print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
@@ -49,6 +50,7 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
               f' (!=0 => FAILED!)' * failed,
               f'{reset}',
               f' using {sampling_type} sampling type',
+              f', the angle is {angle}°',
               sep='')
 
 
