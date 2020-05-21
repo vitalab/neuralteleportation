@@ -15,7 +15,7 @@ class NeuralTeleportationModel(nn.Module):
 
     Args:
         network (nn.Module):  Network to be wrapped for teleportation.
-        input_shape (tuple: input shape used to compute the network graph.
+        input_shape (tuple): input shape used to compute the network graph.
     """
 
     def __init__(self, network: nn.Module, input_shape: Tuple) -> None:

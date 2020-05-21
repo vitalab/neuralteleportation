@@ -4,8 +4,14 @@ import torch
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 
-# Checks if method set_weights() in NeuralTeleportationModel works
 def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
+    """
+        test_set_weights checks if method set_weights() in NeuralTeleportationModel works
+    Args:
+        network (nn.Module): Network to test
+        model_name (string): The name or label assigned to differentiate the model
+        input_shape (tuple): Input shape of network
+    """
     model = NeuralTeleportationModel(network, input_shape)
     w1 = model.get_weights().detach().numpy()
 
@@ -16,8 +22,18 @@ def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
     print("Weights set successfully for " + model_name + " model.")
 
 
-# Checks if teleportation produces different weights with the same network function
 def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False):
+    """
+        Return mean of the difference between the weights of network and a random teleportation, and checks if
+        teleportation has the same network function
+    Args:
+        network (nn.Module): Network to be tested
+        model_name (string): The name or label assigned to differentiate the model
+        input_shapue (tuple): Input shape of network
+        verbose (bool): Flag to print comparision between network and a teleportation
+    Returns:
+        float with the average of the difference between the weights of the network and a teleportation
+    """
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape)
     pred1 = model(x).detach().numpy()
@@ -34,7 +50,7 @@ def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False
         print("Sample outputs: ")
         print("Pre teleportation: ", pred1.flatten()[:10])
         print("Post teleportation: ", pred2.flatten()[:10])
-        print("Diff weight average: ", (w1 - w2).mean())
+        print("Diff weight average: ", diff_average)
         print("Diff prediction average: ", (pred1 - pred2).mean())
 
     assert not np.allclose(w1, w2)
@@ -43,8 +59,14 @@ def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False
     return diff_average
 
 
-# Checks if method reset_weights() in  NeuralTeleportationModel works
 def test_reset_weights(network, model_name, input_shape=(1, 1, 28, 28)):
+    """
+        test_reset_weights checks if method reset_weights() in NeuralTeleportationModel works
+    Args:
+        network (nn.Module): Network to be tested
+        model_name (string): The name or label assigned to differentiate the model
+        input_shapue (tuple): Input shape of network
+    """
     model = NeuralTeleportationModel(network, input_shape=input_shape)
     w1 = model.get_weights().detach().numpy()
     model.reset_weights()
