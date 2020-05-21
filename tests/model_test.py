@@ -4,6 +4,7 @@ import torch
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 
+# Checks if method set_weights() in NeuralTeleportationModel works
 def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
     model = NeuralTeleportationModel(network, input_shape)
     w1 = model.get_weights().detach().numpy()
@@ -15,6 +16,7 @@ def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
     print("Weights set successfully for " + model_name + " model.")
 
 
+# Checks if teleportation produces different weights with the same network function
 def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False):
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape)
@@ -41,6 +43,7 @@ def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False
     return diff_average
 
 
+# Checks if method reset_weights() in  NeuralTeleportationModel works
 def test_reset_weights(network, model_name, input_shape=(1, 1, 28, 28)):
     model = NeuralTeleportationModel(network, input_shape=input_shape)
     w1 = model.get_weights().detach().numpy()
