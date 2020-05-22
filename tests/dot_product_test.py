@@ -12,7 +12,7 @@ reset = "\033[0m"
 
 
 def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
-    r"""
+    """
     This method tests the scalar produt between the teleporation line and the gradient for nullity
 
     Args:
