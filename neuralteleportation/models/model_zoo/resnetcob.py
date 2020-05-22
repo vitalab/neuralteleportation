@@ -367,5 +367,5 @@ if __name__ == '__main__':
 
     resnet = resnet18COB(pretrained=True)
     summary(resnet, (3, 224, 224), device='cpu')
-    test_teleport(resnet, 'resnet', (1, 3, 224, 224), verbose=True)
+    test_teleport(resnet, (1, 3, 224, 224), verbose=True)
 

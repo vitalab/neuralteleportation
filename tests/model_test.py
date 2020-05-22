@@ -1,17 +1,22 @@
+from typing import Tuple
+
 import numpy as np
 import torch
+import torch.nn as nn
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 
-def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
+def test_set_weights(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), model_name: str = None):
     """
         test_set_weights checks if method set_weights() in NeuralTeleportationModel works
     Args:
         network (nn.Module): Network to test
-        model_name (string): The name or label assigned to differentiate the model
         input_shape (tuple): Input shape of network
+        model_name (str): The name or label assigned to differentiate the model
     """
+    model_name = model_name or network.__class__.__name__
+
     model = NeuralTeleportationModel(network, input_shape)
     w1 = model.get_weights().detach().numpy()
 
@@ -22,18 +27,23 @@ def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
     print("Weights set successfully for " + model_name + " model.")
 
 
-def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False):
+def test_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), verbose: bool = False,
+                  atol: float = 1e-5, model_name: str = None):
     """
         Return mean of the difference between the weights of network and a random teleportation, and checks if
         teleportation has the same network function
+
     Args:
         network (nn.Module): Network to be tested
-        model_name (string): The name or label assigned to differentiate the model
-        input_shapue (tuple): Input shape of network
+        input_shape (tuple): Input shape of network
         verbose (bool): Flag to print comparision between network and a teleportation
+        atol (float): Absolute tolerance allowed between outputs to pass the test
+        model_name (str): The name or label assigned to differentiate the model
+
     Returns:
         float with the average of the difference between the weights of the network and a teleportation
     """
+    model_name = model_name or network.__class__.__name__
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
     x = torch.rand(input_shape)
     pred1 = model(x).detach().numpy()
@@ -54,19 +64,23 @@ def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False
         print("Diff prediction average: ", diff_average)
 
     assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2, atol=1e-5), "Teleporation did not work. Average difference: {}".format(diff_average)
+    assert np.allclose(pred1, pred2, atol=atol), "Teleporation did not work. Average difference: {}".format(diff_average)
+
     print("Teleportation successful for " + model_name + " model.")
     return diff_average
 
 
-def test_reset_weights(network, model_name, input_shape=(1, 1, 28, 28)):
+def test_reset_weights(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), model_name: str = None):
     """
         test_reset_weights checks if method reset_weights() in NeuralTeleportationModel works
+
     Args:
         network (nn.Module): Network to be tested
-        model_name (string): The name or label assigned to differentiate the model
-        input_shapue (tuple): Input shape of network
+        input_shape (tuple): Input shape of network
+        model_name (str): The name or label assigned to differentiate the model
+
     """
+    model_name = model_name or network.__class__.__name__
     model = NeuralTeleportationModel(network, input_shape=input_shape)
     w1 = model.get_weights().detach().numpy()
     model.reset_weights()

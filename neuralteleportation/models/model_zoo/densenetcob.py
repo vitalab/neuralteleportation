@@ -13,11 +13,12 @@ from torch import Tensor
 from torch.hub import load_state_dict_from_url
 from torch.jit.annotations import List
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.mergelayers import Concat
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB, DropoutCOB
-from neuralteleportation.layers.neuronlayers import BatchNorm2dCOB, LinearCOB, Conv2dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.merge import Concat
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.dropout import DropoutCOB
+from neuralteleportation.layers.neuron import BatchNorm2dCOB, LinearCOB, Conv2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB, AvgPool2dCOB
 
 __all__ = ['DenseNetCOB', 'densenet121COB', 'densenet169COB', 'densenet201COB', 'densenet161COB']
 
@@ -27,6 +28,7 @@ model_urls = {
     'densenet201': 'https://download.pytorch.org/models/densenet201-c1103571.pth',
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
+
 
 class _DenseLayerCOB(nn.Module):
     def __init__(self, num_input_features, growth_rate, bn_size, drop_rate, memory_efficient=False):
@@ -136,7 +138,7 @@ class _TransitionCOB(nn.Sequential):
 
 
 class DenseNetCOB(nn.Module):
-    r"""Densenet-BC model class, based on
+    """Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -241,7 +243,7 @@ def _densenetCOB(arch, growth_rate, block_config, num_init_features, pretrained,
 
 
 def densenet121COB(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-121 model from
+    """Densenet-121 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -255,7 +257,7 @@ def densenet121COB(pretrained=False, progress=True, **kwargs):
 
 
 def densenet161COB(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-161 model from
+    """Densenet-161 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -269,7 +271,7 @@ def densenet161COB(pretrained=False, progress=True, **kwargs):
 
 
 def densenet169COB(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-169 model from
+    """Densenet-169 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -283,7 +285,7 @@ def densenet169COB(pretrained=False, progress=True, **kwargs):
 
 
 def densenet201COB(pretrained=False, progress=True, **kwargs):
-    r"""Densenet-201 model from
+    """Densenet-201 model from
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
     Args:
@@ -294,6 +296,7 @@ def densenet201COB(pretrained=False, progress=True, **kwargs):
     """
     return _densenetCOB('densenet201', 32, (6, 12, 48, 32), 64, pretrained, progress,
                         **kwargs)
+
 
 if __name__ == '__main__':
     from tests.model_test import test_teleport
