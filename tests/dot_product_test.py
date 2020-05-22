@@ -41,16 +41,30 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
         dot_prod = np.dot(grad, (w2 - w1))/(np.linalg.norm(grad)*np.linalg.norm((w2 - w1)))
         angle = np.degrees(np.arccos(dot_prod))
 
+        # Create a random vector to compare repectives scalar products
+        random_vector = torch.rand(grad.shape, dtype=torch.float)
+        rand_dot_prod = np.dot(grad, random_vector)/(np.linalg.norm(grad)*np.linalg.norm(random_vector))
+        rand_angle = np.degrees(np.arccos(rand_dot_prod))
+
         # Arbitrary precision threshold for nullity comparison
-        tol = 1e-1
+        tol = 1e-2
         failed = (not np.allclose(dot_prod, 0, atol=tol))
+        rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
+        target_angle = 90
 
         print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
-              f'{red * failed}{np.round(abs(dot_prod), int(abs(np.log10(tol))))}',
+              f'{red * failed}{dot_prod}',
               f' (!=0 => FAILED!)' * failed,
               f'{reset}',
               f' using {sampling_type} sampling type',
               f', the angle is {angle}°',
+              f', the delta in angle is {angle - target_angle}°\n',
+              f'The scalar product  between the gradient and a micro-teleporation vector is: ',
+              f'{red * rand_failed}{rand_dot_prod}',
+              f' (!=0 => FAILED!)' * rand_failed,
+              f'{reset}',
+              f', and the angle is {rand_angle}°',
+              f', the delta in angle is {rand_angle - target_angle}°\n',
               sep='')
 
 
@@ -81,5 +95,4 @@ if __name__ == '__main__':
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
     test_dot_product(network=mlp_model)
-
     test_dot_product(network=cnn_model)
