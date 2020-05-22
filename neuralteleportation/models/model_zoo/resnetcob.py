@@ -1,16 +1,16 @@
+import torch.nn as nn
 """
 Code from torchvision.models.resnet modified with cob layers.
 https://pytorch.org/docs/stable/torchvision/models.html
 """
 
-import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.mergelayers import Add
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB
+from neuralteleportation.layers.merge import Add
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, BatchNorm2dCOB
 
 __all__ = ['ResNetCOB', 'resnet18COB', 'resnet34COB', 'resnet50COB', 'resnet101COB',
            'resnet152COB', 'resnext50_32x4dCOB', 'resnext101_32x8dCOB',
@@ -364,7 +364,8 @@ if __name__ == '__main__':
     from torchsummary import summary
     from tests.model_test import test_teleport
 
+
     resnet = resnet18COB(pretrained=True)
     summary(resnet, (3, 224, 224), device='cpu')
-    test_teleport(resnet, (1, 3, 224, 224), verbose=True)
+    test_teleport(resnet, 'resnet', (1, 3, 224, 224), verbose=True)
 

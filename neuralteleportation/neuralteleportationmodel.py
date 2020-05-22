@@ -4,8 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.mergelayers import Concat, Add
-from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
+from neuralteleportation.layers.merge import Add, Concat
+from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
 
 
@@ -15,7 +15,7 @@ class NeuralTeleportationModel(nn.Module):
 
     Args:
         network (nn.Module):  Network to be wrapped for teleportation.
-        input_shape (tuple: input shape used to compute the network graph.
+        input_shape (tuple): input shape used to compute the network graph.
     """
 
     def __init__(self, network: nn.Module, input_shape: Tuple) -> None:
@@ -31,7 +31,7 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-    def get_random_change_of_basis(self, basis_range=10):
+    def get_random_change_of_basis(self, basis_range=0.5):
         """
           Compute random change of basis for every layer in the network.
         """

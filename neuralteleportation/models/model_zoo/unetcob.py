@@ -5,10 +5,10 @@ https://github.com/PyTorchLightning/pytorch-lightning/blob/master/pl_examples/mo
 
 import torch.nn as nn
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.mergelayers import Concat
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, ConvTranspose2dCOB, BatchNorm2dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, UpsampleCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.merge import Concat
+from neuralteleportation.layers.neuron import Conv2dCOB, ConvTranspose2dCOB, BatchNorm2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, UpsampleCOB
 
 
 class UNetCOB(nn.Module):
@@ -127,13 +127,13 @@ class UpCOB(nn.Module):
 
 
 if __name__ == '__main__':
-    from torchsummary import summary
     from tests.model_test import test_teleport
+    from torchsummary import summary
 
     model = UNetCOB(input_channels=1, output_channels=4, bilinear=False)
 
     summary(model, (1, 256, 256), device='cpu')
-    test_teleport(model, (1, 1, 256, 256), verbose=True)
+    test_teleport(model, 'Unet', (1, 1, 256, 256), verbose=True)
 
 
 

@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
@@ -29,7 +29,7 @@ def test_cuda_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
 
     assert not np.allclose(w1, w2)
     assert np.allclose(pred1, pred2), "Teleporation did not work. Average difference: {}".format(diff_average)
-
+    print("Teleportation successful.")
     return diff_average
 
 
