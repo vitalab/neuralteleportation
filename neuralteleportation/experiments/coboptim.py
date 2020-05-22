@@ -13,11 +13,12 @@ from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training import train, test
 
-
 # torch.manual_seed(1234)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-epochs = 20
-
+epochs = 0
+batch_size = 128
+metrics = [accuracy]
+loss = nn.CrossEntropyLoss()
 
 mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
 mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
@@ -40,85 +41,43 @@ class Model(nn.Module):
 
 sample_input_shape = (1, 1, 28, 28)
 
-
 model1 = Model().to(device)
 model1 = NeuralTeleportationModel(network=model1, input_shape=sample_input_shape)
-optimizer = torch.optim.Adam(model1.parameters())
-metrics = [accuracy]
-loss = nn.CrossEntropyLoss()
-train(model1, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
-      epochs=epochs, device=device)
+train(model1, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, metrics=metrics,
+      epochs=epochs, device=device, batch_size=batch_size)
 
 model2 = Model().to(device)
 model2 = NeuralTeleportationModel(network=model2, input_shape=sample_input_shape)
-optimizer = torch.optim.Adam(model2.parameters())
-metrics = [accuracy]
-loss = nn.CrossEntropyLoss()
-train(model2, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
-      epochs=epochs, device=device)
+train(model2, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, metrics=metrics,
+      epochs=epochs, device=device, batch_size=batch_size)
+
+print("Before")
+w1 = model1.get_weights()
+w2 = model2.get_weights()
+diff = (w1.detach().cpu()-w2.detach().cpu()).abs().mean()
+print(diff)
 
 w1 = model1.get_weights(concat=False, flatten=False, bias=False)
-
 w2 = model2.get_weights(concat=False, flatten=False, bias=False)
-
 calculated_cob = model1.calculate_cob(w1, w2, concat=True)
 
 
 model1.set_change_of_basis(calculated_cob)
 model1.teleport()
 
-w2_ = model1.get_weights(concat=False, flatten=False, bias=False)
+print(model1.get_cob())
 
-print("Before")
-print(w2)
+
 print("After")
-print(w2_)
+w1 = model1.get_weights()
+w2 = model2.get_weights()
+diff = (w1.detach().cpu()-w2.detach().cpu()).abs().mean()
+print(diff)
 
-# model1.set_change_of_basis(torch.cat([t1, t2]))
-# model1.teleport()
-# # w1 = model1.get_weights(concat=False, flatten=False, bias=False)
-# w1_ = model1.get_weights()
-# print(test(model1, loss, metrics, mnist_test))
-#
-# w2 = model2.get_weights()
-#
-# print(w1_)
-# print(w2)
-# print((w1_ - w2).abs().mean())
+w1 = model1.get_weights(concat=False, flatten=False, bias=False)
+w2 = model2.get_weights(concat=False, flatten=False, bias=False)
 
-############################
+for i in range(len(w1)):
+    print('layer : ', i)
+    print("w1  - w2 = ", (w1[i]-w2[i]).abs().sum())
 
-# # Get the initial set of weights and teleport.
-# initial_weights = model.get_weights(concat=False, flatten=False, bias=False)
-# model.random_teleport(cob_range=1)
-#
-# # Get second set of weights (Goal weights)
-# target_weights = model.get_weights(concat=False, flatten=False, bias=False)
-#
-# # Get the change of basis that created this set of weights.
-# target_cob = model.get_cob(concat=True)
-
-
-# print("Target cob: ", target_cob)
-
-# print(target_weights)
-
-# print("Computed cob")
-# cob = [torch.ones(initial_weights[0].shape[1])]
-# for i in range(len(initial_weights)):
-#     c = ((target_weights[i] / initial_weights[i]) * cob[-1][None])[:, 0]
-#     # print(c)
-#     cob.append(c)
-#
-# print(cob)
-
-# cob = get_cob(initial_weights, target_weights)
-#
-# print("Target cob: ", target_cob.shape)
-# print("cob: ", cob.shape)
-#
-# # print("Target cob: ", target_cob)
-# # print("cob: ", cob)
-#
-# print("Cob diff:", (target_cob - cob))
-# print("Cob diff:", (target_cob - cob).abs().mean())

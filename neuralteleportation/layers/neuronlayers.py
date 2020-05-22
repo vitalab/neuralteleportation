@@ -13,9 +13,9 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
         super().__init__(in_features, out_features, bias)
 
         # Save the weights as separate tensors to be able to compute gradients with respect to the change of basis.
-        self.w = torch.tensor(self.weight)
+        self.w = self.weight.clone().detach()
         if self.bias is not None:
-            self.b = torch.tensor(self.bias)
+            self.b = self.bias.clone().detach()
 
     def apply_cob(self, prev_cob, next_cob):
 
@@ -28,12 +28,12 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
 
         w = next_cob[..., None] / prev_cob[None, ...]
         w = w.type_as(self.weight)
-        self.w = torch.tensor(self.weight) * w
+        self.w = self.weight.clone().detach() * w
         self.weight = nn.Parameter(self.w, requires_grad=True)
 
         if self.bias is not None:
             b = next_cob.type_as(self.bias)
-            self.b = torch.tensor(self.bias) * b
+            self.b = self.bias.clone().detach() * b
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
@@ -79,7 +79,8 @@ class LinearCOB(nn.Linear, NeuronLayerMixin):
         """
         cob = []
         for (wi, wi_hat) in zip(weights, target_weights):
-            ti = (wi / prev_cob).dot(wi_hat) / (wi /prev_cob).dot(wi /prev_cob)
+            ti = wi_hat.dot(wi / prev_cob) / (wi /prev_cob).dot(wi /prev_cob)
+
             cob.append(ti)
 
         return torch.tensor(cob)
