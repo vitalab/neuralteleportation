@@ -31,7 +31,7 @@ optimizer = torch.optim.Adam(net.parameters())
 metrics = [accuracy]
 loss = nn.CrossEntropyLoss()
 train(net, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
-      epochs=1)
+      epochs=0)
 
 # net = nn.Sequential(LinearCOB(2, 3, bias=False),
 #                     ReLUCOB(),

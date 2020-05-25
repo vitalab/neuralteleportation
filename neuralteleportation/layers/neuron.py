@@ -12,7 +12,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
     in_features: int
     out_features: int
 
-    def get_cob(self, basis_range: int = 0.5) -> np.ndarray:
+    def get_cob(self, basis_range: int = 0.5) -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
 
         Args:
@@ -21,23 +21,23 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         Returns:
             change of basis.
         """
-        return get_random_cob(range_cob=basis_range, size=self.out_features)
+        return get_random_cob(range=basis_range, size=self.out_features)
 
-    def get_output_cob(self) -> np.ndarray:
+    def get_output_cob(self) -> torch.Tensor:
         """Get change of basis for the layer if it is an output layer.
 
         Returns:
             Ones of size of the output features.
         """
-        return np.ones(shape=self.out_features)
+        return torch.ones(self.out_features)
 
-    def get_input_cob(self) -> np.ndarray:
+    def get_input_cob(self) -> torch.Tensor:
         """Get change of basis for the layer if it is an input layer.
 
         Returns:
             Ones of size of the input features.
         """
-        return np.ones(shape=self.in_features)
+        return torch.ones(self.in_features)
 
     def get_nb_params(self) -> int:
         """Get the number of parameters in the layer (weight and bias).
@@ -51,16 +51,22 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         return nb_params
 
-    def get_weights(self) -> Tuple[torch.Tensor, ...]:
+    def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
         """Get the weights from the layer.
 
         Returns:
             tuple of weight tensors.
         """
-        if self.bias is not None:
-            return self.weight.flatten(), self.bias.flatten()
+        if self.bias is not None and bias:
+            if flatten:
+                return self.weight.flatten(), self.bias.flatten()
+            else:
+                return self.weight, self.bias
         else:
-            return self.weight.flatten(),
+            if flatten:
+                return self.weight.flatten(),
+            else:
+                return self.weight,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
@@ -71,25 +77,25 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         counter = 0
         w_shape = self.weight.shape
         w_nb_params = np.prod(w_shape)
-        w = torch.tensor(weights[counter:counter + w_nb_params].reshape(w_shape))
+        w = weights[counter:counter + w_nb_params].reshape(w_shape)
         self.weight = torch.nn.Parameter(w, requires_grad=True)
         counter += w_nb_params
 
         if self.bias is not None:
             b_shape = self.bias.shape
             b_nb_params = np.prod(b_shape)
-            b = torch.tensor(weights[counter:counter + b_nb_params].reshape(b_shape))
+            b = weights[counter:counter + b_nb_params].reshape(b_shape)
             self.bias = torch.nn.Parameter(b, requires_grad=True)
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        w = torch.tensor(self._get_cob_weight_factor(prev_cob, next_cob)).type_as(self.weight)
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        w = self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
         self.weight = nn.Parameter(self.weight * w, requires_grad=True)
 
         if self.bias is not None:
-            b = torch.tensor(next_cob).type_as(self.bias)
+            b = next_cob.type_as(self.bias)
             self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
 
-    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+    def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         """Computes the factor to apply to the weights of the current layer to perform a change of basis.
 
         Args:
@@ -104,7 +110,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
 class LinearCOB(NeuronLayerMixin, nn.Linear):
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         if len(prev_cob) != self.in_features:  # if previous layer is Conv2D, duplicate cob for each feature map.
             feature_map_size = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
@@ -114,7 +120,7 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
 
         super().apply_cob(prev_cob, next_cob)
 
-    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+    def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return next_cob[..., None] / prev_cob[None, ...]
 
 
@@ -128,13 +134,13 @@ class ConvMixin(NeuronLayerMixin):
 
 class Conv2dCOB(ConvMixin, nn.Conv2d):
 
-    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+    def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return (next_cob[..., None] / prev_cob[None, ...])[..., None, None]
 
 
 class ConvTranspose2dCOB(ConvMixin, nn.ConvTranspose2d):
 
-    def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
+    def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return (next_cob[None, ...] / prev_cob[..., None])[..., None, None]
 
 
@@ -145,8 +151,8 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
         super().__init__(num_features)
         self.in_features = self.out_features = self.num_features
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        self.prev_cob = torch.tensor(prev_cob)
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        self.prev_cob = prev_cob
         super().apply_cob(prev_cob, next_cob)
 
     def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:

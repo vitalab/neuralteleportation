@@ -13,16 +13,17 @@ def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
         input_shape (tuple): Input shape of network
     """
     model = NeuralTeleportationModel(network, input_shape)
-    w1 = model.get_weights().detach().numpy()
+    w1 = model.get_weights()
 
     model.set_weights(w1)
-    w2 = model.get_weights().detach().numpy()
+    w2 = model.get_weights()
 
-    assert np.allclose(w1, w2)
+    assert np.allclose(w1.detach().numpy(), w2.detach().numpy())
     print("Weights set successfully for " + model_name + " model.")
 
     # assert not np.allclose(w1, w2)
-    assert np.allclose(w1, w3)
+    assert np.allclose(w1.detach().numpy(), w2.detach().numpy())
+
 
 def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False):
     """
@@ -56,7 +57,8 @@ def test_teleport(network, model_name, input_shape=(1, 1, 28, 28), verbose=False
         print("Diff prediction average: ", (pred1 - pred2).mean())
 
     assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2, atol=1e-5), "Teleporation did not work. Average difference: {}".format(diff_average)
+    assert np.allclose(pred1, pred2, atol=1e-5), "Teleporation did not work. Average difference: {}".format(
+        diff_average)
     print("Teleportation successful for " + model_name + " model.")
     return diff_average
 
@@ -76,6 +78,34 @@ def test_reset_weights(network, model_name, input_shape=(1, 1, 28, 28)):
 
     assert not np.allclose(w1, w2)
     print("Reset weights successful for " + model_name + " model.")
+
+
+def test_set_cob(network, model_name, input_shape=(1, 1, 28, 28), verbose=False):
+    x = torch.rand(input_shape)
+    model = NeuralTeleportationModel(network, input_shape=input_shape)
+    model.random_teleport()
+    w1 = model.get_weights()
+    t1 = model.get_cob()
+    pred1 = model(x)
+
+    model.reset_weights()
+    pred2 = model(x)
+
+    model.set_change_of_basis(t1)
+    model.set_weights(w1)
+    model.apply_cob()
+
+    pred3 = model(x)
+
+    if verbose:
+        print("Diff prediction average: ", (pred1 - pred3).mean())
+        print("Pre teleportation: ", pred1.flatten()[:10])
+        print("Post teleportation: ", pred3.flatten()[:10])
+
+    assert not np.allclose(pred1.detach().numpy(), pred2.detach().numpy(), atol=1e-5)
+    assert np.allclose(pred1.detach().numpy(), pred3.detach().numpy(), atol=1e-5), "Set cob/weights did not work."
+
+    print("Set cob successful for " + model_name + " model.")
 
 
 def test_calculate_cob(network, input_shape=(1, 1, 28, 28), noise=False, verbose=True):
@@ -127,8 +157,6 @@ def test_calculate_cob2(network, input_shape=(1, 1, 28, 28), noise=False, verbos
     # assert np.allclose(_w2_, _w2)
 
 
-
-
 if __name__ == '__main__':
     import torch.nn as nn
     from torch.nn.modules import Flatten
@@ -163,6 +191,5 @@ if __name__ == '__main__':
     test_teleport(network=cnn_model, model_name="Convolutional")
     test_reset_weights(network=cnn_model, model_name="Convolutional")
 
-    test_calculate_cob(mlp_model, verbose=True, noise=False)
-    test_calculate_cob2(mlp_model, verbose=True, noise=False)
-
+    test_set_cob(network=mlp_model, model_name="MLP")
+    test_set_cob(network=cnn_model, model_name="Convolutional")

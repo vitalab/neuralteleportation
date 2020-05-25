@@ -8,8 +8,8 @@ from neuralteleportation.layers.neuralteleportation import NeuralTeleportationLa
 class ActivationLayerMixin(COBForwardMixin, NeuralTeleportationLayerMixin):
     cob_field = 'cob'
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        self.cob = torch.tensor(prev_cob)
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        self.cob = prev_cob
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)

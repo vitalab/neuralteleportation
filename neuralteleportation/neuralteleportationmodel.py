@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from neuralteleportation.layers.merge import Add, Concat
 from neuralteleportation.layers.neuron import NeuronLayerMixin
-from neuralteleportation.changeofbasisutils import get_torch_cob
+from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.network_graph import NetworkGrapher
 
 
@@ -32,13 +32,23 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
+    def initialize_cob(self):
+        size = 0
+        neuron_layers = self.get_neuron_layers()
+        for i in range(len(neuron_layers) - 1):
+            size += neuron_layers[i].out_features
+
+        cob = torch.ones(size)
+
+        self.set_change_of_basis(cob)
+
     def generate_random_cob(self, cob_range=10):
         size = 0
         neuron_layers = self.get_neuron_layers()
         for i in range(len(neuron_layers) - 1):
-            size += neuron_layers[i].cob_size
+            size += neuron_layers[i].out_features
 
-        return get_torch_cob(range=cob_range, size=size, requires_grad=True)
+        return get_random_cob(range=cob_range, size=size, requires_grad=True)
 
     def get_random_change_of_basis(self, basis_range=10):
         """
@@ -99,6 +109,16 @@ class NeuralTeleportationModel(nn.Module):
     def teleport(self):
         for k, layer in enumerate(self.graph):
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+
+    def apply_cob(self):
+        """
+        Apply change of basis for layers without teleporting.
+        Only changes the chages of basis for activation layer, pooling, ...
+
+        """
+        for k, layer in enumerate(self.graph):
+            if not isinstance(layer['module'], NeuronLayerMixin):
+                layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def set_change_of_basis(self, cob, contains_ones=False):
         """
@@ -262,9 +282,9 @@ class NeuralTeleportationModel(nn.Module):
         for i, layer in enumerate(self.graph):
             if isinstance(layer['module'], NeuronLayerMixin):
                 # Last layer
-                if not np.array(
-                        [isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any() and contain_ones:
-                    cob.append(layer['cob'])
+                if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
+                    if contain_ones:
+                        cob.append(layer['cob'])
                 # First layer
                 elif not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[:i]]).any():
                     if contain_ones:
