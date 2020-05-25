@@ -30,58 +30,67 @@ def test_dot_product(network, input_shape=(1, 1, 28, 28)) -> None:
     w1 = model.get_weights().detach().numpy()
     sampling_types = ['usual', 'symmetric', 'negative', 'zero']
 
+    iterations = range (0, 100)
     loss_func = torch.nn.MSELoss()
 
     grad = model.get_grad(x, y, loss_func, zero_grad=False)
 
-    dot_prod_results = []
     for sampling_type in sampling_types:
+        for pow in range(-6, -5):
+            cob = 10 ** pow
+            dot_prod_results = []
+            rand_dot_prod_results = []
+            for iteration in iterations:
+                # model = NeuralTeleportationModel(network=network, input_shape=input_shape)
+                model.set_weights(w1)
+                model.random_teleport(cob_range=cob, sampling_type=sampling_type)
+                w2 = model.get_weights().detach().numpy()
 
-        # #reinitialize cob range
-        # cob = 0.0001
-        for pow in range(-3,3):
+                assert not (w2 == np.inf).any(), \
+                    f'Weights have diverged to infinity after telportation. Consider reducing COB iterative ' \
+                    f'range (for pow in range (-4, <superior limit>)).'
 
-            cob = 10**pow
-            print(f'cob is: {cob}')
-            model.random_teleport(cob_range=cob, sampling_type=sampling_type)
-            w2 = model.get_weights().detach().numpy()
+                # Normalized scalar product
+                dot_prod = np.longfloat(np.dot(grad, (w2 - w1))/(np.linalg.norm(grad)*np.linalg.norm((w2 - w1))))
+                angle = np.degrees(np.arccos(dot_prod))
 
-            # Normalized scalar product
-            dot_prod = np.longfloat(np.dot(grad, (w2 - w1))/(np.linalg.norm(grad)*np.linalg.norm((w2 - w1))))
-            angle = np.degrees(np.arccos(dot_prod))
+                # Create a random vector to compare repectives scalar products
+                random_vector = torch.rand(grad.shape, dtype=torch.float)
+                rand_dot_prod = np.longfloat(np.dot(grad, random_vector)/(np.linalg.norm(grad)*np.linalg.norm(random_vector)))
+                rand_angle = np.degrees(np.arccos(rand_dot_prod))
 
-            # Create a random vector to compare repectives scalar products
-            random_vector = torch.rand(grad.shape, dtype=torch.float)
-            rand_dot_prod = np.longfloat(np.dot(grad, random_vector)/(np.linalg.norm(grad)*np.linalg.norm(random_vector)))
-            rand_angle = np.degrees(np.arccos(rand_dot_prod))
+                # Arbitrary precision threshold for nullity comparison
+                tol = 1e-2
+                failed = (not np.allclose(dot_prod, 0, atol=tol))
+                rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
+                target_angle = 90
 
-            # Arbitrary precision threshold for nullity comparison
-            tol = 1e-2
-            failed = (not np.allclose(dot_prod, 0, atol=tol))
-            rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
-            target_angle = 90
-
-            dot_prod_results.append(dot_prod)
+                rand_dot_prod_results.append(rand_dot_prod)
+                dot_prod_results.append(dot_prod)
 
 
             print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
-                  f'{red * failed}{np.round(dot_prod, abs(int(np.log10(tol))))}',
+                  f'{red * failed}{np.round(np.array(dot_prod_results).mean(), abs(int(np.log10(tol))))}',
                   f' (!=0 => FAILED!)' * failed,
                   f'{reset}',
                   f' using {sampling_type} sampling type',
                   f', the angle is {angle}°',
                   f', the delta in angle is {angle - target_angle}°\n',
                   f'The scalar product  between the gradient and a random vector is: ',
-                  f'{red * rand_failed}{rand_dot_prod}',
+                  f'{red * rand_failed}{np.array(rand_dot_prod_results).mean()}',
                   f' (!=0 => FAILED!)' * rand_failed,
                   f'{reset}',
                   f', and the angle is {rand_angle}°',
                   f', the delta in angle is {rand_angle - target_angle}°\n',
                   sep='')
 
-            plt.hist(np.array(dot_prod_results))
+            plt.hist(np.array(dot_prod_results), color='b')
+            plt.title(f'Micro-teleportation: Sampling type: {sampling_type}, cob range: {cob}')
             plt.show()
-            plt.title(f'Sampling type: {sampling_type}, cob range: {cob}')
+
+            plt.hist(np.array(rand_dot_prod_results), color='g')
+            plt.title(f'Random vector: Sampling type: {sampling_type}, cob range: {cob}')
+            plt.show()
 
 if __name__ == '__main__':
     import torch.nn as nn
