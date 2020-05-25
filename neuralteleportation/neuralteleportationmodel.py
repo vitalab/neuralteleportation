@@ -4,9 +4,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.merge import Add, Concat
 from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
+from neuralteleportation.layers.merge import Add, Concat
 
 
 class NeuralTeleportationModel(nn.Module):
@@ -193,7 +193,7 @@ class NeuralTeleportationModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from neuralteleportation.models.generic_models.test_models import *
+    from tests.cobmodels_test import *
     from neuralteleportation.models.generic_models.residual_models import *
     from neuralteleportation.models.generic_models.dense_models import *
     from neuralteleportation.models.model_zoo.resnetcob import *

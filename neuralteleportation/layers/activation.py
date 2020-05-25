@@ -17,3 +17,11 @@ class ActivationLayerMixin(COBForwardMixin, NeuralTeleportationLayerMixin):
 
 class ReLUCOB(ActivationLayerMixin, nn.ReLU):
     reshape_cob = True
+
+
+class TanhCOB(ActivationLayerMixin, nn.Tanh):
+    reshape_cob = True
+
+
+class SigmoidCOB(ActivationLayerMixin, nn.Sigmoid):
+    reshape_cob = True
