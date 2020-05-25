@@ -1,9 +1,9 @@
 import torch.nn as nn
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.mergelayers import Concat
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, ConvTranspose2dCOB, BatchNorm2dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, UpsampleCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.merge import Concat
+from neuralteleportation.layers.neuron import Conv2dCOB, ConvTranspose2dCOB, BatchNorm2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, UpsampleCOB
 
 
 class UNet(nn.Module):
@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     # summary(model, (1, 256, 256), device='cpu')
 
-    test_teleport(model, (1, 1, 256, 256))
+    test_teleport(model, (1, 1, 256, 256), verbose=True)
 
 
 

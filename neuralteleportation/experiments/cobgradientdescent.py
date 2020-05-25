@@ -6,9 +6,9 @@ from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms
 from torchvision.datasets import MNIST
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import LinearCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.neuron import LinearCOB
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training import train

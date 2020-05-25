@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, ConvTranspose2dCOB, BatchNorm2dCOB, \
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, ConvTranspose2dCOB, BatchNorm2dCOB, \
     BatchNorm1dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB
 
 
 class Net(nn.Module):

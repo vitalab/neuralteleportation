@@ -1,9 +1,9 @@
 import torch.nn as nn
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.mergelayers import Concat
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.merge import Concat
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB
 
 
 class DenseNet(nn.Module):
