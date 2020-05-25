@@ -161,4 +161,4 @@ class BatchNorm2dCOB(BatchNormMixin, nn.BatchNorm2d):
 
 
 class BatchNorm1dCOB(BatchNormMixin, nn.BatchNorm1d):
-    reshape_cob = False
+    reshape_cob = True

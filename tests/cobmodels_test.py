@@ -6,6 +6,7 @@ from neuralteleportation.layers.neuralteleportation import FlattenCOB
 from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, ConvTranspose2dCOB, BatchNorm2dCOB, \
     BatchNorm1dCOB
 from neuralteleportation.layers.pooling import MaxPool2dCOB
+from neuralteleportation.layers.merge import Add
 
 
 class Net(nn.Module):
@@ -92,7 +93,6 @@ class Net4(nn.Module):
         return x
 
 
-
 # class CombinedModule(nn.Module):
 #     def __init__(self):
 #         super(CombinedModule, self).__init__()
@@ -139,8 +139,17 @@ class MLP(nn.Module):
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    models = [Net, Net2, Net3, Net4, ConvTransposeNet, MLP]
+    models = [Net, Net2, Net3, Net4, ConvTransposeNet]
     input_shape = (1, 1, 28, 28)
+
+    mod = MLP()
+    mod.eval()
+
+    try:
+        diff_avg = test_teleport(mod, input_shape)
+        print("{} model passed with avg diff: {}".format(mod, diff_avg))
+    except Exception as e:
+        print("Teleportation failed for model: {} with error {}".format(mod, e))
 
     for model in models:
         try:
