@@ -1,11 +1,16 @@
+"""
+Test for models constructed with layers Conv2dCOB, LinearCOB, FlattenCOB, ReLUCOB, MaxPool2dCOB, BatchNorm2dCOB,
+ConvTranspose2dCOB, BatchNorm1dCOB
+"""
+
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, ConvTranspose2dCOB, BatchNorm2dCOB, \
+from neuralteleportation.layers.activation import ReLUCOB, TanhCOB, SigmoidCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, ConvTranspose2dCOB, BatchNorm2dCOB, \
     BatchNorm1dCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB
 
 
 class Net(nn.Module):
@@ -19,15 +24,15 @@ class Net(nn.Module):
         self.flatten = FlattenCOB()
         self.relu1 = ReLUCOB()
         self.relu2 = ReLUCOB()
+        self.tanhcob = TanhCOB()
         self.relu3 = ReLUCOB()
-        self.relu4 = ReLUCOB()
 
     def forward(self, x):
         x = self.relu1(self.conv1(x))
         x = self.relu2(self.conv2(x))
         x = self.flatten(x)
-        x = self.relu3(self.fc1(x))
-        x = self.relu4(self.fc2(x))
+        x = self.tanhcob(self.fc1(x))
+        x = self.relu3(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -39,22 +44,13 @@ class Net2(nn.Module):
         self.pool1 = MaxPool2dCOB(kernel_size=2)
         self.pool2 = MaxPool2dCOB(kernel_size=2)
         self.conv2 = Conv2dCOB(6, 16, 5)
-        # self.fc1 = LinearCOB(16 * 4 * 4, 120)
-        # self.fc2 = LinearCOB(120, 84)
-        # self.fc3 = LinearCOB(84, 10)
         self.flatten = FlattenCOB()
+        self.sigmoid = SigmoidCOB()
         self.relu1 = ReLUCOB()
-        self.relu2 = ReLUCOB()
-        # self.relu3 = ReLUCOB()
-        # self.relu4 = ReLUCOB()
 
     def forward(self, x):
-        x = self.pool1(self.relu1(self.conv1(x)))
-        x = self.pool2(self.relu2(self.conv2(x)))
-        # x = self.flatten(x)
-        # x = self.relu3(self.fc1(x))
-        # x = self.relu4(self.fc2(x))
-        # x = self.fc3(x)
+        x = self.pool1(self.sigmoid(self.conv1(x)))
+        x = self.pool2(self.relu1(self.conv2(x)))
         return x
 
 
@@ -92,20 +88,6 @@ class Net4(nn.Module):
         return x
 
 
-
-# class CombinedModule(nn.Module):
-#     def __init__(self):
-#         super(CombinedModule, self).__init__()
-#         self.resnet = ResidualNet()
-#         self.densenet = DenseNet2()
-#
-#     def forward(self, x):
-#         x = self.densenet(x)
-#         x = self.resnet(x)
-#
-#         return x
-
-
 class ConvTransposeNet(nn.Module):
     def __init__(self):
         super(ConvTransposeNet, self).__init__()
@@ -139,14 +121,16 @@ class MLP(nn.Module):
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    models = [Net, Net2, Net3, Net4, ConvTransposeNet, MLP]
+    models = [MLP, Net, Net2, Net3, Net4, ConvTransposeNet]
     input_shape = (1, 1, 28, 28)
 
     for model in models:
         try:
-            diff_avg = test_teleport(model(), input_shape)
-            print("{} model passed with avg diff: {}".format(model, diff_avg))
+            mod = model()
+            mod.eval()
+            diff_avg = test_teleport(mod, input_shape)
+            print("{} model passed with avg diff: {}".format(mod, diff_avg))
         except Exception as e:
-            print("Teleportation failed for model: {} with error {}".format(model, e))
+            print("Teleportation failed for model: {} with error {}".format(mod, e))
 
     print("All tests are done")

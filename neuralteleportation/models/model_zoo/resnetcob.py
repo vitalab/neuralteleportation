@@ -1,16 +1,20 @@
 import torch.nn as nn
-
-__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
-           'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
-           'wide_resnet50_2', 'wide_resnet101_2']
+"""
+Code from torchvision.models.resnet modified with cob layers.
+https://pytorch.org/docs/stable/torchvision/models.html
+"""
 
 from torch.hub import load_state_dict_from_url
 
-from neuralteleportation.layers.activationlayers import ReLUCOB
-from neuralteleportation.layers.neuralteleportationlayers import FlattenCOB
-from neuralteleportation.layers.poolinglayers import MaxPool2dCOB, AdaptiveAvgPool2dCOB
-from neuralteleportation.layers.mergelayers import Add
-from neuralteleportation.layers.neuronlayers import Conv2dCOB, LinearCOB, BatchNorm2dCOB
+from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.neuralteleportation import FlattenCOB
+from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB
+from neuralteleportation.layers.merge import Add
+from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, BatchNorm2dCOB
+
+__all__ = ['ResNetCOB', 'resnet18COB', 'resnet34COB', 'resnet50COB', 'resnet101COB',
+           'resnet152COB', 'resnext50_32x4dCOB', 'resnext101_32x8dCOB',
+           'wide_resnet50_2COB', 'wide_resnet101_2COB']
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -36,12 +40,12 @@ def conv1x1(in_planes, out_planes, stride=1):
     return Conv2dCOB(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
-class BasicBlock(nn.Module):
+class BasicBlockCOB(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None):
-        super(BasicBlock, self).__init__()
+        super(BasicBlockCOB, self).__init__()
         if norm_layer is None:
             norm_layer = BatchNorm2dCOB
         if groups != 1 or base_width != 64:
@@ -53,7 +57,6 @@ class BasicBlock(nn.Module):
         self.bn1 = norm_layer(planes)
         self.relu1 = ReLUCOB(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.conv3 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
         self.add = Add()
@@ -80,12 +83,12 @@ class BasicBlock(nn.Module):
         return out
 
 
-class Bottleneck(nn.Module):
+class BottleneckCOB(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None):
-        super(Bottleneck, self).__init__()
+        super(BottleneckCOB, self).__init__()
         if norm_layer is None:
             norm_layer = BatchNorm2dCOB
         width = int(planes * (base_width / 64.)) * groups
@@ -127,12 +130,12 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ResNetCOB(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None, input_channels=3):
-        super(ResNet, self).__init__()
+        super(ResNetCOB, self).__init__()
         if norm_layer is None:
             norm_layer = BatchNorm2dCOB
         self._norm_layer = norm_layer
@@ -177,9 +180,9 @@ class ResNet(nn.Module):
         # This improves the model by 0.2~0.3% according to https://arxiv.org/abs/1706.02677
         if zero_init_residual:
             for m in self.modules():
-                if isinstance(m, Bottleneck):
+                if isinstance(m, BottleneckCOB):
                     nn.init.constant_(m.bn3.weight, 0)
-                elif isinstance(m, BasicBlock):
+                elif isinstance(m, BasicBlockCOB):
                     nn.init.constant_(m.bn2.weight, 0)
 
     def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
@@ -224,8 +227,8 @@ class ResNet(nn.Module):
         return x
 
 
-def _resnet(arch, block, layers, pretrained, progress, **kwargs):
-    model = ResNet(block, layers, **kwargs)
+def _resnetCOB(arch, block, layers, pretrained, progress, **kwargs):
+    model = ResNetCOB(block, layers, **kwargs)
     if pretrained:
         state_dict = load_state_dict_from_url(model_urls[arch],
                                               progress=progress)
@@ -233,7 +236,7 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     return model
 
 
-def resnet18(pretrained=False, progress=True, **kwargs):
+def resnet18COB(pretrained=False, progress=True, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -241,11 +244,11 @@ def resnet18(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
-                   **kwargs)
+    return _resnetCOB('resnet18', BasicBlockCOB, [2, 2, 2, 2], pretrained, progress,
+                      **kwargs)
 
 
-def resnet34(pretrained=False, progress=True, **kwargs):
+def resnet34COB(pretrained=False, progress=True, **kwargs):
     r"""ResNet-34 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -253,11 +256,11 @@ def resnet34(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
-                   **kwargs)
+    return _resnetCOB('resnet34', BasicBlockCOB, [3, 4, 6, 3], pretrained, progress,
+                      **kwargs)
 
 
-def resnet50(pretrained=False, progress=True, **kwargs):
+def resnet50COB(pretrained=False, progress=True, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -265,11 +268,11 @@ def resnet50(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
-                   **kwargs)
+    return _resnetCOB('resnet50', BottleneckCOB, [3, 4, 6, 3], pretrained, progress,
+                      **kwargs)
 
 
-def resnet101(pretrained=False, progress=True, **kwargs):
+def resnet101COB(pretrained=False, progress=True, **kwargs):
     r"""ResNet-101 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -277,11 +280,11 @@ def resnet101(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet101', Bottleneck, [3, 4, 23, 3], pretrained, progress,
-                   **kwargs)
+    return _resnetCOB('resnet101', BottleneckCOB, [3, 4, 23, 3], pretrained, progress,
+                      **kwargs)
 
 
-def resnet152(pretrained=False, progress=True, **kwargs):
+def resnet152COB(pretrained=False, progress=True, **kwargs):
     r"""ResNet-152 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -289,11 +292,11 @@ def resnet152(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet152', Bottleneck, [3, 8, 36, 3], pretrained, progress,
-                   **kwargs)
+    return _resnetCOB('resnet152', BottleneckCOB, [3, 8, 36, 3], pretrained, progress,
+                      **kwargs)
 
 
-def resnext50_32x4d(pretrained=False, progress=True, **kwargs):
+def resnext50_32x4dCOB(pretrained=False, progress=True, **kwargs):
     r"""ResNeXt-50 32x4d model from
     `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_
 
@@ -303,11 +306,11 @@ def resnext50_32x4d(pretrained=False, progress=True, **kwargs):
     """
     kwargs['groups'] = 32
     kwargs['width_per_group'] = 4
-    return _resnet('resnext50_32x4d', Bottleneck, [3, 4, 6, 3],
-                   pretrained, progress, **kwargs)
+    return _resnetCOB('resnext50_32x4d', BottleneckCOB, [3, 4, 6, 3],
+                      pretrained, progress, **kwargs)
 
 
-def resnext101_32x8d(pretrained=False, progress=True, **kwargs):
+def resnext101_32x8dCOB(pretrained=False, progress=True, **kwargs):
     r"""ResNeXt-101 32x8d model from
     `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_
 
@@ -317,11 +320,11 @@ def resnext101_32x8d(pretrained=False, progress=True, **kwargs):
     """
     kwargs['groups'] = 32
     kwargs['width_per_group'] = 8
-    return _resnet('resnext101_32x8d', Bottleneck, [3, 4, 23, 3],
-                   pretrained, progress, **kwargs)
+    return _resnetCOB('resnext101_32x8d', BottleneckCOB, [3, 4, 23, 3],
+                      pretrained, progress, **kwargs)
 
 
-def wide_resnet50_2(pretrained=False, progress=True, **kwargs):
+def wide_resnet50_2COB(pretrained=False, progress=True, **kwargs):
     r"""Wide ResNet-50-2 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1605.07146.pdf>`_
 
@@ -335,11 +338,11 @@ def wide_resnet50_2(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     kwargs['width_per_group'] = 64 * 2
-    return _resnet('wide_resnet50_2', Bottleneck, [3, 4, 6, 3],
-                   pretrained, progress, **kwargs)
+    return _resnetCOB('wide_resnet50_2', BottleneckCOB, [3, 4, 6, 3],
+                      pretrained, progress, **kwargs)
 
 
-def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
+def wide_resnet101_2COB(pretrained=False, progress=True, **kwargs):
     r"""Wide ResNet-101-2 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1605.07146.pdf>`_
 
@@ -353,24 +356,16 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     kwargs['width_per_group'] = 64 * 2
-    return _resnet('wide_resnet101_2', Bottleneck, [3, 4, 23, 3],
-                   pretrained, progress, **kwargs)
+    return _resnetCOB('wide_resnet101_2', BottleneckCOB, [3, 4, 23, 3],
+                      pretrained, progress, **kwargs)
 
 
 if __name__ == '__main__':
     from torchsummary import summary
     from tests.model_test import test_teleport
-    from torchvision import transforms
-    from torchvision.datasets import MNIST
-    from neuralteleportation.metrics import accuracy
 
-    mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.Compose([transforms.Resize((224, 224)),
-                                                                                         transforms.ToTensor()]))
 
-    loss = nn.CrossEntropyLoss()
-    metrics = [accuracy]
-
-    resnet = resnet18(num_classes=10, input_channels=1)
-    summary(resnet, (1, 224, 224), device='cpu')
-    test_teleport(resnet, (1, 1, 224, 224), verbose=True)
+    resnet = resnet18COB(pretrained=True)
+    summary(resnet, (3, 224, 224), device='cpu')
+    test_teleport(resnet, (1, 3, 224, 224), verbose=True)
 

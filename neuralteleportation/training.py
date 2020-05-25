@@ -67,8 +67,8 @@ def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
 if __name__ == '__main__':
     from torchvision.datasets import MNIST
     import torchvision.transforms as transforms
-    from torch.nn.modules import Flatten
     from neuralteleportation.metrics import accuracy
+    from torch.nn.modules import Flatten
     import torch.nn as nn
 
     mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())

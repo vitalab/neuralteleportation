@@ -2,7 +2,7 @@
 
 To teleport a Pytorch neural network (nn.Module) one must use the 
 [NeuralTeleportationModel](neuralteleportationmodel.py) class and use layers that inherit from 
-[NeuralTeleportationLayerMixin](layers/neuralteleportationlayers.py). The logic for teleportation is mainly split into 
+[NeuralTeleportationLayerMixin](layers/neuralteleportation.py). The logic for teleportation is mainly split into 
 these two files. 
 
 **One must respect the know limitations in this [README](../README.md).**
@@ -69,8 +69,8 @@ The model zoo contains well-known models that we implemented with the teleportat
 The implementations come in part from [torchvision.models](https://pytorch.org/docs/stable/torchvision/models.html)
 
 ```python
-from neuralteleportation.models.model_zoo.resnet import resnet50
+from neuralteleportation.models.model_zoo.resnetcob import resnet50COB
 
-model =  resnet50()
+model =  resnet50COB()
 model = NeuralTeleportationModel(model, input_shape)
 ``` 

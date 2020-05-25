@@ -4,9 +4,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.mergelayers import Concat, Add
-from neuralteleportation.layers.neuralteleportationlayers import NeuronLayerMixin
+from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
+from neuralteleportation.layers.merge import Add, Concat
 
 
 class NeuralTeleportationModel(nn.Module):
@@ -15,7 +15,7 @@ class NeuralTeleportationModel(nn.Module):
 
     Args:
         network (nn.Module):  Network to be wrapped for teleportation.
-        input_shape (tuple: input shape used to compute the network graph.
+        input_shape (tuple): input shape used to compute the network graph.
     """
 
     def __init__(self, network: nn.Module, input_shape: Tuple) -> None:
@@ -31,7 +31,7 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-    def get_random_change_of_basis(self, basis_range=10, sampling_type='usual'):
+    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual'):
         """
           Compute random change of basis for every layer in the network.
         """
@@ -193,12 +193,12 @@ class NeuralTeleportationModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from neuralteleportation.models.generic_models.test_models import *
+    from tests.cobmodels_test import *
     from neuralteleportation.models.generic_models.residual_models import *
     from neuralteleportation.models.generic_models.dense_models import *
-    from neuralteleportation.models.model_zoo.resnet import *
+    from neuralteleportation.models.model_zoo.resnetcob import *
 
-    model = resnet18(pretrained=False)
+    model = resnet18COB(pretrained=False)
     sample_input_shape = (1, 3, 224, 224)
 
     model = NeuralTeleportationModel(network=model, input_shape=sample_input_shape)
