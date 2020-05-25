@@ -9,7 +9,7 @@ class MaxPool2dCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.MaxPool2d)
     """Wrapper for the MaxPool2d change of basis layer.
 
     Max pooling is positive scale invariant. It is necessary to un-apply and re-apply the change of basis for the
-    opperation.
+    operation.
     """
     cob_field = 'cob'
     reshape_cob = True
