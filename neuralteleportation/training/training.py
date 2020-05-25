@@ -1,26 +1,35 @@
 from collections import defaultdict
+from typing import Sequence, Callable
 
 import pandas as pd
 import torch
 import torch.optim as optim
+from torch import Tensor
+from torch import nn
+from torch.nn.modules.loss import _Loss
+from torch.optim.optimizer import Optimizer
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 
-def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
-          device='cpu'):
+
+def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig,
+          val_dataset: Dataset = None, optimizer: Optimizer = None):
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
-    for epoch in range(1, epochs + 1):
-        train_step(model, criterion, optimizer, train_loader, epoch, device=device)
+    for epoch in range(1, config.epochs + 1):
+        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch, device=config.device)
         if val_dataset:
-            val_res = test(model, criterion, metrics, val_dataset, device=device)
+            val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))
 
 
-def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
+def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
+                device: str = 'cpu', progress_bar: bool = True):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -29,24 +38,24 @@ def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        if batch_idx % 500 == 0:
+        if progress_bar and batch_idx % 500 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
-    test_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig):
+    test_loader = DataLoader(dataset, batch_size=config.batch_size)
     model.eval()
     results = defaultdict(list)
     with torch.no_grad():
         for i, (data, target) in tqdm(enumerate(test_loader)):
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(config.device), target.to(config.device)
             output = model(data)
-            results['loss'].append(criterion(output, target).item())
+            results['loss'].append(metrics.criterion(output, target).item())
 
             if metrics is not None:
-                batch_results = compute_metrics(metrics, y=target, y_hat=output, to_tensor=False)
+                batch_results = compute_metrics(metrics.metrics, y=target, y_hat=output, to_tensor=False)
                 for k in batch_results.keys():
                     results[k].append(batch_results[k])
 
@@ -54,7 +63,8 @@ def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
     return dict(results.mean())
 
 
-def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
+def compute_metrics(metrics: Sequence[Callable[[Tensor, Tensor], Tensor]], y_hat: Tensor, y: Tensor,
+                    prefix: str = '', to_tensor: bool = True):
     results = {}
     for metric in metrics:
         m = metric(y_hat, y)
@@ -82,9 +92,8 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-    optim = torch.optim.Adam(model.parameters())
-    metrics = [accuracy]
-    loss = nn.CrossEntropyLoss()
-    train(model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1)
-    print(test(model, loss, metrics, mnist_test))
+    config = TrainingConfig()
+    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
+
+    train(model, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_val)
+    print(test(model, mnist_test, metrics, config))
