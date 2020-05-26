@@ -32,7 +32,7 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
     # Initialize an optimizer if there isn't already one
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.SGD(model.parameters(), lr=config.lr)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
@@ -73,7 +73,7 @@ def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, met
 
     # Call recursively the training algorithm on teleported models, with less epochs left to perform
     # The non-teleported model uses the previous training iterations' optimizer,
-    # and the teleported models initialize new optimizers
+    # and the teleported models initialize new optimizers (with the new models' parameters)
     trained_models = train((f'{model_name}_0', model), train_dataset, metrics, deepcopy(config),
                            val_dataset=val_dataset, optimizer=optimizer)
     for idx, teleported_model in enumerate(teleported_models, 1):
