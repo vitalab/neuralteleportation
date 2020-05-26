@@ -12,6 +12,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
     in_features: int
     out_features: int
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Create new tensor for weight and bias to allow gradient to be computed with respect to cob.
+        self.w = self.weight.clone().detach().requires_grad_(True)
+        if self.bias is not None:
+            self.b = self.bias.clone().detach().requires_grad_(True)
+
     def get_cob(self, basis_range: int = 0.5) -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
 
@@ -59,14 +67,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
         if self.bias is not None and bias:
             if flatten:
-                return self.weight.flatten(), self.bias.flatten()
+                return self.w.flatten(), self.b.flatten()
             else:
-                return self.weight, self.bias
+                return self.w, self.b
         else:
             if flatten:
-                return self.weight.flatten(),
+                return self.w.flatten(),
             else:
-                return self.weight,
+                return self.w,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
@@ -77,23 +85,23 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         counter = 0
         w_shape = self.weight.shape
         w_nb_params = np.prod(w_shape)
-        w = weights[counter:counter + w_nb_params].reshape(w_shape)
-        self.weight = torch.nn.Parameter(w, requires_grad=True)
+        self.w = weights[counter:counter + w_nb_params].reshape(w_shape)
+        self.weight = torch.nn.Parameter(self.w, requires_grad=True)
         counter += w_nb_params
 
         if self.bias is not None:
             b_shape = self.bias.shape
             b_nb_params = np.prod(b_shape)
-            b = weights[counter:counter + b_nb_params].reshape(b_shape)
-            self.bias = torch.nn.Parameter(b, requires_grad=True)
+            self.b = weights[counter:counter + b_nb_params].reshape(b_shape)
+            self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
-        w = self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
-        self.weight = nn.Parameter(self.weight * w, requires_grad=True)
+        self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
+        self.weight = nn.Parameter(self.w, requires_grad=True)
 
         if self.bias is not None:
-            b = next_cob.type_as(self.bias)
-            self.bias = torch.nn.Parameter(self.bias * b, requires_grad=True)
+            self.b = self.bias * next_cob.type_as(self.bias)
+            self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         """Computes the factor to apply to the weights of the current layer to perform a change of basis.
@@ -104,6 +112,13 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         Returns:
             factors to apply to the weights of the current layer to apply the change of basis.
+        """
+        raise NotImplementedError
+
+    @ staticmethod
+    def calculate_cob(weights, target_weights, prev_cob, concat=True):
+        """
+        Compute the cob to teleport from the current weights to the target_weights
         """
         raise NotImplementedError
 
@@ -122,6 +137,19 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return next_cob[..., None] / prev_cob[None, ...]
+
+    @ staticmethod
+    def calculate_cob(weights, target_weights, prev_cob, concat=True):
+        """
+        Compute the cob to teleport from the current weights to the target_weights
+        """
+        cob = []
+        for (wi, wi_hat) in zip(weights, target_weights):
+            ti = (wi / prev_cob).dot(wi_hat) / (wi / prev_cob).dot(wi / prev_cob)
+            cob.append(ti)
+
+        return torch.tensor(cob)
+
 
 
 class ConvMixin(NeuronLayerMixin):

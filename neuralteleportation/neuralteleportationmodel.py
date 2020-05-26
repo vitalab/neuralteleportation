@@ -41,6 +41,7 @@ class NeuralTeleportationModel(nn.Module):
         cob = torch.ones(size)
 
         self.set_change_of_basis(cob)
+        self.apply_cob()
 
     def generate_random_cob(self, cob_range=10):
         size = 0
