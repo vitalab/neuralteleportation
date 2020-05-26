@@ -1,4 +1,5 @@
-from typing import Tuple, List
+import functools
+from typing import Tuple, List, Callable
 
 import torchvision.transforms as transforms
 from torch import nn
@@ -24,6 +25,15 @@ def get_cifar10_datasets() -> Tuple[VisionDataset, VisionDataset, VisionDataset]
     return train_set, val_set, test_set
 
 
+def to_device(func: Callable[[], List[nn.Module]]):
+    @functools.wraps(func)
+    def wrapper_to_device(device: str = 'cpu'):
+        return [module.to(device) for module in func()]
+
+    return wrapper_to_device
+
+
+@to_device
 def get_mnist_models() -> List[nn.Module]:
     return [
         MLPCOB(),
@@ -33,6 +43,7 @@ def get_mnist_models() -> List[nn.Module]:
     ]
 
 
+@to_device
 def get_cifar10_models() -> List[nn.Module]:
     return [
         MLPCOB(input_shape=(3, 32, 32)),

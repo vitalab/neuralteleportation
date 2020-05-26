@@ -106,10 +106,10 @@ if __name__ == '__main__':
 
     # Run on MNIST
     mnist_train, mnist_val, mnist_test = get_mnist_datasets()
-    config = TeleportationTrainingConfig()
-    run_models(get_mnist_models(), config, metrics, mnist_train, mnist_test, val_set=mnist_val)
+    config = TeleportationTrainingConfig(device='cuda')
+    run_models(get_mnist_models(device='cuda'), config, metrics, mnist_train, mnist_test, val_set=mnist_val)
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
-    config = TeleportationTrainingConfig(input_shape=(3, 32, 32))
-    run_models(get_cifar10_models(), config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
+    config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
+    run_models(get_cifar10_models(device='cuda'), config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
