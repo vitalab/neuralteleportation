@@ -114,7 +114,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
             plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
             plt.xlim(x_min, x_max)
             plt.legend(['Micro-teleportation \n Random Vector'])
-
+            plt.xlabel('Angle in degrees')
             plt.show()
 
 
