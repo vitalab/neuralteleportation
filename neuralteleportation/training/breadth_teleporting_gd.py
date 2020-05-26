@@ -1,15 +1,13 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, Sequence
 
 import torch.optim as optim
 from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
+from torchvision.datasets import VisionDataset
 
-from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
-from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-from neuralteleportation.models.model_zoo.vggcob import vgg16COB
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
@@ -69,7 +67,8 @@ def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, met
     model_name, model = model
 
     # Teleport the model to obtain N different models corresponding to the same function
-    teleportation_model = NeuralTeleportationModel(network=deepcopy(model), input_shape=config.input_shape)
+    # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
+    teleportation_model = NeuralTeleportationModel(network=deepcopy(model), input_shape=(1,) + config.input_shape)
     teleported_models = [deepcopy(teleportation_model.random_teleport()) for _ in range(config.num_teleportations)]
 
     # Call recursively the training algorithm on teleported models, with less epochs left to perform
@@ -85,29 +84,32 @@ def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, met
     return trained_models
 
 
-if __name__ == '__main__':
-    from torchvision.datasets import MNIST
-    import torchvision.transforms as transforms
-    from neuralteleportation.metrics import accuracy
-    import torch.nn as nn
-
-    mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
-    mnist_val = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
-    mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
-
-    models = [
-        MLPCOB(),
-        vgg16COB(num_classes=10, input_channels=1),
-        resnet18COB(num_classes=10, input_channels=1),
-    ]
-
-    config = TeleportationTrainingConfig()
-    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
-
+def run_models(models: Sequence[nn.Module], config: TeleportationTrainingConfig, metrics: TrainingMetrics,
+               train_set: VisionDataset, test_set: VisionDataset, val_set: VisionDataset = None):
     for model in models:
         print(f"Training {model.__class__.__name__} model using multiple COB "
               f"every {config.teleport_every_n_epochs} epochs")
-        models = train(model, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_val)
-        for id, model in models.items():
-            print("Testing {}: {} \n".format(id, test(model, mnist_test, metrics, config)))
+        trained_models = train(model, train_dataset=train_set, metrics=metrics, config=deepcopy(config),
+                               val_dataset=val_set)
+        for id, trained_model in trained_models.items():
+            print("Testing {}: {} \n".format(id, test(trained_model, test_set, metrics, config)))
         print()
+
+
+if __name__ == '__main__':
+    from neuralteleportation.training.experiments_setup import (
+        get_mnist_models, get_mnist_datasets, get_cifar10_models, get_cifar10_datasets
+    )
+    from neuralteleportation.metrics import accuracy
+
+    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
+
+    # Run on MNIST
+    mnist_train, mnist_val, mnist_test = get_mnist_datasets()
+    config = TeleportationTrainingConfig()
+    run_models(get_mnist_models(), config, metrics, mnist_train, mnist_test, val_set=mnist_val)
+
+    # Run on CIFAR10
+    cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
+    config = TeleportationTrainingConfig(input_shape=(3, 32, 32))
+    run_models(get_cifar10_models(), config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
