@@ -34,15 +34,12 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
     """
 
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
-    x = torch.rand(input_shape, dtype=torch.float)
-    y = torch.rand((100, 10), dtype=torch.float)
 
     w1 = model.get_weights().detach().numpy()
 
     iterations = range(0, nb_teleport)
     loss_func = torch.nn.MSELoss()
 
-    grad = model.get_grad(x, y, loss_func, zero_grad=False)
     tol = 1e-2
 
     for sampling_type in sampling_types:
@@ -50,20 +47,38 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
             cob = 10 ** power
             angle_results = []
             rand_angle_results = []
+            rand_rand_angle_results = []
+            rand_micro_angle_results = []
             for _ in iterations:
+                x = torch.rand(input_shape, dtype=torch.float)
+                y = torch.rand((100, 10), dtype=torch.float)
+                grad = model.get_grad(x, y, loss_func, zero_grad=False)
+
                 model.set_weights(w1)
                 model.random_teleport(cob_range=cob, sampling_type=sampling_type)
                 w2 = model.get_weights().detach().numpy()
+                micro_teleport_vec = (w2 - w1)
+
+                random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
+                random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
 
                 # Normalized scalar product
-                dot_prod = np.longfloat(np.dot(grad, (w2 - w1))/(np.linalg.norm(grad)*np.linalg.norm((w2 - w1))))
+                dot_prod = np.longfloat(np.dot(grad, micro_teleport_vec) /
+                                        (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
                 angle = np.degrees(np.arccos(dot_prod))
 
-                # Create a random vector to compare respective scalar products
-                random_vector = torch.rand(grad.shape, dtype=torch.float)
                 rand_dot_prod = np.longfloat(np.dot(grad, random_vector) /
                                              (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
                 rand_angle = np.degrees(np.arccos(rand_dot_prod))
+
+                rand_rand_dot_prod = np.longfloat(np.dot(random_vector2, random_vector) /
+                                                  (np.linalg.norm(random_vector2)*np.linalg.norm(random_vector)))
+                rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
+
+                rand_micro_dot_prod = np.longfloat(np.dot(random_vector2, micro_teleport_vec) /
+                                                  (np.linalg.norm(random_vector2)*np.linalg.norm(micro_teleport_vec)))
+                rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
+
 
                 # Arbitrary precision threshold for nullity comparison
                 failed = (not np.allclose(dot_prod, 0, atol=tol))
@@ -72,9 +87,13 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
 
                 angle_results.append(angle)
                 rand_angle_results.append(rand_angle)
+                rand_rand_angle_results.append(rand_rand_angle)
+                rand_micro_angle_results.append(rand_micro_angle)
 
             angle_results = np.array(angle_results)
             rand_angle_results = np.array(rand_angle_results)
+            rand_rand_angle_results = np.array(rand_rand_angle_results)
+            rand_micro_angle_results = np.array(rand_micro_angle_results)
 
             print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
                   f'{red * failed}{np.round(angle_results.mean(), abs(int(np.log10(tol))))}',
@@ -93,27 +112,44 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
 
             # This conditional display is necessary because some sampling type/COB combinations produce such a narrow
             # distribution for micro-teleportation that pyplot is not able to display them at all
-            x_min = np.minimum(85, 90 - np.abs(90 - rand_angle_results.mean())-5)
-            x_max = 180-x_min
+            delta = np.maximum(1.0, rand_rand_angle_results.std()*3)
+            x_min = 90-delta
+            x_max = 90+delta
 
-            plt.subplot(2, 1, 1)
+            plt.subplot(4, 1, 1)
 
             bin_height, bin_boundary = np.histogram(np.array(angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1))
+            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
             plt.title(f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}, 'f'{nb_teleport:} iter')
-            plt.legend(['Micro-teleportation \n Gradient'])
-
+            plt.legend(['Micro-teleportation\n vs \n Gradient'])
             plt.xlim(x_min, x_max)
+
+            bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
+            width = bin_boundary[1] - bin_boundary[0]
+            bin_height = bin_height / float(max(bin_height))
+            plt.subplot(4, 1, 2)
+            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            plt.xlim(x_min, x_max)
+            plt.legend(['Micro-teleportation\n vs \n Random Vector'])
 
             bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            plt.subplot(2, 1, 2)
+            plt.subplot(4, 1, 3)
             plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
             plt.xlim(x_min, x_max)
-            plt.legend(['Micro-teleportation \n Random Vector'])
+            plt.legend(['Gradient\n vs \n Random Vector'])
+
+            bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
+            width = bin_boundary[1] - bin_boundary[0]
+            bin_height = bin_height / float(max(bin_height))
+            plt.subplot(4, 1, 4)
+            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            plt.xlim(x_min, x_max)
+            plt.legend(['Random Vector\n vs \n Random Vector'])
+
             plt.xlabel('Angle in degrees')
             plt.show()
 
