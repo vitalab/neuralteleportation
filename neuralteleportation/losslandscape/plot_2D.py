@@ -1,5 +1,11 @@
 """
+    Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
+    Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
+    Source Code: https://github.com/tomgoldstein/loss-landscape
+    
     2D plotting funtions
+
+    Modified: Philippe Spino
 """
 
 from mpl_toolkits.mplot3d import Axes3D

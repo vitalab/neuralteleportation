@@ -46,7 +46,7 @@ def set_weights(net, weights, directions=None, step=None):
             changes = [d * step for d in directions[0]]
 
         for (p, w, d) in zip(net.parameters(), weights, changes):
-            p.data = w + torch.Tensor(d).type(type(w))
+            p.data = w + torch.Tensor(d).type_as(w)
 
 
 def set_states(net, states, directions=None, step=None):
@@ -324,7 +324,8 @@ def name_direction_file(args):
                 dir_file += '_same_dir'
 
     # index number
-    if args.idx > 0: dir_file += '_idx=' + str(args.idx)
+    if args.idx > 0: 
+        dir_file += '_idx=' + str(args.idx)
 
     dir_file += ".h5"
 
