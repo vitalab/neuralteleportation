@@ -16,7 +16,7 @@ import time
 from torch.autograd.variable import Variable
 
 
-def eval_loss(net, criterion, loader, device='cpu'):
+def eval_loss(net, criterion, loader, device='device'):
     """
     Evaluate the loss value for a given 'net' on the dataset provided by the loader.
 
@@ -39,21 +39,16 @@ def eval_loss(net, criterion, loader, device='cpu'):
             for _, (inputs, targets) in enumerate(loader):
                 batch_size = inputs.size(0)
                 total += batch_size
-                inputs = Variable(inputs)
-                targets = Variable(targets)
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = net(inputs)
                 loss = criterion(outputs, targets)
                 total_loss += loss.item() * batch_size
                 _, predicted = torch.max(outputs.data, 1)
                 correct += predicted.eq(targets).sum().item()
-
         elif isinstance(criterion, nn.MSELoss):
             for _, (inputs, targets) in enumerate(loader):
                 batch_size = inputs.size(0)
                 total += batch_size
-                inputs = Variable(inputs)
-
                 one_hot_targets = torch.FloatTensor(batch_size, 10).zero_()
                 one_hot_targets = one_hot_targets.scatter_(1, targets.view(batch_size, 1), 1.0)
                 one_hot_targets = one_hot_targets.float()
@@ -64,5 +59,4 @@ def eval_loss(net, criterion, loader, device='cpu'):
                 total_loss += loss.item() * batch_size
                 _, predicted = torch.max(outputs.data, 1)
                 correct += predicted.cpu().eq(targets).sum().item()
-
     return total_loss / total, 100. * correct / total

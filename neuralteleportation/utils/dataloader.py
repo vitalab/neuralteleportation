@@ -8,13 +8,12 @@ import numpy as np
 import argparse
 
 
-def load_cifar10_dataset(batch_size=128, raw_data=False, data_split=1, split_idx=0, shuffle=False, download=True):
+def load_cifar10_dataloaders(batch_size=128, data_split=1, split_idx=0, shuffle=False, download=True):
     """
     Setup dataloader. The data is not randomly cropped as in training because of
     we want to esimate the loss value with a fixed dataset.
 
     Args:
-        raw_data: raw images, no data preprocessing
         data_split: the number of splits for the training dataloader
         split_idx: the index for the split of the dataloader, starting at 0
 
@@ -23,24 +22,12 @@ def load_cifar10_dataset(batch_size=128, raw_data=False, data_split=1, split_idx
     """
 
     assert split_idx < data_split, 'the index of data partition should be smaller than the total number of split'
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
 
-    normalize = transforms.Normalize(mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
-                                     std=[x / 255.0 for x in [63.0, 62.1, 66.7]])
-
-    if raw_data:
-        transform = transforms.Compose([
-            transforms.ToTensor()
-        ])
-    else:
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-        ])
-
-    trainset = torchvision.datasets.CIFAR10(root='/tmp', train=True, download=True, transform=transform)
-    indices = torch.tensor(np.arange(len(trainset)))
-    train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices)
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, shuffle=shuffle)
+    trainset = torchvision.datasets.CIFAR10(root='/tmp', train=True, download=download, transform=transform)
+    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
     testset = torchvision.datasets.CIFAR10(root='./tmp', train=False, download=download, transform=transform)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
@@ -59,7 +46,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    trainloader, testloader = load_cifar10_dataset(args.batch_size, args.raw_data, args.data_split, args.split_idx, args.shuffle)
+    trainloader, testloader = load_cifar10_dataloaders(args.batch_size, args.raw_data, args.data_split, args.split_idx, args.shuffle)
 
     print('num of batches: %d' % len(trainloader))
     for batch_idx, (inputs, targets) in enumerate(trainloader):
