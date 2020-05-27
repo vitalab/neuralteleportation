@@ -16,7 +16,7 @@ import time
 from torch.autograd.variable import Variable
 
 
-def eval_loss(net, criterion, loader, device=device):
+def eval_loss(net, criterion, loader, device='cpu'):
     """
     Evaluate the loss value for a given 'net' on the dataset provided by the loader.
 

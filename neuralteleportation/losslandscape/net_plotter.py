@@ -38,7 +38,7 @@ def set_weights(net, weights, directions=None, step=None):
     else:
         assert step is not None, 'If a direction is specified then step must be specified as well'
 
-        if len(directions) == 2:
+        if len(directions) == 2:  # For x and y directions.
             dx = directions[0]
             dy = directions[1]
             changes = [d0 * step[0] + d1 * step[1] for (d0, d1) in zip(dx, dy)]

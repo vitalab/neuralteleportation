@@ -21,6 +21,7 @@ def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, met
 
 
 def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
+    t = tqdm(enumerate(train_loader))
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -29,10 +30,12 @@ def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        if batch_idx % 500 == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                       100. * batch_idx / len(train_loader), loss.item()))
+        # if batch_idx % 100 == 0:
+        t.set_postfix_str('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            epoch, batch_idx * len(data), len(train_loader.dataset),
+            100. * batch_idx / len(train_loader), loss.item()))
+    t.clear()
+    t.close()
 
 
 def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
