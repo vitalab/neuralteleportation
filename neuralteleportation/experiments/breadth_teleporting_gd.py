@@ -1,12 +1,11 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, Tuple, Union, Sequence
+from typing import Dict, Tuple, Union
 
 import torch.optim as optim
 from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import VisionDataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
@@ -84,32 +83,23 @@ def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, met
     return trained_models
 
 
-def run_models(models: Sequence[nn.Module], config: TeleportationTrainingConfig, metrics: TrainingMetrics,
-               train_set: VisionDataset, test_set: VisionDataset, val_set: VisionDataset = None):
-    for model in models:
-        print(f"Training {model.__class__.__name__} model using multiple COB "
-              f"every {config.teleport_every_n_epochs} epochs")
-        trained_models = train(model, train_dataset=train_set, metrics=metrics, config=deepcopy(config),
-                               val_dataset=val_set)
-        for id, trained_model in trained_models.items():
-            print("Testing {}: {} \n".format(id, test(trained_model, test_set, metrics, config)))
-        print()
-
-
 if __name__ == '__main__':
-    from neuralteleportation.training.experiments_setup import (
+    from neuralteleportation.training.experiment_setup import (
         get_mnist_models, get_mnist_datasets, get_cifar10_models, get_cifar10_datasets
     )
     from neuralteleportation.metrics import accuracy
+    from neuralteleportation.training.experiment_run import run_multi_output_training
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
     # Run on MNIST
     mnist_train, mnist_val, mnist_test = get_mnist_datasets()
     config = TeleportationTrainingConfig(device='cuda')
-    run_models(get_mnist_models(device='cuda'), config, metrics, mnist_train, mnist_test, val_set=mnist_val)
+    run_multi_output_training(train, get_mnist_models(device='cuda'), config, metrics,
+                              mnist_train, mnist_test, val_set=mnist_val)
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
     config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
-    run_models(get_cifar10_models(device='cuda'), config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
+    run_multi_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
+                              cifar10_train, cifar10_test, val_set=cifar10_val)
