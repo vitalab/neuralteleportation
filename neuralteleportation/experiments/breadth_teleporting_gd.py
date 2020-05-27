@@ -89,6 +89,11 @@ if __name__ == '__main__':
     )
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.experiment_run import run_multi_output_training
+    import warnings
+
+    warnings.warn("Running this script with larger models over many epochs or with many parallel teleporations "
+                  "may cause 'CUDA out of memory' errors. This issue will be looked into in a later update.")
+    # TODO Fix the swapping of models on-off the GPU during recursive training to solve CUDA memory errors
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
