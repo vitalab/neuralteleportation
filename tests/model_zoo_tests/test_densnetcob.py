@@ -2,7 +2,6 @@ import unittest
 from unittest import TestCase
 
 from neuralteleportation.models.model_zoo.densenetcob import *
-from tests.model_test import test_teleport
 from tests.model_zoo_tests.test_torchvisionmodels import TestTorchVisionModels
 
 
