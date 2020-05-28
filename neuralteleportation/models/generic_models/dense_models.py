@@ -143,19 +143,6 @@ class DenseNet4(nn.Module):
 
 
 if __name__ == '__main__':
-    from tests.model_test import test_teleport
+    from tests.generic_models_test import test_generic_models
 
-    models = [DenseNet, DenseNet2, DenseNet3, SplitConcatModel, DenseNet4]
-    input_shape = (1, 1, 28, 28)
-
-    for model in models:
-        model = model()
-        print("-----------------------------------------------------------")
-        print("Testing model: {}".format(model.__class__.__name__))
-        try:
-            diff_avg = test_teleport(model, input_shape, verbose=True)
-            print("{} model passed with avg diff: {}".format(model.__class__.__name__, diff_avg))
-        except Exception as e:
-            print("Teleportation failed for model: {} with error {}".format(model.__class__.__name__, e))
-
-    print("All tests are done")
+    test_generic_models([DenseNet, DenseNet2, DenseNet3, SplitConcatModel, DenseNet4])
