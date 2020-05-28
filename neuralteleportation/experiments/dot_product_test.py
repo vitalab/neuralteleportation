@@ -40,6 +40,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
     iterations = range(0, nb_teleport)
     loss_func = torch.nn.MSELoss()
 
+    # Arbitrary precision threshold for nullity comparison
     tol = 1e-2
 
     for sampling_type in sampling_types:
@@ -79,8 +80,6 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
                                                   (np.linalg.norm(random_vector2)*np.linalg.norm(micro_teleport_vec)))
                 rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
 
-
-                # Arbitrary precision threshold for nullity comparison
                 failed = (not np.allclose(dot_prod, 0, atol=tol))
                 rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
                 target_angle = 90
@@ -102,7 +101,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
                   f' using {sampling_type} sampling type',
                   f', the angle is {angle}°',
                   f', the delta in angle is {angle - target_angle}°\n',
-                  f'The scalar product  between the gradient and a random vector is: ',
+                  f'The result of the scalar product  between the gradient and a random vector is: ',
                   f'{red * rand_failed}{rand_angle_results.mean()}',
                   f' (!=0 => FAILED!)' * rand_failed,
                   f'{reset}',
