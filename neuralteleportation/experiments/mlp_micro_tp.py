@@ -52,53 +52,57 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
 
         for sampling_type in sampling_types:
             for power in range(-2, 2):
-                for batch_idx, (data, target) in enumerate(dataloader):
+                # for batch_idx, (data, target) in enumerate(dataloader):
 
-                    cob = 10 ** power
-                    angle_results = []
-                    rand_angle_results = []
-                    rand_rand_angle_results = []
-                    rand_micro_angle_results = []
+                cob = 10 ** power
+                angle_results = []
+                rand_angle_results = []
+                rand_rand_angle_results = []
+                rand_micro_angle_results = []
 
+                for _ in tqdm(iterations):
+                    data, target = next(iter(dataloader))
                     model = NeuralTeleportationModel(network=network, input_shape=data.shape)
                     w1 = model.get_weights().detach().numpy()
-                    for _ in tqdm(iterations):
-                        data, target = data.to(device), target.to(device)
-                        grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
-                        model.set_weights(w1)
-                        model.random_teleport(cob_range=cob, sampling_type=sampling_type)
-                        w2 = model.get_weights().detach().numpy()
-                        micro_teleport_vec = (w2 - w1)
+                    data, target = data.to(device), target.to(device)
+                    grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
-                        random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
-                        random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
+                    model.set_weights(w1)
+                    model.random_teleport(cob_range=cob, sampling_type=sampling_type)
+                    w2 = model.get_weights().detach().numpy()
+                    micro_teleport_vec = (w2 - w1)
 
-                        # Normalized scalar product
-                        dot_prod = np.longdouble(np.dot(grad, micro_teleport_vec) /
-                                                (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
-                        angle = np.degrees(np.arccos(dot_prod))
+                    random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
+                    random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
 
-                        rand_dot_prod = np.longdouble(np.dot(grad, random_vector) /
-                                                     (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
-                        rand_angle = np.degrees(np.arccos(rand_dot_prod))
+                    # Normalized scalar product
+                    dot_prod = np.longdouble(np.dot(grad, micro_teleport_vec) /
+                                            (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
+                    angle = np.degrees(np.arccos(dot_prod))
 
-                        rand_rand_dot_prod = np.longdouble(np.dot(random_vector2, random_vector) /
-                                                          (np.linalg.norm(random_vector2)*np.linalg.norm(random_vector)))
-                        rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
+                    rand_dot_prod = np.longdouble(np.dot(grad, random_vector) /
+                                                 (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
+                    rand_angle = np.degrees(np.arccos(rand_dot_prod))
 
-                        rand_micro_dot_prod = np.longdouble(np.dot(random_vector2, micro_teleport_vec) /
-                                                          (np.linalg.norm(random_vector2)*np.linalg.norm(micro_teleport_vec)))
-                        rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
+                    rand_rand_dot_prod = np.longdouble(np.dot(random_vector2, random_vector) /
+                                                    (np.linalg.norm(random_vector2) *
+                                                    np.linalg.norm(random_vector)))
+                    rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
 
-                        failed = (not np.allclose(dot_prod, 0, atol=tol))
-                        rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
-                        target_angle = 90
+                    rand_micro_dot_prod = np.longdouble(np.dot(random_vector2, micro_teleport_vec) /
+                                                      (np.linalg.norm(random_vector2) *
+                                                       np.linalg.norm(micro_teleport_vec)))
+                    rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
 
-                        angle_results.append(angle)
-                        rand_angle_results.append(rand_angle)
-                        rand_rand_angle_results.append(rand_rand_angle)
-                        rand_micro_angle_results.append(rand_micro_angle)
+                    failed = (not np.allclose(dot_prod, 0, atol=tol))
+                    rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
+                    target_angle = 90
+
+                    angle_results.append(angle)
+                    rand_angle_results.append(rand_angle)
+                    rand_rand_angle_results.append(rand_rand_angle)
+                    rand_micro_angle_results.append(rand_micro_angle)
 
                 angle_results = np.array(angle_results)
                 rand_angle_results = np.array(rand_angle_results)
@@ -120,11 +124,11 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                       f', the delta in angle is {rand_angle - target_angle}°\n',
                       sep='')
 
-                delta = np.maximum(1.0, rand_rand_angle_results.std()*3)
-                x_min = 90-delta
-                x_max = 90+delta
-
                 try:
+                    delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
+                    x_min = 90 - delta
+                    x_max = 90 + delta
+
                     plt.subplot(4, 1, 1)
 
                     bin_height, bin_boundary = np.histogram(np.array(angle_results))
@@ -261,7 +265,7 @@ if __name__ == '__main__':
           epochs=1, device='cpu', batch_size=1)
     print(test(mlp_model, loss, metrics, mnist_test))
 
-    dot_product(network=mlp_model, dataset=mnist_test, network_descriptor='MLP on MNIST')
+    dot_product(network=mlp_model, dataset=mnist_test, nb_teleport=50, network_descriptor='MLP on MNIST')
 
     mnist_train = CIFAR10('/tmp', train=True, download=True, transform=trans)
     mnist_val = CIFAR10('/tmp', train=False, download=True, transform=trans)
