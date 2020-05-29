@@ -48,7 +48,7 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
     # Determine if training has reached its end
     # TODO Add test for convergence
-    is_train_end = config.starting_epoch == config.epochs + 1
+    is_train_end = config.starting_epoch >= config.epochs + 1
 
     if is_train_end:
         trained_models = {f'{model_name}_0': model}
