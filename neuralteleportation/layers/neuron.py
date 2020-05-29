@@ -66,27 +66,27 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         Returns:
             tuple of weight tensors.
         """
-        # if self.bias is not None and bias:
-        #     if flatten:
-        #         return self.w.flatten(), self.b.flatten()
-        #     else:
-        #         return self.w, self.b
-        # else:
-        #     if flatten:
-        #         return self.w.flatten(),
-        #     else:
-        #         return self.w,
-
         if self.bias is not None and bias:
             if flatten:
-                return self.weight.flatten(), self.bias.flatten()
+                return self.w.flatten(), self.b.flatten()
             else:
-                return self.weight, self.bias
+                return self.w, self.b
         else:
             if flatten:
-                return self.weight.flatten(),
+                return self.w.flatten(),
             else:
-                return self.weight,
+                return self.w,
+
+        # if self.bias is not None and bias:
+        #     if flatten:
+        #         return self.weight.flatten(), self.bias.flatten()
+        #     else:
+        #         return self.weight, self.bias
+        # else:
+        #     if flatten:
+        #         return self.weight.flatten(),
+        #     else:
+        #         return self.weight,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.

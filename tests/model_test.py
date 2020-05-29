@@ -18,13 +18,13 @@ def test_set_weights(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), mo
     model_name = model_name or network.__class__.__name__
 
     model = NeuralTeleportationModel(network, input_shape)
-    w1 = model.get_weights().detach().numpy()
+    w1 = model.get_weights()
 
     model.reset_weights()
     model.set_weights(w1)
-    w2 = model.get_weights().detach().numpy()
+    w2 = model.get_weights()
 
-    assert np.allclose(w1, w2)
+    assert np.allclose(w1.detach().numpy(), w2.detach().numpy())
     print("Weights set successfully for " + model_name + " model.")
 
 
@@ -135,8 +135,8 @@ def test_calculate_cob(network, model_name, input_shape=(1, 1, 28, 28), noise=Fa
     calculated_cob = model.calculate_cob(w1, w2)
 
     if verbose:
-        print("Cob: ", cob.flatten()[:10])
-        print("Calculated cob: ", calculated_cob.flatten()[:10])
+        print("Cob: ", cob.flatten())
+        print("Calculated cob: ", calculated_cob.flatten())
 
     assert np.allclose(cob, calculated_cob)
 
@@ -191,6 +191,8 @@ if __name__ == '__main__':
         Flatten(),
         nn.Linear(784, 128),
         nn.ReLU(),
+        nn.Linear(128, 128),
+        nn.ReLU(),
         nn.Linear(128, 10)
     )
 
@@ -208,5 +210,4 @@ if __name__ == '__main__':
     test_set_cob(network=mlp_model, model_name="MLP")
     test_set_cob(network=cnn_model, model_name="Convolutional")
 
-    test_calculate_cob(network=mlp_model, model_name="MLP")
-    test_calculate_cob(network=cnn_model, model_name="Convolutional")
+    test_calculate_cob(network=mlp_model, model_name="MLP", verbose=True)

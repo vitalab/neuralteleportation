@@ -49,7 +49,7 @@ class NeuralTeleportationModel(nn.Module):
         for i in range(len(neuron_layers) - 1):
             size += neuron_layers[i].out_features
 
-        return get_random_cob(range=cob_range, size=size, requires_grad=True)
+        return get_random_cob(range_cob=cob_range, size=size, requires_grad=True)
 
     def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual'):
         """
@@ -312,8 +312,8 @@ class NeuralTeleportationModel(nn.Module):
             t = layers[i].calculate_cob(initial_weights[i], target_weights[i], cob[-1])
             cob.append(t)
 
-        print("Last layer")
-        print(layers[-2].out_features)
+        # print("Last layer")
+        # print(layers[-2].out_features)
         t = []
         for i in range(layers[-2].out_features):
             w0 = initial_weights[-2][i, :]
@@ -323,31 +323,31 @@ class NeuralTeleportationModel(nn.Module):
             t0 = cob[-1]
             t2 = layers[-1].get_output_cob()
 
-            print(w0.shape)
-            print(w1.shape)
-            print(w0_hat.shape)
-            print(w1_hat.shape)
-            print(t0.shape)
-            print(t2.shape)
+            # print(w0.shape)
+            # print(w1.shape)
+            # print(w0_hat.shape)
+            # print(w1_hat.shape)
+            # print(t0.shape)
+            # print(t2.shape)
 
             ti = torch.tensor(1.1)
 
             eta = 0.001
 
             for _ in range(20):
-                print((w0 / t0).dot(w0 / t0))
-                print((w0 / t0).dot(w0_hat))
-                print((w1 * t2).dot(w1 * t2))
-                print((w1 * t2).dot(w1_hat))
+                # print((w0 / t0).dot(w0 / t0))
+                # print((w0 / t0).dot(w0_hat))
+                # print((w1 * t2).dot(w1 * t2))
+                # print((w1 * t2).dot(w1_hat))
                 grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
                         2 * (w0 / t0).dot(w0_hat) -
                         2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
                         2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
-                print("ti: ", ti)
-                print("grad: ", grad)
+                # print("ti: ", ti)
+                # print("grad: ", grad)
                 ti = ti - eta * grad
 
-            print("final ti: ", ti)
+            # print("final ti: ", ti)
             t.append(ti)
 
         cob.append(torch.tensor(t))

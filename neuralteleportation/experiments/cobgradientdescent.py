@@ -11,7 +11,6 @@ from neuralteleportation.layers.neuralteleportation import FlattenCOB
 from neuralteleportation.layers.neuron import LinearCOB
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training import train
 
 torch.manual_seed(10)
 
@@ -73,7 +72,7 @@ Optimize the cob to find the 'target_cob' that produced the original teleportati
 optimizer = optim.Adam([cob], lr=1e-3)
 # scheduler = StepLR(optimizer, step_size=10000, gamma=0.1)
 
-for e in range(10000):
+for e in range(5000):
     # Reset the initial weights.
     model.set_weights(initial_weights)
 
