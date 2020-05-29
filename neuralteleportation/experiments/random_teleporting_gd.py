@@ -33,6 +33,9 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
             if random.random() < config.teleport_prob:
                 print("Applying random COB to model in training")
                 model.random_teleport()
+
+                # Initialze a new optimizer using the model's new parameters
+                optimizer = optim.SGD(model.parameters(), lr=config.lr)
             else:
                 print("Skipping COB")
 
