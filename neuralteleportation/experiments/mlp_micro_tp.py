@@ -62,7 +62,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
 
                     model = NeuralTeleportationModel(network=network, input_shape=data.shape)
                     w1 = model.get_weights().detach().numpy()
-                    for _ in iterations:
+                    for _ in tqdm(iterations):
                         data, target = data.to(device), target.to(device)
                         grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
