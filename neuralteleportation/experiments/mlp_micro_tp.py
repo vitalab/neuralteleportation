@@ -18,7 +18,7 @@ reset = "\033[0m"
 
 def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                 sampling_types=['usual', 'symmetric', 'negative', 'zero'],
-                batch_sizes = [2, 4, 8, 16, 32, 64],
+                batch_sizes = [8, 16, 32, 64],
                 device='cpu') -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
@@ -167,6 +167,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                     print(f'{red}Something went wrong while generating graphic!!!:\n{reset}'
                           f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}\n'
                           f'{nb_teleport:} iter, batch size: {batch_size}\n')
+
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
           device='cpu'):
