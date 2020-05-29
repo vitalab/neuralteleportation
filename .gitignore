@@ -119,3 +119,13 @@ venv.bak/
 
 # IDEs
 .idea
+.idea/
+build/
+dist/
+neuralteleportation.egg-info/
+**/__pycache__
+
+# Datasets
+dataset/*
+!dataset/*.sh
+!dataset/*.py

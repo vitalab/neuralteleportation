@@ -5,6 +5,16 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 
 
 def test_cuda_teleport(network, input_shape=(1, 1, 28, 28), verbose=False):
+    """
+        Test if a model can be teleported successfully on cuda.
+    Args:
+        network (nn.Module): Model to test
+        input_shape (tuple): Input shape for the model
+        verbose (bool): if True samples of predictions are printed
+
+    Returns:
+        Average difference between elements of prediction before and after teleportation.
+    """
 
     network = network.cuda()
 

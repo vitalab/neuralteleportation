@@ -1,3 +1,8 @@
+"""
+Code from torchvision.models.vgg modified with cob layers.
+https://pytorch.org/docs/stable/torchvision/models.html
+"""
+
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
@@ -8,8 +13,8 @@ from neuralteleportation.layers.neuron import Conv2dCOB, LinearCOB, BatchNorm2dC
 from neuralteleportation.layers.pooling import MaxPool2dCOB, AdaptiveAvgPool2dCOB
 
 __all__ = [
-    'VGG', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
-    'vgg19_bn', 'vgg19',
+    'VGGCOB', 'vgg11COB', 'vgg11_bnCOB', 'vgg13COB', 'vgg13_bnCOB', 'vgg16COB', 'vgg16_bnCOB',
+    'vgg19_bnCOB', 'vgg19COB',
 ]
 
 model_urls = {
@@ -24,10 +29,10 @@ model_urls = {
 }
 
 
-class VGG(nn.Module):
+class VGGCOB(nn.Module):
 
     def __init__(self, features, num_classes=1000, init_weights=True):
-        super(VGG, self).__init__()
+        super(VGGCOB, self).__init__()
         self.features = features
         self.avgpool = AdaptiveAvgPool2dCOB((7, 7))
         self.flatten = FlattenCOB()
@@ -88,10 +93,10 @@ cfgs = {
 }
 
 
-def _vgg(arch, cfg, batch_norm, pretrained, progress, input_channels=3, **kwargs):
+def _vggCOB(arch, cfg, batch_norm, pretrained, progress, input_channels=3, **kwargs):
     if pretrained:
         kwargs['init_weights'] = False
-    model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm, input_channels=input_channels), **kwargs)
+    model = VGGCOB(make_layers(cfgs[cfg], batch_norm=batch_norm, input_channels=input_channels), **kwargs)
     if pretrained:
         state_dict = load_state_dict_from_url(model_urls[arch],
                                               progress=progress)
@@ -99,7 +104,7 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, input_channels=3, **kwargs
     return model
 
 
-def vgg11(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg11COB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 11-layer model (configuration "A") from
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -108,10 +113,10 @@ def vgg11(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg11', 'A', False, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg11', 'A', False, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg11_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg11_bnCOB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 11-layer model (configuration "A") with batch normalization
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -120,10 +125,10 @@ def vgg11_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg11_bn', 'A', True, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg11_bn', 'A', True, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg13(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg13COB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 13-layer model (configuration "B")
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -132,10 +137,10 @@ def vgg13(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg13', 'B', False, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg13', 'B', False, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg13_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg13_bnCOB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 13-layer model (configuration "B") with batch normalization
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -144,10 +149,10 @@ def vgg13_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg13_bn', 'B', True, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg13_bn', 'B', True, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg16(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg16COB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 16-layer model (configuration "D")
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -156,10 +161,10 @@ def vgg16(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg16', 'D', False, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg16', 'D', False, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg16_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg16_bnCOB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 16-layer model (configuration "D") with batch normalization
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -168,10 +173,10 @@ def vgg16_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg16_bn', 'D', True, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg16_bn', 'D', True, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg19(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg19COB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 19-layer model (configuration "E")
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -180,10 +185,10 @@ def vgg19(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
                 input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg19', 'E', False, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg19', 'E', False, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
-def vgg19_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
+def vgg19_bnCOB(pretrained=False, progress=True, input_channels=3, **kwargs):
     r"""VGG 19-layer model (configuration 'E') with batch normalization
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
@@ -192,14 +197,14 @@ def vgg19_bn(pretrained=False, progress=True, input_channels=3, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
         input_channels (int): number of input channels for the network.
     """
-    return _vgg('vgg19_bn', 'E', True, pretrained, progress, input_channels=input_channels, **kwargs)
+    return _vggCOB('vgg19_bn', 'E', True, pretrained, progress, input_channels=input_channels, **kwargs)
 
 
 if __name__ == '__main__':
     from torchsummary import summary
     from tests.model_test import test_teleport
 
-    vgg = vgg16(pretrained=False, input_channels=1)
+    vgg = vgg16COB(pretrained=False, input_channels=1)
     vgg.eval()  # Put the model in eval to compute the outputs (will change if in train() because of dropout)
     summary(vgg, (1, 224, 224), device='cpu')
     test_teleport(vgg, (1, 1, 224, 224), verbose=True)

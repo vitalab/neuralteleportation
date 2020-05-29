@@ -4,10 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.merge import Add, Concat
 from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.network_graph import NetworkGrapher
+from neuralteleportation.layers.merge import Add, Concat
 
 
 class NeuralTeleportationModel(nn.Module):
@@ -51,7 +51,7 @@ class NeuralTeleportationModel(nn.Module):
 
         return get_random_cob(range=cob_range, size=size, requires_grad=True)
 
-    def get_random_change_of_basis(self, basis_range=10):
+    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual'):
         """
           Compute random change of basis for every layer in the network.
         """
@@ -73,9 +73,9 @@ class NeuralTeleportationModel(nn.Module):
                     for l in self.graph[:i]:
                         l['prev_cob'] = initial_cob
                         l['cob'] = initial_cob
-                    current_cob = layer['module'].get_cob(basis_range=basis_range)
+                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type)
                 else:
-                    current_cob = layer['module'].get_cob(basis_range=basis_range)
+                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type)
 
             if isinstance(layer['module'], Add):
                 connection_layer_index = min(layer['in'])  # Get the first layer
@@ -100,9 +100,12 @@ class NeuralTeleportationModel(nn.Module):
 
             layer['cob'] = current_cob
 
-    def random_teleport(self, cob_range=10):
+    def random_teleport(self, cob_range=0.5, sampling_type='usual'):
         """
           Applies random change of basis to each of the network layers.
+
+        Returns:
+            nn.Module of the network after teleportation
         """
         self.get_random_change_of_basis(cob_range)
         self.teleport()
@@ -120,6 +123,8 @@ class NeuralTeleportationModel(nn.Module):
         for k, layer in enumerate(self.graph):
             if not isinstance(layer['module'], NeuronLayerMixin):
                 layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+
+        return self.network
 
     def set_change_of_basis(self, cob, contains_ones=False):
         """
@@ -357,12 +362,12 @@ class NeuralTeleportationModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from neuralteleportation.models.generic_models.test_models import *
+    from tests.cobmodels_test import *
     from neuralteleportation.models.generic_models.residual_models import *
     from neuralteleportation.models.generic_models.dense_models import *
-    from neuralteleportation.models.model_zoo.resnet import *
+    from neuralteleportation.models.model_zoo.resnetcob import *
 
-    model = resnet18(pretrained=False)
+    model = resnet18COB(pretrained=False)
     sample_input_shape = (1, 3, 224, 224)
 
     model = NeuralTeleportationModel(network=model, input_shape=sample_input_shape)

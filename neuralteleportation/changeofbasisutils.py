@@ -39,8 +39,9 @@ import torch
 #     elif sampling_type == 'zero':
 #         return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float)
 
-def get_random_cob(range: int, size: int, requires_grad=False):
-    x = (-range - range) * torch.rand(size) + range
+
+def get_random_cob(range_cob: int, size: int, requires_grad=False, sampling_type='usual'):
+    x = (-range_cob - range_cob) * torch.rand(size) + range_cob
     if requires_grad:
         x = x.requires_grad_()
     return x
