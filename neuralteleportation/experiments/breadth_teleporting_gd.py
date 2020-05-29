@@ -84,9 +84,7 @@ def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, met
 
 
 if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import (
-        get_mnist_models, get_mnist_datasets, get_cifar10_models, get_cifar10_datasets
-    )
+    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.experiment_run import run_multi_output_training
     import warnings
@@ -96,12 +94,6 @@ if __name__ == '__main__':
     # TODO Fix the swapping of models on-off the GPU during recursive training to solve CUDA memory errors
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
-
-    # Run on MNIST
-    mnist_train, mnist_val, mnist_test = get_mnist_datasets()
-    config = TeleportationTrainingConfig(device='cuda')
-    run_multi_output_training(train, get_mnist_models(device='cuda'), config, metrics,
-                              mnist_train, mnist_test, val_set=mnist_val)
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
