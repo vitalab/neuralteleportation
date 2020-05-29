@@ -1,17 +1,18 @@
+
 import pandas as pd
 import torch
 import torch.optim as optim
-import pickle
 
+from torch.nn.modules import Flatten
+from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 from collections import defaultdict
 from tqdm import tqdm
-from models.model_zoo import vggcob, resnetcob
-import argparse
+from dot_product_utils import dot_product
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
           device='cpu'):
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.SGD(model.parameters(), lr=0.001)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
@@ -20,8 +21,6 @@ def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, met
         if val_dataset:
             val_res = test(model, criterion, metrics, val_dataset, device=device)
             print("Validation: {}".format(val_res))
-
-    pickle.dump(obj=model, protocol=d)
 
 
 def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
@@ -75,7 +74,6 @@ if __name__ == '__main__':
     import torch.nn as nn
 
     trans = list()
-    trans.append(transforms.Resize(size=224))
     trans.append(transforms.ToTensor())
     trans = transforms.Compose(trans)
 
@@ -83,17 +81,24 @@ if __name__ == '__main__':
     mnist_val = MNIST('/tmp', train=False, download=True, transform=trans)
     mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
 
-    # GGS: reducing the dataset size since cuda is not available on local system due to unidentified bug as of
-    # may 28th 2020, this should be taken down once CUDA problem has been addressed
-    mnist_train.data = mnist_train.data[:1500, :, :]
-    mnist_val.data = mnist_val.data[:50, :, :]
-    mnist_test.data = mnist_test.data[:50, :, :]
+    mlp_model = torch.nn.Sequential(
+        Flatten(),
+        nn.Linear(784, 5),
+        nn.ReLU(),
+        nn.Linear(5, 5),
+        nn.ReLU(),
+        nn.Linear(5, 10)
+    )
 
-    model = vggcob.vgg11COB(input_channels=1);
+    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
-    optim = torch.optim.SGD(params=model.parameters(), lr=.01)
+    optim = torch.optim.SGD(params=mlp_model.parameters(), lr=.001)
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
-    train(model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1, device='cpu', batch_size=32)
-    print(test(model, loss, metrics, mnist_test))
+    train(mlp_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+          epochs=1, device='cpu', batch_size=1)
+    print(test(mlp_model, loss, metrics, mnist_test))
+
+    dot_product(mlp_model)
+    dot_product(network=mlp_model, input_shape=(1, 1, 28, 28), network_descriptor='MLP')
+
