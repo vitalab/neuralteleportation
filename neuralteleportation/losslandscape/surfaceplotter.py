@@ -39,23 +39,23 @@ class SurfacePlotter():
         It is based on the publication of Visualizing the Loss Landscape of Neural Nets
 
         Args:
-            net_name: string to identify the created surface file if none is given.
-            net: a CoB of nn.Sequential module
-            x, y: string format of min:max:precision that is used to define the space where the surface will be plotted.
-            surf_file:  the h5 file location containing a surface to be plotted. 
+            net_name(string): string to identify the created surface file if none is given.
+            net(nn.Modules or NeuralTeleportationModel): the network to be plotted.
+            x, y(string): string format of min:max:precision that is used to define the space where the surface will be plotted.
+            surf_file(string):  the h5 file path containing a surface to be plotted.
                         If left to None, it will generate a new file for the current network.
-            direction_file: the h5 file containing the values of the random direction vector used in the
+            direction_file(string): the h5 file path containing the values of the random direction vector used in the
                             Filter-wise Normalized contour plot.
-            direction_type: string specifying if the random direction vector should be build using weights or using torch.network_state.
-            same_direction: bool to specify if the y directional vector should be the same as the x directional vector.
-            raw_data: bool to specify if the data used in train should be left as is.
-            data_split: int, how much splits should be done inside the dataloader.
+            direction_type(string): key specifying if the random direction vector should be build using weights or using torch.network_state.
+            same_direction(bool): specify if the y directional vector should be the same as the x directional vector.
+            raw_data(bool): specify if the data used in train should be left as is.
+            data_split(int): how much splits should be done inside the dataloader.
 
         Example:
             net = nn.Conv2D(1,3,3)
             x = '-1:1:5'
             surfplt = SurfacePlotter('resnet56', net, x, surf_file='')
-            surfplt.crunch(criterion, w1, state, trainloader, 'train_loss', 'train_acc', device)
+            surfplt.crunch(criterion, w1, None, trainloader, 'train_loss', 'train_acc', device)
     """
     def __init__(self, net_name, net, x, y=None, surf_file=None, directions_file=None, direction_type='weights', same_direction=False, raw_data=True, data_split=1):
         self.net_name = net_name
@@ -247,9 +247,9 @@ class SurfacePlotter():
 
             # Load the weights corresponding to those coordinates into the net
             if self.direction_type == 'weights':
-                net_plotter.set_weights(self.net, w, d, coord)
+                net_plotter.set_weights(self.net, w, d, coord, device)
             elif self.direction_type == 'states':
-                net_plotter.set_states(self.net, s, d, coord)
+                net_plotter.set_states(self.net, s, d, coord, device)
 
             # Record the time to compute the loss value
             loss_start = time.time()
@@ -275,11 +275,9 @@ class SurfacePlotter():
                 f[loss_key][losses != -1] = losses[losses != -1]
                 f[acc_key][accuracies != -1] = accuracies[accuracies != -1]
                 f.flush()
-                f.close()
 
         total_time = time.time() - start_time
         print('done! Total time: %.2f Sync: %.2f' % (total_time, total_sync))
-
         f.close()
 
     def plot_surface(self, additional_points=None, surf_name='train_loss'):
@@ -301,15 +299,22 @@ class SurfacePlotter():
 
         fig = plt.figure()
         ax = Axes3D(fig)
+        
+        if additional_points:
+            for p in additional_points:
+                ax.scatter3D(p[0], p[1], p[2], color='Black', marker='o')
+
         surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        fig.savefig(surf_file + '_' + surf_name + '_3dsurface.pdf', dpi=300,
+
+
+        fig.savefig(self.surf_file + '_' + surf_name + '_3dsurface.pdf', dpi=300,
                     bbox_inches='tight', format='pdf')
 
         f.close()
 
-    def plot_contours(self, vmin, vmax, vlevel, surf_name='train_loss'):
+    def plot_contours(self, vmin, vmax, vlevel, surf_name='train_loss', save=False):
         """
         """
         f = h5py.File(self.surf_file, 'r')
@@ -327,17 +332,42 @@ class SurfacePlotter():
         CS = plt.contour(X, Y, Z, cmap='summer', levels=np.arange(vmin, vmax, vlevel))
         plt.clabel(CS, inline=1, fontsize=8)
 
-        # fig.savefig(surf_file + '_' + self.surf_name + '_2dcontour' + '.pdf', dpi=300,
-        #             bbox_inches='tight', format='pdf')
+        if save:
+            fig.savefig(surf_file + '_' + self.surf_name + '_2dcontour' + '.pdf', dpi=300,
+                        bbox_inches='tight', format='pdf')
 
     def show(self):
         plt.show()
+
+    @staticmethod
+    def plot_from_surf_file(surf_file):
+        """
+            a static method to plot an already computed surface.
+
+            Args:
+                surf_file(string): the path to the h5 surface file.
+        """
+        f = h5py.File(surf_file, 'r')
+        x = np.array(f['xcoordinates'][:])
+        y = np.array(f['ycoordinates'][:])
+        X, Y = np.meshgrid(x, y)
+        Z = np.array(f['train_loss'][:])
+
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+
+        f.close()
+
+        plt.show()
+
 
 ###############################################################
 #                          MAIN
 ###############################################################
 if __name__ == '__main__':
-    
+
     import torchvision.transforms as transforms
     from neuralteleportation.models.model_zoo.resnetcob import resnet50COB
     from neuralteleportation.models.model_zoo.vggcob import vgg11COB
@@ -359,32 +389,14 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     train_set = trainloader.dataset
 
-    # net = resnet50COB().to(device)
-    # net = vgg11COB().to(device)
-    net = nn.Sequential(
-        nn.Conv2d(3, 6, 5),
-        nn.ReLU(),
-        nn.MaxPool2d(2, 2),
-        nn.Conv2d(6, 16, 5),
-        nn.ReLU(),
-        nn.MaxPool2d(2, 2),
-        nn.Flatten(),
-        nn.Linear(16 * 5 * 5, 120),
-        nn.ReLU(),
-        nn.Linear(120, 84),
-        nn.ReLU(),
-        nn.Linear(84, 10),
-    ).to(device)
+    net = resnet50COB(input_channels=3, num_classes=10).to(device)
     w = net_plotter.get_weights(net)
-    s = copy.deepcopy(net.state_dict)
 
-    # train(net, criterion, train_dataset=train_set, epochs=1, batch_size=batch_size, device=device)
-
-    # loss, acc = evaluation.eval_loss(net, criterion, trainloader, device)
-
-    surfplt = SurfacePlotter('test', net, x='-1:1:50', y='-1:1:50')
-    surfplt.crunch(criterion, w, s, trainloader, 'train_loss', 'train_acc', device)
+    surfplt = SurfacePlotter('test', net, x='-1:1:2', y='-1:1:2')
+    surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device)
 
     surfplt.plot_surface()
-    surfplt.plot_contours(vmin=0.1, vmax=10, vlevel=0.5)
     plt.show()
+
+    # You can add any surface file here. 
+    SurfacePlotter.plot_from_surf_file('./tmp/teleported_resnet56_surface_[-1.0,1.0,20]x[-1.0,1.0,20]_rawdata.h5')

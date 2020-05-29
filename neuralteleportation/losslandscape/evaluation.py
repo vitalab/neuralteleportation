@@ -16,7 +16,7 @@ import time
 from torch.autograd.variable import Variable
 
 
-def eval_loss(net, criterion, loader, device='device'):
+def eval_loss(net, criterion, loader, device='cpu'):
     """
     Evaluate the loss value for a given 'net' on the dataset provided by the loader.
 
@@ -31,8 +31,6 @@ def eval_loss(net, criterion, loader, device='device'):
     correct = 0
     total_loss = 0
     total = 0  # number of samples
-
-    net.eval()
 
     with torch.no_grad():
         if isinstance(criterion, nn.CrossEntropyLoss):

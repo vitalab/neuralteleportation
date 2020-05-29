@@ -8,7 +8,7 @@ import os
 import copy
 import h5py
 import neuralteleportation.losslandscape.net_plotter as net_plotter
-import h5_util
+import neuralteleportation.losslandscape.h5_util as h5_util
 from sklearn.decomposition import PCA
 
 def tensorlist_to_tensor(weights):

@@ -1,8 +1,15 @@
 """
+    Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
+    Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
+    Source Code: https://github.com/tomgoldstein/loss-landscape
+
+    Modified: Philippe Spino
+
     Serialization and deserialization of directions in the direction file.
 """
 
 import torch
+
 
 def write_list(f, name, direction):
     """ Save the direction to the hdf5 file with name as the key

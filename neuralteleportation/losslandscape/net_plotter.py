@@ -14,7 +14,6 @@ from os.path import exists, commonprefix
 import h5py
 
 import neuralteleportation.losslandscape.h5_util as h5_util
-# import neuralteleportation.losslandscape.model_loader as model_loader
 
 ################################################################################
 #                 Supporting functions for weights manipulation
@@ -26,7 +25,7 @@ def get_weights(net):
     return [p.data for p in net.parameters()]
 
 
-def set_weights(net, weights, directions=None, step=None):
+def set_weights(net, weights, directions=None, step=None, device='cpu'):
     """
         Overwrite the network's weights with a specified list of tensors
         or change weights along directions with a step size.
@@ -46,7 +45,8 @@ def set_weights(net, weights, directions=None, step=None):
             changes = [d * step for d in directions[0]]
 
         for (p, w, d) in zip(net.parameters(), weights, changes):
-            p.data = w + torch.Tensor(d).type_as(w)
+            d = torch.tensor(d).to(device=device)
+            p.data = w + d
 
 
 def set_states(net, states, directions=None, step=None):
