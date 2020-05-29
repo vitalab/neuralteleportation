@@ -13,31 +13,31 @@ from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training import train
 
-# torch.manual_seed(1234)
+torch.manual_seed(10)
 
-net = nn.Sequential(FlattenCOB(),
-                    LinearCOB(784, 128),
-                    ReLUCOB(),
-                    LinearCOB(128, 128),
-                    ReLUCOB(),
-                    LinearCOB(128, 10)
-                    )
-sample_input_shape = (1, 1, 28, 28)
-
-mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
-mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
-
-optimizer = torch.optim.Adam(net.parameters())
-metrics = [accuracy]
-loss = nn.CrossEntropyLoss()
-train(net, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
-      epochs=0)
-
-# net = nn.Sequential(LinearCOB(2, 3, bias=False),
+# net = nn.Sequential(FlattenCOB(),
+#                     LinearCOB(784, 128),
 #                     ReLUCOB(),
-#                     LinearCOB(3, 1, bias=False)
+#                     LinearCOB(128, 128),
+#                     ReLUCOB(),
+#                     LinearCOB(128, 10)
 #                     )
-# sample_input_shape = (1, 1, 2)
+# sample_input_shape = (1, 1, 28, 28)
+#
+# mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
+# mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+#
+# optimizer = torch.optim.Adam(net.parameters())
+# metrics = [accuracy]
+# loss = nn.CrossEntropyLoss()
+# train(net, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_test, optimizer=optimizer, metrics=metrics,
+#       epochs=0)
+
+net = nn.Sequential(LinearCOB(2, 3, bias=False),
+                    ReLUCOB(),
+                    LinearCOB(3, 1, bias=False)
+                    )
+sample_input_shape = (1, 1, 2)
 
 model = NeuralTeleportationModel(network=net, input_shape=sample_input_shape, )
 
@@ -54,6 +54,7 @@ target_cob = model.get_cob(concat=True)
 print("Target cob shape: ", target_cob.shape)
 
 # Generate a new random cob
+torch.manual_seed(20)
 cob = model.generate_random_cob(cob_range=1)
 print("cob shape: ", cob.shape)
 print("cob grad_fn: ", cob.grad_fn)

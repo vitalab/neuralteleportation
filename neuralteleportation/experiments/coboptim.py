@@ -15,7 +15,7 @@ from neuralteleportation.training import train, test
 
 # torch.manual_seed(1234)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-epochs = 3
+epochs = 0
 batch_size = 128
 metrics = [accuracy]
 loss = nn.CrossEntropyLoss()
@@ -29,10 +29,6 @@ class Model(nn.Module):
         super().__init__()
         self.net = nn.Sequential(FlattenCOB(),
                                  LinearCOB(784, 128),
-                                 ReLUCOB(),
-                                 LinearCOB(128, 128),
-                                 ReLUCOB(),
-                                 LinearCOB(128, 128),
                                  ReLUCOB(),
                                  LinearCOB(128, 10)
                                  )
@@ -79,4 +75,6 @@ w2 = model2.get_weights(concat=False, flatten=False, bias=False)
 for i in range(len(w1)):
     print('layer : ', i)
     print("w1  - w2 = ", (w1[i].detach().cpu()-w2[i].detach().cpu()).abs().sum())
+    print("w1: ", w1[i].detach().cpu().flatten()[:10])
+    print("w2: ", w2[i].detach().cpu().flatten()[:10])
 

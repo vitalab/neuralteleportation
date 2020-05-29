@@ -15,6 +15,7 @@ def test_set_weights(network, model_name, input_shape=(1, 1, 28, 28)):
     model = NeuralTeleportationModel(network, input_shape)
     w1 = model.get_weights()
 
+    model.reset_weights()
     model.set_weights(w1)
     w2 = model.get_weights()
 
