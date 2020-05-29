@@ -233,14 +233,18 @@ if __name__ == '__main__':
     mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
 
     cnn_model = torch.nn.Sequential(
-        nn.Conv2d(1, 32, 3, 1),
+        nn.Conv2d(1, 32, 5),
         nn.ReLU(),
-        nn.Conv2d(32, 64, 3, 2),
+        nn.Conv2d(32, 32, 5),
+        nn.MaxPool2d(2),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, 5),
+        nn.MaxPool2d(2),
         nn.ReLU(),
         Flatten(),
-        nn.Linear(9216, 128),
+        nn.Linear(3*3*64, 256, bias=True),
         nn.ReLU(),
-        nn.Linear(128, 10)
+        nn.Linear(256, 10, bias=True)
     )
 
     cnn_model = swap_model_modules_for_COB_modules(cnn_model)
