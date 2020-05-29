@@ -1,12 +1,14 @@
+
 import pandas as pd
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
 
+from torch.nn.modules import Flatten
+from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 from collections import defaultdict
 from tqdm import tqdm
-from models.model_zoo import vggcob, resnetcob
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 # ANSI escape code for colored console text
@@ -37,7 +39,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
         device:                 Device used to compute the netork operations (Typically 'cpu' or 'cuda')
     """
 
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=16)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
     data, target = next(iter(dataloader))
 
     model = NeuralTeleportationModel(network=network, input_shape=data.shape)
@@ -70,19 +72,19 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                 random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
 
                 # Normalized scalar product
-                dot_prod = np.longfloat(np.dot(grad, micro_teleport_vec) /
+                dot_prod = np.longdouble(np.dot(grad, micro_teleport_vec) /
                                         (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
                 angle = np.degrees(np.arccos(dot_prod))
 
-                rand_dot_prod = np.longfloat(np.dot(grad, random_vector) /
+                rand_dot_prod = np.longdouble(np.dot(grad, random_vector) /
                                              (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
                 rand_angle = np.degrees(np.arccos(rand_dot_prod))
 
-                rand_rand_dot_prod = np.longfloat(np.dot(random_vector2, random_vector) /
+                rand_rand_dot_prod = np.longdouble(np.dot(random_vector2, random_vector) /
                                                   (np.linalg.norm(random_vector2)*np.linalg.norm(random_vector)))
                 rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
 
-                rand_micro_dot_prod = np.longfloat(np.dot(random_vector2, micro_teleport_vec) /
+                rand_micro_dot_prod = np.longdouble(np.dot(random_vector2, micro_teleport_vec) /
                                                   (np.linalg.norm(random_vector2)*np.linalg.norm(micro_teleport_vec)))
                 rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
 
@@ -161,7 +163,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
           device='cpu'):
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.SGD(model.parameters(), lr=0.001)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
@@ -181,10 +183,10 @@ def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        if batch_idx % 10 == 0:
+        if batch_idx % 500 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                       batch_idx / len(train_loader), loss.item()))
+                       100. * batch_idx / len(train_loader), loss.item()))
 
 
 def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
@@ -223,7 +225,6 @@ if __name__ == '__main__':
     import torch.nn as nn
 
     trans = list()
-    trans.append(transforms.Resize(size=224))
     trans.append(transforms.ToTensor())
     trans = transforms.Compose(trans)
 
@@ -231,19 +232,24 @@ if __name__ == '__main__':
     mnist_val = MNIST('/tmp', train=False, download=True, transform=trans)
     mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
 
-    # GGS: reducing the dataset size since cuda is not available on local system due to unidentified bug as of
-    # may 28th 2020, this should be taken down once CUDA problem has been addressed
-    mnist_train.data = mnist_train.data[:50, :, :]
-    mnist_val.data = mnist_val.data[:50, :, :]
-    mnist_test.data = mnist_test.data[:50, :, :]
+    cnn_model = torch.nn.Sequential(
+        nn.Conv2d(1, 32, 3, 1),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, 3, 2),
+        nn.ReLU(),
+        Flatten(),
+        nn.Linear(9216, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10)
+    )
 
-    vgg_model = vggcob.vgg11COB(input_channels=1)
+    cnn_model = swap_model_modules_for_COB_modules(cnn_model)
 
-    optim = torch.optim.Adam(params=vgg_model.parameters(), lr=.01)
+    optim = torch.optim.Adam(params=cnn_model.parameters(), lr=.01)
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
-    train(vgg_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1, device='cpu', batch_size=16)
-    print(test(vgg_model, loss, metrics, mnist_test))
+    train(cnn_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+          epochs=1, device='cpu', batch_size=1)
+    print(test(cnn_model, loss, metrics, mnist_test))
 
-    dot_product(vgg_model, dataset=mnist_test, network_descriptor='VGG')
+    dot_product(network=cnn_model, dataset=mnist_test, network_descriptor='CNN')
