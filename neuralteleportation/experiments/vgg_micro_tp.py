@@ -1,16 +1,21 @@
-from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-
-import numpy as np
+import pandas as pd
 import torch
+import torch.optim as optim
 import matplotlib.pyplot as plt
+import numpy as np
+
+from collections import defaultdict
+from tqdm import tqdm
+from models.model_zoo import vggcob, resnetcob
+from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 # ANSI escape code for colored console text
 red = "\033[31m"
 reset = "\033[0m"
 
 
-def dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, network_descriptor='',
-                sampling_types=['usual', 'symmetric', 'negative', 'zero']) -> None:
+def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
+                sampling_types=['usual', 'symmetric', 'negative', 'zero'], device='cpu') -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
     vector and the gradient for nullity. It then displays the histograms of the calculated scalar products.
@@ -28,14 +33,19 @@ def dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, network_
         network_descriptor:     String describing the content of the network
 
         sampling_types :        Teleportation sampling types
+
+        device:                 Device used to compute the netork operations (Typically 'cpu' or 'cuda')
     """
 
-    model = NeuralTeleportationModel(network=network, input_shape=input_shape)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+    data, target = next(iter(dataloader))
+
+    model = NeuralTeleportationModel(network=network, input_shape=data.shape)
 
     w1 = model.get_weights().detach().numpy()
 
     iterations = range(0, nb_teleport)
-    loss_func = torch.nn.MSELoss()
+    loss_func = torch.nn.CrossEntropyLoss()
 
     # Arbitrary precision threshold for nullity comparison
     tol = 1e-2
@@ -48,9 +58,8 @@ def dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, network_
             rand_rand_angle_results = []
             rand_micro_angle_results = []
             for _ in iterations:
-                x = torch.rand(input_shape, dtype=torch.float)
-                y = torch.rand((100, 10), dtype=torch.float)
-                grad = model.get_grad(x, y, loss_func, zero_grad=False)
+                data, target = data.to(device), target.to(device)
+                grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
                 model.set_weights(w1)
                 model.random_teleport(cob_range=cob, sampling_type=sampling_type)
@@ -61,19 +70,19 @@ def dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, network_
                 random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
 
                 # Normalized scalar product
-                dot_prod = np.longfloat(np.dot(grad, micro_teleport_vec) /
+                dot_prod = np.longdouble(np.dot(grad, micro_teleport_vec) /
                                         (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
                 angle = np.degrees(np.arccos(dot_prod))
 
-                rand_dot_prod = np.longfloat(np.dot(grad, random_vector) /
+                rand_dot_prod = np.longdouble(np.dot(grad, random_vector) /
                                              (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
                 rand_angle = np.degrees(np.arccos(rand_dot_prod))
 
-                rand_rand_dot_prod = np.longfloat(np.dot(random_vector2, random_vector) /
+                rand_rand_dot_prod = np.longdouble(np.dot(random_vector2, random_vector) /
                                                   (np.linalg.norm(random_vector2)*np.linalg.norm(random_vector)))
                 rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
 
-                rand_micro_dot_prod = np.longfloat(np.dot(random_vector2, micro_teleport_vec) /
+                rand_micro_dot_prod = np.longdouble(np.dot(random_vector2, micro_teleport_vec) /
                                                   (np.linalg.norm(random_vector2)*np.linalg.norm(micro_teleport_vec)))
                 rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
 
@@ -148,3 +157,94 @@ def dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, network_
 
             plt.xlabel('Angle in degrees')
             plt.show()
+
+def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
+          device='cpu'):
+    if optimizer is None:
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+
+    for epoch in range(1, epochs + 1):
+        train_step(model, criterion, optimizer, train_loader, epoch, device=device)
+        if val_dataset:
+            val_res = test(model, criterion, metrics, val_dataset, device=device)
+            print("Validation: {}".format(val_res))
+
+
+def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
+    model.train()
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+        if batch_idx % 10 == 0:
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                epoch, batch_idx * len(data), len(train_loader.dataset),
+                       batch_idx / len(train_loader), loss.item()))
+
+
+def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
+    test_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+    model.eval()
+    results = defaultdict(list)
+    with torch.no_grad():
+        for i, (data, target) in tqdm(enumerate(test_loader)):
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            results['loss'].append(criterion(output, target).item())
+
+            if metrics is not None:
+                batch_results = compute_metrics(metrics, y=target, y_hat=output, to_tensor=False)
+                for k in batch_results.keys():
+                    results[k].append(batch_results[k])
+
+    results = pd.DataFrame(results)
+    return dict(results.mean())
+
+
+def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
+    results = {}
+    for metric in metrics:
+        m = metric(y_hat, y)
+        if to_tensor:
+            m = torch.tensor(m)
+        results[prefix + metric.__name__] = m
+    return results
+
+
+if __name__ == '__main__':
+    from torchvision.datasets import MNIST
+    import torchvision.transforms as transforms
+    from neuralteleportation.metrics import accuracy
+    import torch.nn as nn
+
+    trans = list()
+    trans.append(transforms.Resize(size=224))
+    trans.append(transforms.ToTensor())
+    trans = transforms.Compose(trans)
+
+    mnist_train = MNIST('/tmp', train=True, download=True, transform=trans)
+    mnist_val = MNIST('/tmp', train=False, download=True, transform=trans)
+    mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
+
+    # GGS: reducing the dataset size since cuda is not available on local system due to unidentified bug as of
+    # may 28th 2020, this should be taken down once CUDA problem has been addressed
+    mnist_train.data = mnist_train.data[:50, :, :]
+    mnist_val.data = mnist_val.data[:50, :, :]
+    mnist_test.data = mnist_test.data[:50, :, :]
+
+    vgg_model = vggcob.vgg11COB(input_channels=1)
+
+    optim = torch.optim.Adam(params=vgg_model.parameters(), lr=.01)
+    metrics = [accuracy]
+    loss = nn.CrossEntropyLoss()
+    train(vgg_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+          epochs=1, device='cpu', batch_size=32)
+    print(test(vgg_model, loss, metrics, mnist_test))
+
+    dot_product(vgg_model, dataset=mnist_test, network_descriptor='VGG')
+
