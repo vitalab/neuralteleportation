@@ -37,7 +37,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
         device:                 Device used to compute the netork operations (Typically 'cpu' or 'cuda')
     """
 
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=16)
     data, target = next(iter(dataloader))
 
     model = NeuralTeleportationModel(network=network, input_shape=data.shape)
@@ -243,8 +243,7 @@ if __name__ == '__main__':
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
     train(vgg_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1, device='cpu', batch_size=32)
+          epochs=1, device='cpu', batch_size=16)
     print(test(vgg_model, loss, metrics, mnist_test))
 
     dot_product(vgg_model, dataset=mnist_test, network_descriptor='VGG')
-
