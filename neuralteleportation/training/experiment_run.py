@@ -15,6 +15,11 @@ def run_single_output_training(train_fct: Callable, models: Sequence[nn.Module],
     for model in models:
         print(f"Training {model.__class__.__name__}")
         trained_model = train_fct(model, train_dataset=train_set, metrics=metrics, config=config, val_dataset=val_set)
+
+        # Ensure the model is on the correct device before testing
+        # This avoids problem in case models are shuffled between CPU and GPU during training
+        trained_model.to(config.device)
+
         print("Testing {}: {} \n".format(model.__class__.__name__, test(trained_model, test_set, metrics, config)))
         print()
 
@@ -28,5 +33,9 @@ def run_multi_output_training(train_fct: Callable, models: Sequence[nn.Module],
         trained_models = train_fct(model, train_dataset=train_set, metrics=metrics, config=deepcopy(config),
                                    val_dataset=val_set)
         for id, trained_model in trained_models.items():
+            # Ensure the model is on the correct device before testing
+            # This avoids problem in case models are shuffled between CPU and GPU during training
+            trained_model.to(config.device)
+
             print("Testing {}: {} \n".format(id, test(trained_model, test_set, metrics, config)))
         print()
