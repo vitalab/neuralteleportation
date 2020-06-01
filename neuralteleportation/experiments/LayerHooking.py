@@ -6,11 +6,14 @@ from torchvision import transforms
 from torchvision.datasets import MNIST, ImageNet, CIFAR10
 
 from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules as patch_module
-from neuralteleportation.training import train
+from neuralteleportation.training.training import train
+from neuralteleportation.training.config import *
+from neuralteleportation.metrics import accuracy
+
 from neuralteleportation.models.generic_models.dense_models import DenseNet as MNIST_DenseNet
-from neuralteleportation.models.model_zoo.densenet import densenet121
-from neuralteleportation.models.model_zoo.resnet import resnet18
-from neuralteleportation.models.model_zoo.vgg import vgg11
+from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
+from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
+from neuralteleportation.models.model_zoo.vggcob import vgg11COB
 from neuralteleportation.layerhook import LayerHook
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
@@ -26,14 +29,14 @@ def argument_parser():
     '''
     parser = argparse.ArgumentParser(
         description='Simple argument parser for the layer hook experiment.')
-    parser.add_argument("--batch_size", type=int, default=100)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=0)
     parser.add_argument("--model", type=str, default="resnet", choices=['mnist_densenet',
                                                                         'densenet',
                                                                         'resnet',
                                                                         'vggnet'])
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
-    parser.add_argument("--layer_name", type=str, default="")
+    parser.add_argument("--layer_name", type=str, default="conv1")
     return parser.parse_args()
 
 
@@ -49,7 +52,6 @@ if __name__ == "__main__":
         plt.colorbar()
 
     parser = argument_parser()
-
     batch_size = parser.batch_size
 
     if torch.cuda.is_available():
@@ -59,24 +61,20 @@ if __name__ == "__main__":
 
     model = None
     transform = transforms.ToTensor()
-    hook_state = None    # This is going to be passed to the layer hook.
-
     num_classes = 10
-
-    hook_state = (parser.layer_name, hookCallback)
+    
     if parser.model == 'mnist_densenet':
         model = MNIST_DenseNet(in_channels=1)
     elif parser.model == 'densenet':
-        model = densenet121(num_classes=num_classes)
+        model = densenet121COB(num_classes=num_classes)
     elif parser.model == 'resnet':
-        model = resnet18(input_channels=3, num_classes=num_classes)
+        model = resnet18COB(input_channels=3, num_classes=num_classes)
         transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
     elif parser.model == 'vggnet':
-        model = vgg11(num_classes=num_classes)
+        model = vgg11COB(num_classes=num_classes)
 
     dataset_train = None
     dataset_test = None
-    num_of_classes = None
     if parser.dataset == "mnist":
         dataset_train = MNIST('/tmp', train=True, download=True, transform=transform)
         dataset_test = MNIST( '/tmp', train=False, download=True, transform=transform)
@@ -95,22 +93,17 @@ if __name__ == "__main__":
     test_img = torch.as_tensor(dataset_test[0][0])
     test_img = torch.unsqueeze(test_img, 0)
     test_img = test_img.to(device=device)
-    del dataset_train, dataset_test
 
     # Change the model to a teleportable model.
     model = model.to(device=device)
     model = NeuralTeleportationModel(network=model, input_shape=(batch_size, dims, w, h))
 
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters())
-    train(model,
-          criterion=criterion,
-          train_dataset=data_train_loader,
-          optimizer=optimizer,
-          epochs=parser.epochs,
-          batch_size=parser.batch_size)
+    metric = TrainingMetrics(torch.nn.CrossEntropyLoss(), [accuracy])
+    config = TrainingConfig(epochs=parser.epochs, device=device, batch_size=batch_size)
+    train(model, train_dataset=dataset_train, metrics=metric, config=config)
 
     # Attach the hook to a specific layer
+    hook_state = (parser.layer_name, hookCallback)
     hook = LayerHook(model, hook_state)
 
     # We do a forward propagation to illustrate the example.
