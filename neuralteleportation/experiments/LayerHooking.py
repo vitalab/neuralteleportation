@@ -7,7 +7,7 @@ from torchvision.datasets import MNIST, ImageNet, CIFAR10
 
 from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules as patch_module
 from neuralteleportation.training import train
-from neuralteleportation.models.test_models.dense_models import DenseNet as MNIST_DenseNet
+from neuralteleportation.models.generic_models.dense_models import DenseNet as MNIST_DenseNet
 from neuralteleportation.models.model_zoo.densenet import densenet121
 from neuralteleportation.models.model_zoo.resnet import resnet18
 from neuralteleportation.models.model_zoo.vgg import vgg11
