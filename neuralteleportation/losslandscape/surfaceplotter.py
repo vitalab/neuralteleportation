@@ -296,15 +296,13 @@ class SurfacePlotter():
 
         fig = plt.figure()
         ax = Axes3D(fig)
-        
+
         if additional_points:
             for p in additional_points:
                 ax.scatter3D(p[0], p[1], p[2], color='Black', marker='o')
 
         surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
-
-
 
         fig.savefig(self.surf_file + '_' + surf_name + '_3dsurface.pdf', dpi=300,
                     bbox_inches='tight', format='pdf')
@@ -365,8 +363,8 @@ if __name__ == '__main__':
     import torchvision.transforms as transforms
     from neuralteleportation.models.model_zoo.resnetcob import resnet50COB
     from neuralteleportation.models.model_zoo.vggcob import vgg11COB
-    from neuralteleportation.utils.dataloader import load_cifar10_dataloaders
-    from neuralteleportation.training import train, test
+    from neuralteleportation.training.experiment_setup import get_cifar10_datasets
+    from neuralteleportation.training.training import train, test
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
@@ -378,19 +376,16 @@ if __name__ == '__main__':
     batch_size = 128
     data_split = 1
 
-    trainloader, testloader = load_cifar10_dataloaders(batch_size, data_split, 0, shuffle=False)
+    trainset, valset, testset = get_cifar10_datasets()
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
 
     criterion = nn.CrossEntropyLoss()
-    train_set = trainloader.dataset
 
     net = resnet50COB(input_channels=3, num_classes=10).to(device)
     w = net_plotter.get_weights(net)
 
-    surfplt = SurfacePlotter('test', net, x='-asdfas1:1:5', y='-1:1:5')
+    surfplt = SurfacePlotter('test', net, x='-1:1:5', y='-1:1:5')
     surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device)
 
     surfplt.plot_surface()
     plt.show()
-
-    # You can add any surface file here.
-    SurfacePlotter.plot_from_surf_file('/tmp/teleported_resnet56_surface_[-1.0,1.0,20]x[-1.0,1.0,20]_rawdata.h5')

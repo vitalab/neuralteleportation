@@ -50,7 +50,7 @@ def set_weights(net, weights, directions=None, step=None, device='cpu'):
             p.data = w + d
 
 
-def set_states(net, states, directions=None, step=None):
+def set_states(net, states, directions=None, step=None, device='cpu'):
     """
         Overwrite the network's state_dict or change it along directions with a step size.
     """
@@ -68,7 +68,7 @@ def set_states(net, states, directions=None, step=None):
         new_states = copy.deepcopy(states)
         assert (len(new_states) == len(changes))
         for (_, v), d in zip(new_states.items(), changes):
-            d = torch.tensor(d)
+            d = torch.tensor(d).to(device=device)
             v.add_(d.type(v.type()))
 
         net.load_state_dict(new_states)
