@@ -8,18 +8,15 @@
 
     This class serve as a serializer for the surface drawn by the author's code.
 
-    Last Modified: 1 June 2020
+    Last Modified: 2 June 2020
 """
 import argparse
 import copy
 import h5py
 import torch
 import time
-import socket
 import os
-import sys
 import numpy as np
-import torchvision
 import torch.nn as nn
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -31,8 +28,6 @@ import neuralteleportation.losslandscape.scheduler as scheduler
 import neuralteleportation.losslandscape.net_plotter as net_plotter
 import neuralteleportation.losslandscape.evaluation as evaluation
 import neuralteleportation.losslandscape.h5_util as h5_util
-import neuralteleportation.losslandscape.plot_2D as plot_2D
-import neuralteleportation.losslandscape.plot_1D as plot_1D
 import neuralteleportation.losslandscape.projection as proj
 
 
@@ -60,7 +55,7 @@ class SurfacePlotter():
             surfplt = SurfacePlotter('resnet56', net, x, surf_file='')
             surfplt.crunch(criterion, w1, None, trainloader, 'train_loss', 'train_acc', device)
     """
-    def __init__(self, net_name, net, x, y=None, surf_file=None, directions_file=None, direction_type='weights', same_direction=False, raw_data=True, data_split=1):
+    def __init__(self, net_name, net, x, y=None, xignore='', yignore='', surf_file=None, directions_file=None, direction_type='weights', same_direction=False, raw_data=True, data_split=1):
         self.net_name = net_name
         self.net = net
         self.direction_type = direction_type
@@ -71,8 +66,8 @@ class SurfacePlotter():
         self.y = y
         self.xnorm = 'filter'
         self.ynorm = 'filter'
-        self.xignore = 'biasbn'
-        self.yignore = 'biasbn'
+        self.xignore = xignore
+        self.yignore = yignore
         self.surface = None
 
         try:
@@ -133,14 +128,16 @@ class SurfacePlotter():
         # Open if the direction file already exists or no
         if os.path.exists(self.directions_file):
             f = h5py.File(self.directions_file, 'r')
-            if (self.y and 'ydirection' in f.keys()) or 'xdirection' in f.keys():
+            if not self.directions_file and ((self.y and 'ydirection' in f.keys()) or 'xdirection' in f.keys()):
+                print("%s rewritting on file" % self.directions_file)
+            else:
+                print("%s is setuped" % self.directions_file)
                 f.close()
-                print("%s is already set up" % self.directions_file)
                 return
-            f.close()
+        else:
+            f = h5py.File(self.directions_file, 'w')  # create file, fail if exists
 
         # Create the plotting directions
-        f = h5py.File(self.directions_file, 'w')  # create file, fail if exists
         print("Setting up the plotting directions...")
         xdirection = net_plotter.create_random_direction(self.net, self.direction_type, ignore=self.xignore, norm=self.xnorm)
         h5_util.write_list(f, 'xdirection', xdirection)
@@ -160,7 +157,7 @@ class SurfacePlotter():
             Creates the name of the network the surface file.
         """
         # use self.dir_file as the perfix
-        surf_file = "./tmp/" + self.net_name + "_surface"
+        surf_file = "/tmp/" + self.net_name + "_surface"
 
         # resolution
         surf_file += '_[%s,%s,%d]' % (str(self.xmin), str(self.xmax), int(self.xnum))
@@ -170,8 +167,6 @@ class SurfacePlotter():
         # dataloder parameters
         if self.raw_data:  # without data normalization
             surf_file += '_rawdata'
-        if self.data_split > 1:
-            surf_file += '_datasplit=' + str(self.data_split) + '_splitidx=' + str(self.split_idx)
 
         return surf_file + ".h5"
 
@@ -183,12 +178,14 @@ class SurfacePlotter():
         if os.path.exists(self.surf_file):
             f = h5py.File(self.surf_file, 'r')
             if (self.y and 'ycoordinates' in f.keys()) or 'xcoordinates' in f.keys():
+                print("%s rewritting on file" % self.surf_file)
+            else:
+                print("%s is setuped" % self.directions_file)
                 f.close()
-                print("%s is already set up" % self.surf_file)
                 return
-
+        else:
+            f = h5py.File(self.surf_file, 'a')
         print("Setting up the surface file...")
-        f = h5py.File(self.surf_file, 'a')
         f['directions_file'] = self.directions_file
 
         # Create the coordinates(resolutions) at which the function is evaluated
@@ -203,7 +200,7 @@ class SurfacePlotter():
 
     def crunch(self, criterion, w, s, dataloader, loss_key, acc_key, device='cpu'):
         """
-            Calculate the loss values and accuracies of modified model by replacing the weights 
+            Calculate the loss values and accuracies of modified model by replacing the weights
             with a new set of weights. These are computed off the f(a,b) = L(theta + a*d1 + b*d2)
         """
 
@@ -311,6 +308,10 @@ class SurfacePlotter():
 
     def plot_contours(self, vmin, vmax, vlevel, surf_name='train_loss', save=False):
         """
+            Plot the computed surface using contours and adds point from given args.
+
+            Args:
+                surf_name: name of the plot.
         """
         f = h5py.File(self.surf_file, 'r')
         x = np.array(f['xcoordinates'][:])
@@ -318,7 +319,7 @@ class SurfacePlotter():
 
         if surf_name in f.keys():
             Z = np.array(f[surf_name][:])
-        elif surf_name == 'train_err' or surf_name == 'test_err' :
+        elif surf_name == 'train_err' or surf_name == 'test_err':
             Z = 100 - np.array(f[surf_name][:])
 
         X, Y = np.meshgrid(x, y)
@@ -328,7 +329,7 @@ class SurfacePlotter():
         plt.clabel(CS, inline=1, fontsize=8)
 
         if save:
-            fig.savefig(surf_file + '_' + self.surf_name + '_2dcontour' + '.pdf', dpi=300,
+            fig.savefig(self.surf_file + '_' + surf_name + '_2dcontour' + '.pdf', dpi=300,
                         bbox_inches='tight', format='pdf')
 
     def show(self):
