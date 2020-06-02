@@ -9,6 +9,8 @@ from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.network_graph import NetworkGrapher
 from neuralteleportation.layers.merge import Add, Concat
 
+from matplotlib import pyplot as plt
+
 
 class NeuralTeleportationModel(nn.Module):
     """
@@ -112,6 +114,7 @@ class NeuralTeleportationModel(nn.Module):
 
     def teleport(self):
         for k, layer in enumerate(self.graph):
+            print(layer['module'])
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def apply_cob(self):
@@ -312,45 +315,61 @@ class NeuralTeleportationModel(nn.Module):
             t = layers[i].calculate_cob(initial_weights[i], target_weights[i], cob[-1])
             cob.append(t)
 
-        # print("Last layer")
-        # print(layers[-2].out_features)
-        t = []
-        for i in range(layers[-2].out_features):
-            w0 = initial_weights[-2][i, :]
-            w0_hat = target_weights[-2][i, :]
-            w1 = initial_weights[-1][:, i]
-            w1_hat = target_weights[-1][:, 1]
-            t0 = cob[-1]
-            t2 = layers[-1].get_output_cob()
+        cob.append(layers[-2].calculate_last_cob(initial_weights[-2], target_weights[-2],
+                                                 initial_weights[-1], target_weights[-1],
+                                                 cob[-1]))
 
-            # print(w0.shape)
-            # print(w1.shape)
-            # print(w0_hat.shape)
-            # print(w1_hat.shape)
-            # print(t0.shape)
-            # print(t2.shape)
-
-            ti = torch.tensor(1.1)
-
-            eta = 0.001
-
-            for _ in range(20):
-                # print((w0 / t0).dot(w0 / t0))
-                # print((w0 / t0).dot(w0_hat))
-                # print((w1 * t2).dot(w1 * t2))
-                # print((w1 * t2).dot(w1_hat))
-                grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
-                        2 * (w0 / t0).dot(w0_hat) -
-                        2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
-                        2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
-                # print("ti: ", ti)
-                # print("grad: ", grad)
-                ti = ti - eta * grad
-
-            # print("final ti: ", ti)
-            t.append(ti)
-
-        cob.append(torch.tensor(t))
+        # t = []
+        # for i in range(layers[-2].out_features):
+        #     w0 = initial_weights[-2][i, :]
+        #     w0_hat = target_weights[-2][i, :]
+        #     w1 = initial_weights[-1][:, i]
+        #     w1_hat = target_weights[-1][:, i]
+        #     t0 = cob[-1]
+        #     t2 = layers[-1].get_output_cob()
+        #
+        #     print(w0.shape)
+        #     print(w1.shape)
+        #     print(w0_hat.shape)
+        #     print(w1_hat.shape)
+        #     print(t0.shape)
+        #     print(t2.shape)
+        #
+        #     exit(0)
+        #
+        #
+        #     ti = torch.tensor(1.0)
+        #
+        #     eta = 0.1
+        #
+        #     grads = []
+        #
+        #     for _ in range(200):
+        #         # print((w0 / t0).dot(w0 / t0))
+        #         # print((w0 / t0).dot(w0_hat))
+        #         # print((w1 * t2).dot(w1 * t2))
+        #         # print((w1 * t2).dot(w1_hat))
+        #         grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
+        #                 2 * (w0 / t0).dot(w0_hat) -
+        #                 2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
+        #                 2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
+        #         print("ti: ", ti)
+        #         print("grad: ", grad)
+        #         ti = ti - eta * grad
+        #         grads.append(grad.item())
+        #
+        #     plt.figure()
+        #     plt.plot(grads)
+        #     plt.show()
+        #     #
+        #     # if i == 2:
+        #     #     exit(0)
+        #
+        #
+        #     # print("final ti: ", ti)
+        #     t.append(ti)
+        #
+        # cob.append(torch.tensor(t))
 
         cob.pop(0)
         # cob.pop(-1)

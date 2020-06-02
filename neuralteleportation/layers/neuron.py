@@ -7,6 +7,8 @@ import torch.nn as nn
 from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.layers.neuralteleportation import NeuralTeleportationLayerMixin, COBForwardMixin
 
+from matplotlib import pyplot as plt
+
 
 class NeuronLayerMixin(NeuralTeleportationLayerMixin):
     in_features: int
@@ -19,7 +21,6 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         self.w = self.weight.clone().detach().requires_grad_(True)
         if self.bias is not None:
             self.b = self.bias.clone().detach().requires_grad_(True)
-
 
     def get_cob(self, basis_range: int = 0.5, sampling_type='usual') -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
@@ -108,12 +109,16 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        print("Apply COB")
+        print(self.weight)
         self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
         self.weight = nn.Parameter(self.w, requires_grad=True)
-
+        print(self.weight)
         if self.bias is not None:
             self.b = self.bias * next_cob.type_as(self.bias)
+            print(self.bias)
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
+            print(self.bias)
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         """Computes the factor to apply to the weights of the current layer to perform a change of basis.
@@ -127,10 +132,17 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
         raise NotImplementedError
 
-    @ staticmethod
+    @staticmethod
     def calculate_cob(weights, target_weights, prev_cob, concat=True):
         """
         Compute the cob to teleport from the current weights to the target_weights
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def calculate_last_cob(initial_weights1, initial_weights2, target_weights1, target_weights2, prev_cob):
+        """
+        Compute the cob to teleport from the current weights to the target_weight for the last cob.
         """
         raise NotImplementedError
 
@@ -150,7 +162,7 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return next_cob[..., None] / prev_cob[None, ...]
 
-    @ staticmethod
+    @staticmethod
     def calculate_cob(weights, target_weights, prev_cob, concat=True):
         """
         Compute the cob to teleport from the current weights to the target_weights
@@ -162,6 +174,47 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
 
         return torch.tensor(cob)
 
+    @staticmethod
+    def calculate_last_cob(initial_weights1, target_weights1, initial_weights2, target_weights2, prev_cob):
+        t = []
+        for i in range(initial_weights1.shape[0]):
+            w0 = initial_weights1[i, :]
+            w0_hat = target_weights1[i, :]
+            w1 = initial_weights2[:, i]
+            w1_hat = target_weights2[:, i]
+            t0 = prev_cob
+            t2 = torch.ones(target_weights2.shape[0])
+
+            # print(w0.shape)
+            # print(w1.shape)
+            # print(w0_hat.shape)
+            # print(w1_hat.shape)
+            # print(t0.shape)
+            # print(t2.shape)
+
+            ti = torch.tensor(1.0)
+
+            eta = 0.1
+
+            grads = []
+            for _ in range(200):
+                grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
+                        2 * (w0 / t0).dot(w0_hat) -
+                        2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
+                        2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
+                # print("ti: ", ti)
+                # print("grad: ", grad)
+                ti = ti - eta * grad
+                grads.append(grad.item())
+
+            # plt.figure()
+            # plt.plot(grads)
+            # plt.show()
+
+            # print("final ti: ", ti)
+            t.append(ti)
+
+        return torch.tensor(t)
 
 
 class ConvMixin(NeuronLayerMixin):

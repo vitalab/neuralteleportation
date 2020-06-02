@@ -31,7 +31,10 @@ class Model(nn.Module):
         self.net = nn.Sequential(FlattenCOB(),
                                  LinearCOB(784, 128),
                                  ReLUCOB(),
+                                 LinearCOB(128, 128),
+                                 ReLUCOB(),
                                  LinearCOB(128, 10)
+
                                  )
 
     def forward(self, input):

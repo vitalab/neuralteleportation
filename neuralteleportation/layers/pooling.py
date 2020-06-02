@@ -15,7 +15,7 @@ class MaxPool2dCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.MaxPool2d)
     reshape_cob = True
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
-        self.cob = torch.tensor(prev_cob)
+        self.cob = prev_cob
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)

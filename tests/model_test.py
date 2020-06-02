@@ -64,8 +64,9 @@ def test_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), verbo
         print("Diff weight average: ", np.mean(np.abs((w1 - w2))))
         print("Diff prediction average: ", diff_average)
 
-    assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2, atol=atol), "Teleporation did not work for model {}. Average difference: {}".\
+    # assert not np.allclose(w1, w2)
+    assert np.all(~np.isclose(w1, w2))
+    assert np.allclose(pred1, pred2, atol=atol), "Teleporation did not work for model {}. Average difference: {}". \
         format(model_name, diff_average)
 
     print("Teleportation successful for " + model_name + " model.")
@@ -134,9 +135,13 @@ def test_calculate_cob(network, model_name, input_shape=(1, 1, 28, 28), noise=Fa
     cob = model.get_cob()
     calculated_cob = model.calculate_cob(w1, w2)
 
+    error = (cob - calculated_cob).abs().mean()
+
     if verbose:
         print("Cob: ", cob.flatten())
         print("Calculated cob: ", calculated_cob.flatten())
+        print("cob error ", calculated_cob.flatten() - cob.flatten())
+        print("cob error : ", error)
 
     assert np.allclose(cob, calculated_cob)
 
@@ -190,8 +195,8 @@ if __name__ == '__main__':
     mlp_model = torch.nn.Sequential(
         Flatten(),
         nn.Linear(784, 128),
-        nn.ReLU(),
-        nn.Linear(128, 128),
+        # nn.ReLU(),
+        # nn.Linear(128, 128),
         nn.ReLU(),
         nn.Linear(128, 10)
     )
@@ -199,15 +204,15 @@ if __name__ == '__main__':
     cnn_model = swap_model_modules_for_COB_modules(cnn_model)
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
-    test_set_weights(network=mlp_model, model_name="MLP")
-    test_teleport(network=mlp_model, model_name="MLP")
-    test_reset_weights(network=mlp_model, model_name="MLP")
-
-    test_set_weights(network=cnn_model, model_name="Convolutional")
-    test_teleport(network=cnn_model, model_name="Convolutional")
-    test_reset_weights(network=cnn_model, model_name="Convolutional")
-
-    test_set_cob(network=mlp_model, model_name="MLP")
-    test_set_cob(network=cnn_model, model_name="Convolutional")
+    # test_set_weights(network=mlp_model, model_name="MLP")
+    # test_teleport(network=mlp_model, model_name="MLP")
+    # test_reset_weights(network=mlp_model, model_name="MLP")
+    #
+    # test_set_weights(network=cnn_model, model_name="Convolutional")
+    # test_teleport(network=cnn_model, model_name="Convolutional")
+    # test_reset_weights(network=cnn_model, model_name="Convolutional")
+    #
+    # test_set_cob(network=mlp_model, model_name="MLP")
+    # test_set_cob(network=cnn_model, model_name="Convolutional")
 
     test_calculate_cob(network=mlp_model, model_name="MLP", verbose=True)
