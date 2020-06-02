@@ -1,5 +1,12 @@
 """
+    Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
+    Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
+    Source Code: https://github.com/tomgoldstein/loss-landscape
+
     Project a model or multiple models to a plane spaned by given directions.
+
+    Modified: Philippe Spino
+    Last Modified: 1 June 2020
 """
 
 import numpy as np
@@ -11,8 +18,9 @@ import neuralteleportation.losslandscape.net_plotter as net_plotter
 import neuralteleportation.losslandscape.h5_util as h5_util
 from sklearn.decomposition import PCA
 
+
 def tensorlist_to_tensor(weights):
-    """ Concatnate a list of tensors into one tensor.
+    """ Concatenate a list of tensors into one tensor.
 
         Args:
             weights: a list of parameter tensors, e.g. net_plotter.get_weights(net).
@@ -69,7 +77,6 @@ def npvec_to_tensorlist(direction, params):
             idx += w.numel()
         assert(idx == len(direction))
         return s2
-
 
 
 def cal_angle(vec1, vec2):
@@ -249,4 +256,3 @@ def setup_PCA_directions(args, model_files, w, s):
     print ('PCA directions saved in: %s' % dir_name)
 
     return dir_name
-

@@ -3,9 +3,10 @@
     Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
     Source Code: https://github.com/tomgoldstein/loss-landscape
 
-    Modified: Philippe Spino
-
     Manipulate network parameters and setup random directions with normalization.
+
+    Modified: Philippe Spino
+    Last Modified: 1 June 2020
 """
 
 import torch

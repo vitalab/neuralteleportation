@@ -1,11 +1,14 @@
 """
-    Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
-    Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
-    Source Code: https://github.com/tomgoldstein/loss-landscape
+    Code Author: Philippe Spino
+
+    Strongly inspired by:
+        Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
+        Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
+        Source Code: https://github.com/tomgoldstein/loss-landscape
 
     This class serve as a serializer for the surface drawn by the author's code.
 
-    Modified: Philippe Spino
+    Last Modified: 1 June 2020
 """
 import argparse
 import copy
@@ -35,7 +38,7 @@ import neuralteleportation.losslandscape.projection as proj
 
 class SurfacePlotter():
     """
-        This class serve as a holder for the loss landscape surface. 
+        This class serve as a holder for the loss landscape surface.
         It is based on the publication of Visualizing the Loss Landscape of Neural Nets
 
         Args:
@@ -77,7 +80,7 @@ class SurfacePlotter():
             self.ymin, self.ymax, self.ynum = (None, None, None)
             if y:
                 self.ymin, self.ymax, self.ynum = [float(a) for a in self.y.split(':')]
-        except:
+        except ValueError:
             raise Exception('Improper format for x- or y-coordinates. Try something like -1:1:51')
 
         if not directions_file:
@@ -112,12 +115,6 @@ class SurfacePlotter():
             dir_file += '_ynorm=' + self.ynorm
         if self.same_direction:  # ydirection is the same as xdirection
             dir_file += '_same_dir'
-
-        # index number
-        # idx = 1
-        # while os.path.exists(dir_file):
-        #     dir_file += '_' + idx
-        #     idx += 1
 
         dir_file += ".h5"
 
@@ -363,9 +360,6 @@ class SurfacePlotter():
         plt.show()
 
 
-###############################################################
-#                          MAIN
-###############################################################
 if __name__ == '__main__':
 
     import torchvision.transforms as transforms
@@ -392,11 +386,11 @@ if __name__ == '__main__':
     net = resnet50COB(input_channels=3, num_classes=10).to(device)
     w = net_plotter.get_weights(net)
 
-    surfplt = SurfacePlotter('test', net, x='-1:1:2', y='-1:1:2')
+    surfplt = SurfacePlotter('test', net, x='-asdfas1:1:5', y='-1:1:5')
     surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device)
 
     surfplt.plot_surface()
     plt.show()
 
-    # You can add any surface file here. 
-    SurfacePlotter.plot_from_surf_file('./tmp/teleported_resnet56_surface_[-1.0,1.0,20]x[-1.0,1.0,20]_rawdata.h5')
+    # You can add any surface file here.
+    SurfacePlotter.plot_from_surf_file('/tmp/teleported_resnet56_surface_[-1.0,1.0,20]x[-1.0,1.0,20]_rawdata.h5')

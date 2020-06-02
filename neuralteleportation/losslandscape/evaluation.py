@@ -7,6 +7,7 @@
     the loss value, accuracy and eigen values of the hessian matrix
 
     Modified: Philippe Spino
+    Last Modified: 1 June 2020
 """
 
 import torch
