@@ -8,6 +8,7 @@ from torchvision.datasets import MNIST, ImageNet, CIFAR10
 from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules as patch_module
 from neuralteleportation.training.training import train
 from neuralteleportation.training.config import *
+from neuralteleportation.training import experiment_setup, experiment_run
 from neuralteleportation.metrics import accuracy
 
 from neuralteleportation.models.generic_models.dense_models import DenseNet as MNIST_DenseNet
@@ -37,6 +38,7 @@ def argument_parser():
                                                                         'vggnet'])
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
     parser.add_argument("--layer_name", type=str, default="conv1")
+    parser.add_argument("--cob_sampling", type=str, defaut="usual")
     return parser.parse_args()
 
 
@@ -51,8 +53,8 @@ if __name__ == "__main__":
         plt.imshow(np_out[0, 0, :, :])
         plt.colorbar()
 
-    parser = argument_parser()
-    batch_size = parser.batch_size
+    args = argument_parser()
+    batch_size = args.batch_size
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -62,35 +64,31 @@ if __name__ == "__main__":
     model = None
     transform = transforms.ToTensor()
     num_classes = 10
-    
-    if parser.model == 'mnist_densenet':
+
+    if args.model == 'mnist_densenet':
         model = MNIST_DenseNet(in_channels=1)
-    elif parser.model == 'densenet':
+    elif args.model == 'densenet':
         model = densenet121COB(num_classes=num_classes)
-    elif parser.model == 'resnet':
+    elif args.model == 'resnet':
         model = resnet18COB(input_channels=3, num_classes=num_classes)
         transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
-    elif parser.model == 'vggnet':
+    elif args.model == 'vggnet':
         model = vgg11COB(num_classes=num_classes)
 
-    dataset_train = None
-    dataset_test = None
-    if parser.dataset == "mnist":
-        dataset_train = MNIST('/tmp', train=True, download=True, transform=transform)
-        dataset_test = MNIST( '/tmp', train=False, download=True, transform=transform)
-    elif parser.dataset == "cifar10":
-        dataset_train = CIFAR10('/tmp', train=True, download=True, transform=transform)
-        dataset_test = CIFAR10('/tmp', train=False, download=True, transform=transform)
+    if args.dataset == "mnist":
+        trainset, valset, testset = experiment_setup.get_mnist_datasets()
+    elif args.dataset == "cifar10":
+        trainset, valset, testset = experiment_setup.get_cifar10_datasets()
 
-    data_train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
-    data_test_loader = DataLoader(dataset_test, batch_size=batch_size, shuffle=True)
+    data_train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    data_test_loader = DataLoader(testset, batch_size=batch_size, shuffle=True)
 
     # Get the width and height of the image, then get the dimension of pixels
     # values
-    w, h = dataset_test.transform.transforms[0].size if isinstance(dataset_test.transform, transforms.Compose) else dataset_test.data.shape[1:3]
-    dims = 1 if len(dataset_test.data.shape) < 4 else dataset_test.data.shape[3]
+    w, h = testset.transform.transforms[0].size if isinstance(testset.transform, transforms.Compose) else testset.data.shape[1:3]
+    dims = 1 if len(testset.data.shape) < 4 else testset.data.shape[3]
 
-    test_img = torch.as_tensor(dataset_test[0][0])
+    test_img = torch.as_tensor(testset[0][0])
     test_img = torch.unsqueeze(test_img, 0)
     test_img = test_img.to(device=device)
 
@@ -99,11 +97,11 @@ if __name__ == "__main__":
     model = NeuralTeleportationModel(network=model, input_shape=(batch_size, dims, w, h))
 
     metric = TrainingMetrics(torch.nn.CrossEntropyLoss(), [accuracy])
-    config = TrainingConfig(epochs=parser.epochs, device=device, batch_size=batch_size)
-    train(model, train_dataset=dataset_train, metrics=metric, config=config)
+    config = TrainingConfig(epochs=args.epochs, device=device, batch_size=batch_size)
+    train(model, train_dataset=trainset, metrics=metric, config=config)
 
     # Attach the hook to a specific layer
-    hook_state = (parser.layer_name, hookCallback)
+    hook_state = (args.layer_name, hookCallback)
     hook = LayerHook(model, hook_state)
 
     # We do a forward propagation to illustrate the example.
@@ -117,24 +115,9 @@ if __name__ == "__main__":
     teleported_ones_output = model(ones)
     teleported_img_output = model(test_img)
 
-    ones_diff = torch.abs(ones_output - teleported_ones_output)
-    img_diff = torch.abs(img_output - teleported_img_output)
-
-    print()
-    print("=========Prediction Differences=========")
-    print("Diff of x: torch.ones(): ", ones_diff.detach().cpu().numpy())
-    print("Diff of x: image: ", img_diff.detach().cpu().numpy())
-    print()
-
-    ones_prediction = torch.max(ones_output, 1)
-    teleported_ones_prediction = torch.max(teleported_ones_output, 1)
     img_prediction = torch.max(img_output, 1)
     teleported_img_prediction = torch.max(teleported_img_output, 1)
 
-    print("=========Ones Prediction=========")
-    print(ones_prediction)
-    print(teleported_ones_prediction)
-    print()
     print("=========Image Prediction=========")
     print(img_prediction)
     print(teleported_img_prediction)
