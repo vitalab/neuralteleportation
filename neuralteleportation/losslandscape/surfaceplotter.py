@@ -10,8 +10,6 @@
 
     Last Modified: 2 June 2020
 """
-import argparse
-import copy
 import h5py
 import torch
 import time
@@ -21,7 +19,6 @@ import torch.nn as nn
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-import matplotlib.markers as mmarks
 from matplotlib import cm
 
 import neuralteleportation.losslandscape.scheduler as scheduler
@@ -69,6 +66,14 @@ class SurfacePlotter():
         self.xignore = xignore
         self.yignore = yignore
         self.surface = None
+
+        self.rewrite_dir = False
+        if not directions_file:
+            self.rewrite_dir = True
+
+        self.rewrite_surf = False
+        if not surf_file:
+            self.rewrite_surf = True
 
         try:
             self.xmin, self.xmax, self.xnum = [float(a) for a in self.x.split(':')]
@@ -125,17 +130,19 @@ class SurfacePlotter():
         print('setup_direction')
         print('-------------------------------------------------------------------')
 
-        # Open if the direction file already exists or no
+        # Skip if the direction file if one is passed or write on the already existing one.
         if os.path.exists(self.directions_file):
-            f = h5py.File(self.directions_file, 'r')
-            if not self.directions_file and ((self.y and 'ydirection' in f.keys()) or 'xdirection' in f.keys()):
+            f = h5py.File(self.directions_file, 'r+')
+            if self.rewrite_dir and ((self.y and 'ydirection' in f.keys()) or 'xdirection' in f.keys()):
                 print("%s rewritting on file" % self.directions_file)
+                for key in f.keys():
+                    del f[key]
             else:
                 print("%s is setuped" % self.directions_file)
                 f.close()
                 return
         else:
-            f = h5py.File(self.directions_file, 'w')  # create file, fail if exists
+            f = h5py.File(self.directions_file, 'w-')
 
         # Create the plotting directions
         print("Setting up the plotting directions...")
@@ -156,15 +163,15 @@ class SurfacePlotter():
         """
             Creates the name of the network the surface file.
         """
-        # use self.dir_file as the perfix
+        # Use self.dir_file as the perfix
         surf_file = "/tmp/" + self.net_name + "_surface"
 
-        # resolution
+        # Resolution
         surf_file += '_[%s,%s,%d]' % (str(self.xmin), str(self.xmax), int(self.xnum))
         if self.y:
             surf_file += 'x[%s,%s,%d]' % (str(self.ymin), str(self.ymax), int(self.ynum))
 
-        # dataloder parameters
+        # Dataloder parameters
         if self.raw_data:  # without data normalization
             surf_file += '_rawdata'
 
@@ -174,17 +181,20 @@ class SurfacePlotter():
         """
             Setup for the surface h5 file.
         """
-        # skip if the direction file already exists
+        # Skip if the direction file if one is passed or write on the already existing one.
         if os.path.exists(self.surf_file):
-            f = h5py.File(self.surf_file, 'r')
-            if (self.y and 'ycoordinates' in f.keys()) or 'xcoordinates' in f.keys():
+            f = h5py.File(self.surf_file, 'r+')
+            if self.rewrite_surf and ((self.y and 'ycoordinates' in f.keys()) or 'xcoordinates' in f.keys()):
                 print("%s rewritting on file" % self.surf_file)
+                for key in f.keys():
+                    del f[key]
             else:
                 print("%s is setuped" % self.directions_file)
                 f.close()
                 return
         else:
-            f = h5py.File(self.surf_file, 'a')
+            f = h5py.File(self.surf_file, 'w-')
+
         print("Setting up the surface file...")
         f['directions_file'] = self.directions_file
 
