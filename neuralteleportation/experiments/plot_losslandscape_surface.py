@@ -37,14 +37,15 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description='Simple argument parser for the plot loss landscape experiment.')
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=10, help='How many epoch to train the network if train_model set to true')
+    parser.add_argument("--epochs", type=int, default=10, help='How many epoch to train the network if train set to true')
     parser.add_argument("--cuda", "-c", action="store_true", default=False, help='use cuda if it is availble')
     parser.add_argument("--load_model", type=str, default="", help="file path of the h5 network state file.")
-    parser.add_argument("--train_model", "-t", action="store_true", default=False, help='if the model should be train before teleportation')
+    parser.add_argument("--train", "-t", action="store_true", default=False, help='if the model should be train before teleportation')
     parser.add_argument("--save_model", "-s", action="store_true", default=False, help='tell to save the model or not')
     parser.add_argument("--save_model_location", type=str, default="", help='save path and .pt file for the selected network')
-    parser.add_argument("--num_teleport", type=int, default=0, help='number of teleportation the original model will do')
-    parser.add_argument("--teleport_mode", type=str, default="positive", choices=["positive", "negative", "random"],help="sets the teleportation mode between random and specific")
+    parser.add_argument("--cob_range", type=float, default=0.5, help='set the CoB range for the teleportation.')
+    parser.add_argument("--teleport_mode", type=str, default="positive", choices=["positive", "negative"], help="set the teleportation mode between positive and negative CoB")
+    parser.add_argument("--sampling", type=str, default="usual", help="Sampling type for CoB.")
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"], help="what dataset should the model be trained on.")
     parser.add_argument("--x", type=str, default="-1:1:5", help='x axis size and precision')
     parser.add_argument("--y", type=str, default="-1:1:5", help='y axis size and precision')
@@ -92,7 +93,7 @@ if __name__ == "__main__":
         net = NeuralTeleportationModel(get_model_from_string(args), input_shape=data_size).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    if args.train_model:
+    if args.train:
         metric = TrainingMetrics(criterion, [accuracy])
         config = TrainingConfig(lr=args.lr, epochs=args.epochs, device=device, batch_size=args.batch_size)
         train(net, train_dataset=trainset, metrics=metric, config=config)
@@ -100,15 +101,12 @@ if __name__ == "__main__":
     if args.save_model:
         torch.save(net, args.save_model_location)
 
-    for n in range(args.num_teleport):
-        if args.teleport_mode == "positive":
-            net = net.random_teleport()
-        elif args.teleport_mode == "negative":
-            net = net.random_teleport(cob_range=-1)
-        elif args.teleport_mode == "random":
-            net = net.random_teleport()
-        else:
-            raise NotImplementedError("%s mode not yet implemented or mode doesn't exist" % args.teleport_mode)
+    if args.teleport_mode == "positive":
+        net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.sampling)
+    elif args.teleport_mode == "negative":
+        net = net.random_teleport(cob_range=-args.cob_range, sampling_type=args.sampling)
+    else:
+        raise NotImplementedError("%s mode not yet implemented or mode doesn't exist" % args.teleport_mode)
 
     w = net_plotter.get_weights(net)
 

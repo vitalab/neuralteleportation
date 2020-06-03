@@ -94,7 +94,7 @@ class SurfacePlotter():
         """
             Name the direction file that stores the random directions base on the net name.
         """
-        dir_file = "./tmp/" + self.net_name + "_direction_vector"
+        dir_file = "/tmp/" + self.net_name + "_direction_vector"
 
         # name for xdirection
         dir_file += '_' + self.direction_type
