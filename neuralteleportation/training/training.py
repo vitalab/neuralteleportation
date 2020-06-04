@@ -17,7 +17,7 @@ from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig,
           val_dataset: Dataset = None, optimizer: Optimizer = None):
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.Adam(model.parameters(), lr=config.lr)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
