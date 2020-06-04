@@ -28,7 +28,7 @@ import neuralteleportation.losslandscape.h5_util as h5_util
 import neuralteleportation.losslandscape.projection as proj
 
 
-class SurfacePlotter():
+class SurfacePlotter:
     """
         This class serve as a holder for the loss landscape surface.
         It is based on the publication of Visualizing the Loss Landscape of Neural Nets
@@ -36,15 +36,15 @@ class SurfacePlotter():
         Args:
             net_name(string): string to identify the created surface file if none is given.
             net(nn.Modules or NeuralTeleportationModel): the network to be plotted.
-            x, y(string): string format of min:max:precision that is used to define the space where the surface will be plotted.
+            x, y(string): string format of min:max:precision that is used to define the space where the surface will be
+                plotted.
             surf_file(string):  the h5 file path containing a surface to be plotted.
                         If left to None, it will generate a new file for the current network.
             direction_file(string): the h5 file path containing the values of the random direction vector used in the
                             Filter-wise Normalized contour plot.
-            direction_type(string): key specifying if the random direction vector should be build using weights or using torch.network_state.
+            direction_type(string): key specifying if the random direction vector should be build using weights or using
+             torch.network_state.
             same_direction(bool): specify if the y directional vector should be the same as the x directional vector.
-            raw_data(bool): specify if the data used in train should be left as is.
-            data_split(int): how much splits should be done inside the dataloader.
 
         Example:
             net = nn.Conv2D(1,3,3)
@@ -52,20 +52,20 @@ class SurfacePlotter():
             surfplt = SurfacePlotter('resnet56', net, x, surf_file='')
             surfplt.crunch(criterion, w1, None, trainloader, 'train_loss', 'train_acc', device)
     """
-    def __init__(self, net_name, net, x, y=None, xignore='', yignore='', surf_file=None, directions_file=None, direction_type='weights', same_direction=False, raw_data=True, data_split=1):
+
+    def __init__(self, net_name: str, net, x: str, y: str = None, xignore: str = '', yignore: str = '',
+                 surf_file: str = None, directions_file: str = None,
+                 direction_type='weights', same_direction: bool = False):
         self.net_name = net_name
         self.net = net
         self.direction_type = direction_type
         self.same_direction = same_direction
-        self.raw_data = raw_data
-        self.data_split = data_split
         self.x = x
         self.y = y
         self.xnorm = 'filter'
         self.ynorm = 'filter'
         self.xignore = xignore
         self.yignore = yignore
-        self.surface = None
 
         self.rewrite_dir = False
         if not directions_file:
@@ -146,14 +146,16 @@ class SurfacePlotter():
 
         # Create the plotting directions
         print("Setting up the plotting directions...")
-        xdirection = net_plotter.create_random_direction(self.net, self.direction_type, ignore=self.xignore, norm=self.xnorm)
+        xdirection = net_plotter.create_random_direction(self.net, self.direction_type,
+                                                         ignore=self.xignore, norm=self.xnorm)
         h5_util.write_list(f, 'xdirection', xdirection)
 
         if self.y:
             if self.same_direction:
                 ydirection = xdirection
             else:
-                ydirection = net_plotter.create_random_direction(self.net, self.direction_type, ignore=self.yignore, norm=self.ynorm)
+                ydirection = net_plotter.create_random_direction(self.net, self.direction_type,
+                                                                 ignore=self.yignore, norm=self.ynorm)
             h5_util.write_list(f, 'ydirection', ydirection)
 
         f.close()
@@ -170,10 +172,6 @@ class SurfacePlotter():
         surf_file += '_[%s,%s,%d]' % (str(self.xmin), str(self.xmax), int(self.xnum))
         if self.y:
             surf_file += 'x[%s,%s,%d]' % (str(self.ymin), str(self.ymax), int(self.ynum))
-
-        # Dataloder parameters
-        if self.raw_data:  # without data normalization
-            surf_file += '_rawdata'
 
         return surf_file + ".h5"
 
@@ -208,13 +206,42 @@ class SurfacePlotter():
         f.close()
         print("surface file created: %s" % self.surf_file)
 
-    def crunch(self, criterion, w, s, dataloader, loss_key, acc_key, device='cpu'):
+    def __get_values_from_file(self, key: str):
+        f = h5py.File(self.surf_file, 'r')
+        x = np.array(f['xcoordinates'][:])
+        y = np.array(f['ycoordinates'][:])
+
+        if key in f.keys():
+            z = np.array(f[key][:])
+        elif key == 'train_err' or key == 'test_err':
+            z = 100 - np.array(f[key][:])
+        else:
+            raise ValueError('Could not find any values to plot on the z-axis!')
+        f.close()
+        return x, y, z
+
+    def __load_directions__(self):
+        """
+            Load direction(s) from the direction file.
+        """
+
+        f = h5py.File(self.directions_file, 'r')
+        if 'ydirection' in f.keys():  # If this is a 2D plot
+            xdirection = h5_util.read_list(f, 'xdirection')
+            ydirection = h5_util.read_list(f, 'ydirection')
+            directions = [xdirection, ydirection]
+        else:
+            directions = [h5_util.read_list(f, 'xdirection')]
+
+        return directions
+
+    def crunch(self, criterion, w, s, dataloader, loss_key: str, acc_key: str, device: str = 'cpu'):
         """
             Calculate the loss values and accuracies of modified model by replacing the weights
             with a new set of weights. These are computed off the f(a,b) = L(theta + a*d1 + b*d2)
         """
 
-        d = net_plotter.load_directions(self.directions_file)
+        d = self.__load_directions__()
 
         if len(d) == 2:
             similarity = proj.cal_angle(proj.nplist_to_tensor(d[0]), proj.nplist_to_tensor(d[1]))
@@ -270,8 +297,8 @@ class SurfacePlotter():
             total_sync += syc_time
 
             print('Evaluated %d/%d  (%.1f%%)  coord=%s \t%s= %.3f \t%s=%.2f \ttime=%.2f \tsync=%.2f' % (
-                    count + 1, len(inds), 100.0 * count / len(inds), str(coord), loss_key, loss,
-                    acc_key, acc, loss_compute_time, syc_time))
+                count + 1, len(inds), 100.0 * count / len(inds), str(coord), loss_key, loss,
+                acc_key, acc, loss_compute_time, syc_time))
 
             # Periodically write to file, and always write after last update
             if (count + 1) % 25 == 0 or count + 1 == len(inds):
@@ -284,22 +311,15 @@ class SurfacePlotter():
         print('done! Total time: %.2f Sync: %.2f' % (total_time, total_sync))
         f.close()
 
-    def plot_surface(self, additional_points=None, surf_name='train_loss'):
+    def plot_surface(self, additional_points=None, surf_key: str = 'train_loss'):
         """
             Plot the computed surface and adds point from given args.
 
             Args:
-                surf_name: name of the plot.
+                additional_points: list of point to be plotted on top of the surface.
+                surf_key: key used to get the values to plot on the z-axis.
         """
-        f = h5py.File(self.surf_file, 'r')
-        x = np.array(f['xcoordinates'][:])
-        y = np.array(f['ycoordinates'][:])
-        X, Y = np.meshgrid(x, y)
-
-        if surf_name in f.keys():
-            Z = np.array(f[surf_name][:])
-        elif surf_name == 'train_err' or surf_name == 'test_err':
-            Z = 100 - np.array(f[surf_name][:])
+        x, y, z = self.__get_values_from_file(surf_key)
 
         fig = plt.figure()
         ax = Axes3D(fig)
@@ -308,41 +328,35 @@ class SurfacePlotter():
             for p in additional_points:
                 ax.scatter3D(p[0], p[1], p[2], color='Black', marker='o')
 
-        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
+        surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        fig.savefig(self.surf_file + '_' + surf_name + '_3dsurface.pdf', dpi=300,
+        fig.savefig(self.surf_file + '_' + surf_key + '_3dsurface.pdf', dpi=300,
                     bbox_inches='tight', format='pdf')
 
-        f.close()
-
-    def plot_contours(self, vmin, vmax, vlevel, surf_name='train_loss', save=False):
+    def plot_contours(self, vmin: float, vmax: float, vlevel: float, surf_key: str = 'train_loss', save: bool = False):
         """
             Plot the computed surface using contours and adds point from given args.
 
             Args:
-                surf_name: name of the plot.
+                surf_key: key used to get the values to plot on the z-axis.
+                vmin: minimum value for drawings levels
+                vmax: maximum value for drawings levels
+                vlevel: number of level lines to be drawn.
+                save: if the plot should be saved or not.
         """
-        f = h5py.File(self.surf_file, 'r')
-        x = np.array(f['xcoordinates'][:])
-        y = np.array(f['ycoordinates'][:])
-
-        if surf_name in f.keys():
-            Z = np.array(f[surf_name][:])
-        elif surf_name == 'train_err' or surf_name == 'test_err':
-            Z = 100 - np.array(f[surf_name][:])
-
-        X, Y = np.meshgrid(x, y)
+        x, y, z = self.__get_values_from_file(surf_key)
 
         fig = plt.figure()
-        CS = plt.contour(X, Y, Z, cmap='summer', levels=np.arange(vmin, vmax, vlevel))
-        plt.clabel(CS, inline=1, fontsize=8)
+        cs = plt.contour(x, y, z, cmap='summer', levels=np.arange(vmin, vmax, vlevel))
+        plt.clabel(cs, inline=1, fontsize=8)
 
         if save:
-            fig.savefig(self.surf_file + '_' + surf_name + '_2dcontour' + '.pdf', dpi=300,
+            fig.savefig(self.surf_file + '_' + surf_key + '_2dcontour' + '.pdf', dpi=300,
                         bbox_inches='tight', format='pdf')
 
-    def show(self):
+    @staticmethod
+    def show():
         plt.show()
 
     @staticmethod
@@ -354,29 +368,22 @@ class SurfacePlotter():
                 surf_file(string): the path to the h5 surface file.
         """
         f = h5py.File(surf_file, 'r')
-        x = np.array(f['xcoordinates'][:])
-        y = np.array(f['ycoordinates'][:])
-        X, Y = np.meshgrid(x, y)
-        Z = np.array(f['train_loss'][:])
+        x, y = np.meshgrid(np.array(f['xcoordinates'][:]),
+                           np.array(f['ycoordinates'][:]))
+        z = np.array(f['train_loss'][:])
 
         fig = plt.figure()
         ax = Axes3D(fig)
-        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
+        surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
         f.close()
-
         plt.show()
 
 
 if __name__ == '__main__':
-
-    import torchvision.transforms as transforms
-    from neuralteleportation.models.model_zoo.resnetcob import resnet50COB
-    from neuralteleportation.models.model_zoo.vggcob import vgg11COB
+    from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
     from neuralteleportation.training.experiment_setup import get_cifar10_datasets
-    from neuralteleportation.training.training import train, test
-    from neuralteleportation.metrics import accuracy
     from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
     device = torch.device('cpu')
@@ -385,18 +392,17 @@ if __name__ == '__main__':
 
     # Parameters of the surface plotter.
     batch_size = 128
-    data_split = 1
 
     trainset, valset, testset = get_cifar10_datasets()
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
 
     criterion = nn.CrossEntropyLoss()
 
-    net = resnet50COB(input_channels=3, num_classes=10).to(device)
+    net = resnet18COB(input_channels=3, num_classes=10).to(device)
     w = net_plotter.get_weights(net)
 
     surfplt = SurfacePlotter('test', net, x='-1:1:5', y='-1:1:5')
-    surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device)
+    surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device.type)
 
     surfplt.plot_surface()
     plt.show()

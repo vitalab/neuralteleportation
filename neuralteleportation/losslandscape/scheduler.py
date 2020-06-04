@@ -1,7 +1,15 @@
 """
-    A task scheduler that assign unfinished jobs to different workers.
+    Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
+    Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
+    Source Code: https://github.com/tomgoldstein/loss-landscape
+
+     A task scheduler that assign unfinished jobs to different workers.
+
+    Modified: Philippe Spino
+    Last Modified: 3 June 2020
 """
 import numpy as np
+
 
 def get_unplotted_indices(vals, xcoordinates, ycoordinates=None):
     """
@@ -29,7 +37,7 @@ def get_unplotted_indices(vals, xcoordinates, ycoordinates=None):
         xcoord_mesh, ycoord_mesh = np.meshgrid(xcoordinates, ycoordinates)
         s1 = xcoord_mesh.ravel()[inds]
         s2 = ycoord_mesh.ravel()[inds]
-        return inds, np.c_[s1,s2]
+        return inds, np.c_[s1, s2]
     else:
         return inds, xcoordinates.ravel()[inds]
 
@@ -58,7 +66,7 @@ def split_inds(num_inds, nproc=1):
     return splitted_idx
 
 
-def get_job_indices(vals, xcoordinates, ycoordinates, rank=0, nproc=1):
+def get_job_indices(vals, xcoordinates, ycoordinates):
     """
     Prepare the job indices over which coordinate to calculate.
 
@@ -66,7 +74,6 @@ def get_job_indices(vals, xcoordinates, ycoordinates, rank=0, nproc=1):
         vals: the value matrix
         xcoordinates: x locations, i.e.,[-1, -0.5, 0, 0.5, 1]
         ycoordinates: y locations, i.e.,[-1, -0.5, 0, 0.5, 1]
-        comm: MPI environment
 
     Returns:
         inds: indices that splitted for current rank
@@ -79,8 +86,8 @@ def get_job_indices(vals, xcoordinates, ycoordinates, rank=0, nproc=1):
     splitted_idx = split_inds(len(inds))
 
     # Split the indices over the available MPI processes
-    inds = inds[splitted_idx[rank]]
-    coords = coords[splitted_idx[rank]]
+    inds = inds[splitted_idx[0]]
+    coords = coords[splitted_idx[0]]
 
     # Figure out the number of jobs that each MPI process needs to calculate.
     inds_nums = [len(idx) for idx in splitted_idx]

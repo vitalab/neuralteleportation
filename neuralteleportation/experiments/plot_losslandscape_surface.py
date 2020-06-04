@@ -91,7 +91,7 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     if args.train:
         metric = TrainingMetrics(criterion, [accuracy])
-        config = TrainingConfig(lr=args.lr, epochs=args.epochs, device=device, batch_size=args.batch_size)
+        config = TrainingConfig(lr=args.lr, epochs=args.epochs, device=device.type, batch_size=args.batch_size)
         train(net, train_dataset=trainset, metrics=metric, config=config)
 
     if args.save_model:
@@ -108,6 +108,6 @@ if __name__ == "__main__":
 
     surfplt = SurfacePlotter(args.model, net, args.x, args.y, same_direction=args.same_direction,
                              xignore=args.xignore, yignore=args.yignore)
-    surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device)
+    surfplt.crunch(criterion, w, None, trainloader, 'train_loss', 'train_acc', device.type)
     surfplt.plot_surface()
     surfplt.show()

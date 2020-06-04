@@ -6,7 +6,7 @@
     Manipulate network parameters and setup random directions with normalization.
 
     Modified: Philippe Spino
-    Last Modified: 1 June 2020
+    Last Modified: 3 June 2020
 """
 
 import torch
@@ -16,11 +16,10 @@ import h5py
 
 import neuralteleportation.losslandscape.h5_util as h5_util
 
+
 ################################################################################
 #                 Supporting functions for weights manipulation
 ################################################################################
-
-
 def get_weights(net):
     """ Extract parameters from net, and return a list of tensors"""
     return [p.data for p in net.parameters()]
@@ -118,11 +117,11 @@ def normalize_direction(direction, weights, norm='filter'):
         # Rescale the filters (weights in group) in 'direction' so that each
         # filter has the same norm as its corresponding filter in 'weights'.
         for d, w in zip(direction, weights):
-            d.mul_(w.norm()/(d.norm() + 1e-10))
+            d.mul_(w.norm() / (d.norm() + 1e-10))
     elif norm == 'layer':
         # Rescale the layer variables in the direction so that each layer has
         # the same norm as the layer variables in weights.
-        direction.mul_(weights.norm()/direction.norm())
+        direction.mul_(weights.norm() / direction.norm())
     elif norm == 'weight':
         # Rescale the entries in the direction so that each entry has the same
         # scale as the corresponding weight.
@@ -142,7 +141,7 @@ def normalize_directions_for_weights(direction, weights, norm='filter', ignore='
     """
         The normalization scales the direction entries according to the entries of weights.
     """
-    assert(len(direction) == len(weights))
+    assert (len(direction) == len(weights))
     for d, w in zip(direction, weights):
         if d.dim() <= 1:
             if ignore == 'biasbn':
@@ -154,7 +153,7 @@ def normalize_directions_for_weights(direction, weights, norm='filter', ignore='
 
 
 def normalize_directions_for_states(direction, states, norm='filter', ignore='ignore'):
-    assert(len(direction) == len(states))
+    assert (len(direction) == len(states))
     for d, (k, w) in zip(direction, states.items()):
         if d.dim() <= 1:
             if ignore == 'biasbn':
@@ -325,7 +324,7 @@ def name_direction_file(args):
                 dir_file += '_same_dir'
 
     # index number
-    if args.idx > 0: 
+    if args.idx > 0:
         dir_file += '_idx=' + str(args.idx)
 
     dir_file += ".h5"
