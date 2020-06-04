@@ -31,7 +31,7 @@ model_urls = {
 
 class VGGCOB(nn.Module):
 
-    def __init__(self, features, num_classes=1000, init_weights=True):
+    def __init__(self, features, num_classes, init_weights=True):
         super(VGGCOB, self).__init__()
         self.features = features
         self.avgpool = AdaptiveAvgPool2dCOB((7, 7))
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     from torchsummary import summary
     from tests.model_test import test_teleport
 
-    vgg = vgg16COB(pretrained=False, input_channels=1)
+    vgg = vgg16COB(pretrained=False, input_channels=1, num_classes=10)
     vgg.eval()  # Put the model in eval to compute the outputs (will change if in train() because of dropout)
     summary(vgg, (1, 224, 224), device='cpu')
     test_teleport(vgg, (1, 1, 224, 224), verbose=True)
