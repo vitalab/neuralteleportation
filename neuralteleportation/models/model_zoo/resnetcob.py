@@ -132,7 +132,7 @@ class BottleneckCOB(nn.Module):
 
 class ResNetCOB(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, block, layers, num_classes, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None, input_channels=3):
         super(ResNetCOB, self).__init__()
@@ -364,8 +364,6 @@ if __name__ == '__main__':
     from torchsummary import summary
     from tests.model_test import test_teleport
 
-
-    resnet = resnet18COB(pretrained=True)
+    resnet = resnet18COB(pretrained=True, num_classes=1000)
     summary(resnet, (3, 224, 224), device='cpu')
     test_teleport(resnet, (1, 3, 224, 224), verbose=True)
-
