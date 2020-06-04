@@ -19,6 +19,8 @@ dependencies:
   - pandas
   - structlog
   - packaging
+  - seaborn
+  - h5py
   - pip:
     - pytorch-lightning
     - torchsummary
