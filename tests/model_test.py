@@ -121,61 +121,6 @@ def test_set_cob(network, model_name, input_shape=(1, 1, 28, 28), verbose=False)
     print("Set cob successful for " + model_name + " model.")
 
 
-def test_calculate_cob(network, model_name, input_shape=(1, 1, 28, 28), noise=False, verbose=False):
-    model = NeuralTeleportationModel(network=network, input_shape=input_shape)
-
-    w1 = model.get_weights(concat=False, flatten=False, bias=False)
-    model.random_teleport()
-    w2 = model.get_weights(concat=False, flatten=False, bias=False)
-
-    if noise:
-        for w in w2:
-            w += torch.rand(w.shape) * 0.001
-
-    cob = model.get_cob()
-    calculated_cob = model.calculate_cob(w1, w2)
-
-    error = (cob - calculated_cob).abs().mean()
-
-    if verbose:
-        print("Cob: ", cob.flatten())
-        print("Calculated cob: ", calculated_cob.flatten())
-        print("cob error ", calculated_cob.flatten() - cob.flatten())
-        print("cob error : ", error)
-
-    assert np.allclose(cob, calculated_cob)
-
-    print("Calculate cob successful for " + model_name + " model.")
-
-
-# def test_calculate_cob2(network, input_shape=(1, 1, 28, 28), noise=False, verbose=True):
-#     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
-#
-#     _w1 = model.get_weights()
-#     w1 = model.get_weights(concat=False, flatten=False, bias=False)
-#     model.random_teleport()
-#     w2 = model.get_weights(concat=False, flatten=False, bias=False)
-#     _w2 = model.get_weights()
-#
-#     if noise:
-#         for w in w2:
-#             w += torch.rand(w.shape) * 0.001
-#
-#     calculated_cob = model.calculate_cob(w1, w2)
-#
-#     model.set_weights(_w1)
-#     model.set_change_of_basis(calculated_cob)
-#     model.teleport()
-#
-#     _w2_ = model.get_weights()
-#
-#     if verbose:
-#         print("Cob: ", _w2.flatten()[:10])
-#         print("Calculated cob: ", _w2_.flatten()[:10])
-#
-#     # assert np.allclose(_w2_, _w2)
-
-
 if __name__ == '__main__':
     import torch.nn as nn
     from torch.nn.modules import Flatten
@@ -189,30 +134,29 @@ if __name__ == '__main__':
         Flatten(),
         nn.Linear(9216, 128),
         nn.ReLU(),
-        nn.Linear(128, 10)
+        nn.Linear(128, 10, bias=False)
     )
 
     mlp_model = torch.nn.Sequential(
         Flatten(),
         nn.Linear(784, 128),
-        # nn.ReLU(),
-        # nn.Linear(128, 128),
         nn.ReLU(),
-        nn.Linear(128, 10)
+        nn.Linear(128, 128),
+        nn.ReLU(),
+        nn.Linear(128, 10, bias=False)
     )
 
     cnn_model = swap_model_modules_for_COB_modules(cnn_model)
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
-    # test_set_weights(network=mlp_model, model_name="MLP")
-    # test_teleport(network=mlp_model, model_name="MLP")
-    # test_reset_weights(network=mlp_model, model_name="MLP")
-    #
-    # test_set_weights(network=cnn_model, model_name="Convolutional")
-    # test_teleport(network=cnn_model, model_name="Convolutional")
-    # test_reset_weights(network=cnn_model, model_name="Convolutional")
-    #
-    # test_set_cob(network=mlp_model, model_name="MLP")
-    # test_set_cob(network=cnn_model, model_name="Convolutional")
+    test_set_weights(network=mlp_model, model_name="MLP")
+    test_teleport(network=mlp_model, model_name="MLP")
+    test_reset_weights(network=mlp_model, model_name="MLP")
 
-    test_calculate_cob(network=mlp_model, model_name="MLP", verbose=True)
+    test_set_weights(network=cnn_model, model_name="Convolutional")
+    test_teleport(network=cnn_model, model_name="Convolutional")
+    test_reset_weights(network=cnn_model, model_name="Convolutional")
+
+    test_set_cob(network=mlp_model, model_name="MLP")
+    test_set_cob(network=cnn_model, model_name="Convolutional")
+

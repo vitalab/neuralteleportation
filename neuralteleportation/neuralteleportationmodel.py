@@ -114,7 +114,6 @@ class NeuralTeleportationModel(nn.Module):
 
     def teleport(self):
         for k, layer in enumerate(self.graph):
-            print(layer['module'])
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def apply_cob(self):

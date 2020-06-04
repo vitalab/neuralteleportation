@@ -67,27 +67,27 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         Returns:
             tuple of weight tensors.
         """
-        if self.bias is not None and bias:
-            if flatten:
-                return self.w.flatten(), self.b.flatten()
-            else:
-                return self.w, self.b
-        else:
-            if flatten:
-                return self.w.flatten(),
-            else:
-                return self.w,
-
         # if self.bias is not None and bias:
         #     if flatten:
-        #         return self.weight.flatten(), self.bias.flatten()
+        #         return self.w.flatten(), self.b.flatten()
         #     else:
-        #         return self.weight, self.bias
+        #         return self.w, self.b
         # else:
         #     if flatten:
-        #         return self.weight.flatten(),
+        #         return self.w.flatten(),
         #     else:
-        #         return self.weight,
+        #         return self.w,
+
+        if self.bias is not None and bias:
+            if flatten:
+                return self.weight.flatten(), self.bias.flatten()
+            else:
+                return self.weight, self.bias
+        else:
+            if flatten:
+                return self.weight.flatten(),
+            else:
+                return self.weight,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
@@ -109,16 +109,11 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
-        print("Apply COB")
-        print(self.weight)
         self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
         self.weight = nn.Parameter(self.w, requires_grad=True)
-        print(self.weight)
         if self.bias is not None:
             self.b = self.bias * next_cob.type_as(self.bias)
-            print(self.bias)
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
-            print(self.bias)
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         """Computes the factor to apply to the weights of the current layer to perform a change of basis.
@@ -168,6 +163,7 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
         Compute the cob to teleport from the current weights to the target_weights
         """
         cob = []
+        prev_cob = prev_cob.type_as(weights)
         for (wi, wi_hat) in zip(weights, target_weights):
             ti = (wi / prev_cob).dot(wi_hat) / (wi / prev_cob).dot(wi / prev_cob)
             cob.append(ti)
@@ -177,27 +173,25 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
     @staticmethod
     def calculate_last_cob(initial_weights1, target_weights1, initial_weights2, target_weights2, prev_cob):
         t = []
+        prev_cob = prev_cob.type_as(initial_weights1)
+        last_cob = torch.ones(target_weights2.shape[0]).type_as(initial_weights1)
+
         for i in range(initial_weights1.shape[0]):
             w0 = initial_weights1[i, :]
             w0_hat = target_weights1[i, :]
             w1 = initial_weights2[:, i]
             w1_hat = target_weights2[:, i]
             t0 = prev_cob
-            t2 = torch.ones(target_weights2.shape[0])
-
-            # print(w0.shape)
-            # print(w1.shape)
-            # print(w0_hat.shape)
-            # print(w1_hat.shape)
-            # print(t0.shape)
-            # print(t2.shape)
+            t2 = last_cob
 
             ti = torch.tensor(1.0)
 
-            eta = 0.1
+            eta = 0.00001
+
+            # print("COB")
 
             grads = []
-            for _ in range(200):
+            for _ in range(6000):
                 grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
                         2 * (w0 / t0).dot(w0_hat) -
                         2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
@@ -207,9 +201,10 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
                 ti = ti - eta * grad
                 grads.append(grad.item())
 
-            # plt.figure()
-            # plt.plot(grads)
-            # plt.show()
+            plt.figure()
+            plt.title("{}".format(i))
+            plt.plot(grads)
+            plt.show()
 
             # print("final ti: ", ti)
             t.append(ti)
