@@ -206,10 +206,10 @@ class SurfacePlotter:
         f.close()
         print("surface file created: %s" % self.surf_file)
 
-    def __get_values_from_file(self, key: str):
+    def __get_values_from_file__(self, key: str):
         f = h5py.File(self.surf_file, 'r')
-        x = np.array(f['xcoordinates'][:])
-        y = np.array(f['ycoordinates'][:])
+        x, y = np.meshgrid(np.array(f['xcoordinates'][:]),
+                           np.array(f['ycoordinates'][:]))
 
         if key in f.keys():
             z = np.array(f[key][:])
@@ -319,7 +319,7 @@ class SurfacePlotter:
                 additional_points: list of point to be plotted on top of the surface.
                 surf_key: key used to get the values to plot on the z-axis.
         """
-        x, y, z = self.__get_values_from_file(surf_key)
+        x, y, z = self.__get_values_from_file__(surf_key)
 
         fig = plt.figure()
         ax = Axes3D(fig)
@@ -345,7 +345,7 @@ class SurfacePlotter:
                 vlevel: number of level lines to be drawn.
                 save: if the plot should be saved or not.
         """
-        x, y, z = self.__get_values_from_file(surf_key)
+        x, y, z = self.__get_values_from_file__(surf_key)
 
         fig = plt.figure()
         cs = plt.contour(x, y, z, cmap='summer', levels=np.arange(vmin, vmax, vlevel))
