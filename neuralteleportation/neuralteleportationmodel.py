@@ -85,14 +85,14 @@ class NeuralTeleportationModel(nn.Module):
           Applies random change of basis to each of the network layers.
 
         Returns:
-            nn.Module of the network after teleportation
+            neural teleportation model after teleportation
         """
         self.get_random_change_of_basis(cob_range, sampling_type)
 
         for k, layer in enumerate(self.graph):
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
-        return self.network
+        return self
 
     def reset_weights(self):
         """Reset all layers."""
