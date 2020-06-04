@@ -1,57 +1,55 @@
 import torch
 import matplotlib.pyplot as plt
-
+import argparse
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.datasets import MNIST, ImageNet, CIFAR10
 
-from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules as patch_module
 from neuralteleportation.training.training import train
 from neuralteleportation.training.config import *
-from neuralteleportation.training import experiment_setup, experiment_run
+from neuralteleportation.training import experiment_setup
 from neuralteleportation.metrics import accuracy
 
-from neuralteleportation.models.generic_models.dense_models import DenseNet as MNIST_DenseNet
-from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
-from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-from neuralteleportation.models.model_zoo.vggcob import vgg11COB
 from neuralteleportation.layerhook import LayerHook
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
-import argparse
+__models__ = experiment_setup.get_model_list()
 
 
 def argument_parser():
-    '''
-    simple argument parser for the experiement.
+    """
+        Simple argument parser for the experiement.
 
-    Ex: python layerhooking.py --batch_size 10 --epochs 5 --model resenet --layer_name layer1
+        Ex: python layerhooking.py --batch_size 10 --epochs 5 --model resenet --layer_name layer1
 
-    '''
-    parser = argparse.ArgumentParser(
-        description='Simple argument parser for the layer hook experiment.')
+    """
+    parser = argparse.ArgumentParser(description='Simple argument parser for the layer hook experiment.')
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=0)
-    parser.add_argument("--model", type=str, default="resnet", choices=['mnist_densenet',
-                                                                        'densenet',
-                                                                        'resnet',
-                                                                        'vggnet'])
+    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--model", type=str, default="resnet18COB", choices=__models__)
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
-    parser.add_argument("--layer_name", type=str, default="conv1")
-    parser.add_argument("--cob_sampling", type=str, defaut="usual")
+    parser.add_argument("--layer_name", type=str, default="conv1",
+                        help="the name of the layer that is going to be hooked. user must go verify the right naming "
+                             "format for the model they are trying to hook")
+    parser.add_argument("--num_teleportation", type=int, default=2)
+    parser.add_argument("--cob_range", type=float, default=0.5)
+    parser.add_argument("--cob_sampling", type=str, default="usual")
+    parser.add_argument("--show_original", action="store_true", default=False,
+                        help="enable the plotting of the original image.")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     # Hook Callback example, it can be anything you want.
+    # The Hook Callback always need the signature (self, input, output).
     def hookCallback(self, input, output):
-        '''
-        small callback that prints the first outputed image to a pyplot figure.
-        '''
+        """
+            small callback that prints the first outputed image to a pyplot figure.
+        """
         np_out = output.detach().cpu().numpy()
         plt.figure()
         plt.imshow(np_out[0, 0, :, :])
         plt.colorbar()
+
 
     args = argument_parser()
     batch_size = args.batch_size
@@ -61,20 +59,7 @@ if __name__ == "__main__":
     else:
         device = torch.device('cpu')
 
-    model = None
     transform = transforms.ToTensor()
-    num_classes = 10
-
-    if args.model == 'mnist_densenet':
-        model = MNIST_DenseNet(in_channels=1)
-    elif args.model == 'densenet':
-        model = densenet121COB(num_classes=num_classes)
-    elif args.model == 'resnet':
-        model = resnet18COB(input_channels=3, num_classes=num_classes)
-        transform = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor()])
-    elif args.model == 'vggnet':
-        model = vgg11COB(num_classes=num_classes)
-
     if args.dataset == "mnist":
         trainset, valset, testset = experiment_setup.get_mnist_datasets()
     elif args.dataset == "cifar10":
@@ -83,43 +68,46 @@ if __name__ == "__main__":
     data_train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     data_test_loader = DataLoader(testset, batch_size=batch_size, shuffle=True)
 
-    # Get the width and height of the image, then get the dimension of pixels
-    # values
-    w, h = testset.transform.transforms[0].size if isinstance(testset.transform, transforms.Compose) else testset.data.shape[1:3]
-    dims = 1 if len(testset.data.shape) < 4 else testset.data.shape[3]
+    w, h, dims = trainset.data.shape[1:]
 
-    test_img = torch.as_tensor(testset[0][0])
-    test_img = torch.unsqueeze(test_img, 0)
+    test_img = torch.as_tensor(testset.data[0], dtype=torch.float32)
+    test_img = torch.unsqueeze(test_img, 0).permute(0, 3, 1, 2)
     test_img = test_img.to(device=device)
 
+    if args.show_original:
+        plt.figure()
+        plt.imshow(testset.data[0])
+        plt.colorbar()
+        plt.title("Original Image")
+
     # Change the model to a teleportable model.
-    model = model.to(device=device)
-    model = NeuralTeleportationModel(network=model, input_shape=(batch_size, dims, w, h))
+    net = experiment_setup.get_model_from_string(args.model, num_classes=10, input_channels=dims).to(device=device)
+    net = NeuralTeleportationModel(network=net, input_shape=(batch_size, dims, w, h))
 
     metric = TrainingMetrics(torch.nn.CrossEntropyLoss(), [accuracy])
-    config = TrainingConfig(epochs=args.epochs, device=device, batch_size=batch_size)
-    train(model, train_dataset=trainset, metrics=metric, config=config)
+    config = TrainingConfig(epochs=args.epochs, device=device.type, batch_size=batch_size)
+    train(net, train_dataset=trainset, metrics=metric, config=config)
 
     # Attach the hook to a specific layer
     hook_state = (args.layer_name, hookCallback)
-    hook = LayerHook(model, hook_state)
+    hook = LayerHook(net, hook_state)
 
     # We do a forward propagation to illustrate the example.
-    model.eval()
-    ones = torch.ones((1, dims, w, h)).to(device)
-    ones_output = model(ones)
-    img_output = model(test_img)
+    net.eval()
+    img_output = net(test_img)
+    plt.title("non-teleported")
 
-    if isinstance(model, NeuralTeleportationModel):
-        model.random_teleport()
-    teleported_ones_output = model(ones)
-    teleported_img_output = model(test_img)
-
-    img_prediction = torch.max(img_output, 1)
-    teleported_img_prediction = torch.max(teleported_img_output, 1)
+    teleported_prediction = []
+    for n in range(args.num_teleportation):
+        net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
+        teleported_img_output = net(test_img)
+        plt.title("teleportation number: %s" % (n + 1))
+        img_prediction = torch.max(img_output, 1)
+        teleported_prediction.append(torch.max(teleported_img_output, 1))
 
     print("=========Image Prediction=========")
     print(img_prediction)
-    print(teleported_img_prediction)
+    for pred in teleported_prediction:
+        print(pred)
 
     plt.show()
