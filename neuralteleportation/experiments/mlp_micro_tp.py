@@ -40,36 +40,39 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
 
         device:                 Device used to compute the netork operations (Typically 'cpu' or 'cuda')
     """
-
+    # sampling_types = ['zero']
     # Arbitrary precision threshold for nullity comparison
     tol = 1e-2
+    loss_func = torch.nn.CrossEntropyLoss()
+
 
     for batch_size in batch_sizes:
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+        data, target = next(iter(dataloader))
 
-        iterations = range(0, nb_teleport)
-        loss_func = torch.nn.CrossEntropyLoss()
+        model = NeuralTeleportationModel(network=network, input_shape=data.shape)
+        w1 = model.get_weights().detach().numpy()
 
         for sampling_type in sampling_types:
             for power in range(-2, 2):
-                # for batch_idx, (data, target) in enumerate(dataloader):
 
                 cob = 10 ** power
                 angle_results = []
                 rand_angle_results = []
                 rand_rand_angle_results = []
                 rand_micro_angle_results = []
+                model.set_weights(w1)
+                iterations = min(int(len(dataloader.dataset) / dataloader.batch_size), nb_teleport)
 
-                for _ in tqdm(iterations):
+                for _ in tqdm(range(0, iterations)):
+
                     data, target = next(iter(dataloader))
-                    model = NeuralTeleportationModel(network=network, input_shape=data.shape)
-                    w1 = model.get_weights().detach().numpy()
-
                     data, target = data.to(device), target.to(device)
                     grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
                     model.set_weights(w1)
                     model.random_teleport(cob_range=cob, sampling_type=sampling_type)
+
                     w2 = model.get_weights().detach().numpy()
                     micro_teleport_vec = (w2 - w1)
 
@@ -77,20 +80,21 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                     random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
 
                     # Normalized scalar product
-                    dot_prod = np.longdouble(np.dot(grad, micro_teleport_vec) /
+                    dot_prod = np.longfloat(np.dot(grad, micro_teleport_vec) /
                                             (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
+
                     angle = np.degrees(np.arccos(dot_prod))
 
-                    rand_dot_prod = np.longdouble(np.dot(grad, random_vector) /
+                    rand_dot_prod = np.longfloat(np.dot(grad, random_vector) /
                                                  (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
                     rand_angle = np.degrees(np.arccos(rand_dot_prod))
 
-                    rand_rand_dot_prod = np.longdouble(np.dot(random_vector2, random_vector) /
+                    rand_rand_dot_prod = np.longfloat(np.dot(random_vector2, random_vector) /
                                                     (np.linalg.norm(random_vector2) *
                                                     np.linalg.norm(random_vector)))
                     rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
 
-                    rand_micro_dot_prod = np.longdouble(np.dot(random_vector2, micro_teleport_vec) /
+                    rand_micro_dot_prod = np.longfloat(np.dot(random_vector2, micro_teleport_vec) /
                                                       (np.linalg.norm(random_vector2) *
                                                        np.linalg.norm(micro_teleport_vec)))
                     rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
@@ -109,6 +113,8 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                 rand_rand_angle_results = np.array(rand_rand_angle_results)
                 rand_micro_angle_results = np.array(rand_micro_angle_results)
 
+
+
                 print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
                       f'{red * failed}{np.round(angle_results.mean(), abs(int(np.log10(tol))))}',
                       f' (!=0 => FAILED!)' * failed,
@@ -124,7 +130,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                       f', the delta in angle is {rand_angle - target_angle}°\n',
                       sep='')
 
-                try:
+                if not np.isnan(np.sum(angle_results)):
                     delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
                     x_min = 90 - delta
                     x_max = 90 + delta
@@ -136,7 +142,7 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                     bin_height = bin_height / float(max(bin_height))
                     plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
                     plt.title(f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}\n'
-                              f'{nb_teleport:} iter, batch size: {batch_size}')
+                              f'{iterations:} iter, batch size: {batch_size}')
                     plt.legend(['Micro-teleportation\n vs \n Gradient'])
                     plt.xlim(x_min, x_max)
 
@@ -165,12 +171,18 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                     plt.legend(['Random Vector\n vs \n Random Vector'])
 
                     plt.xlabel('Angle in degrees')
+                    plt.savefig(f'images/{network_descriptor}_Samp_type_{sampling_type}'
+                                f'_cob_{cob}_iter_{iterations}_batch_size_{batch_size}.png'
+                                )
                     plt.show()
 
-                except:
-                    print(f'{red}Something went wrong while generating graphic!!!:\n{reset}'
-                          f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}\n'
-                          f'{nb_teleport:} iter, batch size: {batch_size}\n')
+                else:
+                    print(f'{red}Something went wrong while generating the graphic!:{reset}',
+                          f'angle results contains NaN values' * np.isnan(np.sum(angle_results)),
+                          f'Teleported weights diverged to infinity' * (sum(np.isinf(w2)) > 0),
+                          f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}',
+                          f'{nb_teleport:} iter, batch size: {batch_size}\n',
+                          sep='\n')
 
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
@@ -241,19 +253,80 @@ if __name__ == '__main__':
     trans.append(transforms.ToTensor())
     trans = transforms.Compose(trans)
 
-    mnist_train = MNIST('/tmp', train=True, download=True, transform=trans)
-    mnist_val = MNIST('/tmp', train=False, download=True, transform=trans)
-    mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
+    # mnist_train = MNIST('/tmp', train=True, download=True, transform=trans)
+    # mnist_val = MNIST('/tmp', train=False, download=True, transform=trans)
+    # mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
+    #
+    # mlp_model = torch.nn.Sequential(
+    #     Flatten(),
+    #     nn.Linear(784, 12),
+    #     nn.ReLU(),
+    #     nn.Linear(12, 12),
+    #     nn.ReLU(),
+    #     nn.Linear(12, 10)
+    # )
+    #
+    # mlp_model = swap_model_modules_for_COB_modules(mlp_model)
+    #
+    # optim = torch.optim.SGD(params=mlp_model.parameters(), lr=.01)
+    # metrics = [accuracy]
+    # loss = nn.CrossEntropyLoss()
+    #
+    # train(mlp_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+    #       epochs=1, device='cpu', batch_size=1)
+    # print(test(mlp_model, loss, metrics, mnist_test))
+    #
+    # dot_product(network=mlp_model, dataset=mnist_test, network_descriptor='MLP on MNIST')
+    #
+    # mnist_train = CIFAR10('/tmp', train=True, download=True, transform=trans)
+    # mnist_val = CIFAR10('/tmp', train=False, download=True, transform=trans)
+    # mnist_test = CIFAR10('/tmp', train=False, download=True, transform=trans)
+    #
+    # mlp_model = torch.nn.Sequential(
+    #     Flatten(),
+    #     nn.Linear(3072, 1536),
+    #     nn.ReLU(),
+    #     nn.Linear(1536, 512),
+    #     nn.ReLU(),
+    #     nn.Linear(512, 256),
+    #     nn.ReLU(),
+    #     nn.Linear(256, 128),
+    #     nn.ReLU(),
+    #     nn.Linear(128, 64),
+    #     nn.ReLU(),
+    #     nn.Linear(64, 10)
+    # )
+    #
+    # mlp_model = swap_model_modules_for_COB_modules(mlp_model)
+    #
+    # optim = torch.optim.SGD(params=mlp_model.parameters(), lr=.01)
+    # metrics = [accuracy]
+    # loss = nn.CrossEntropyLoss()
+    #
+    # train(mlp_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+    #       epochs=1, device='cpu', batch_size=1)
+    # print(test(mlp_model, loss, metrics, mnist_test))
+    #
+    # dot_product(network=mlp_model, dataset=mnist_test, network_descriptor='MLP on CIFAR10')
+
+    mnist_train = CIFAR100('/tmp', train=True, download=True, transform=trans)
+    mnist_val = CIFAR100('/tmp', train=False, download=True, transform=trans)
+    mnist_test = CIFAR100('/tmp', train=False, download=True, transform=trans)
 
     mlp_model = torch.nn.Sequential(
         Flatten(),
-        nn.Linear(784, 12),
+        nn.Linear(3072, 1536),
         nn.ReLU(),
-        nn.Linear(12, 12),
+        nn.Linear(1536, 512),
         nn.ReLU(),
-        nn.Linear(12, 10)
+        nn.Linear(512, 256),
+        nn.ReLU(),
+        nn.Linear(256, 128),
+        nn.ReLU(),
+        nn.Linear(128, 64),
+        nn.ReLU(),
+        nn.Linear(64, 100)
     )
-
 
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
@@ -265,27 +338,4 @@ if __name__ == '__main__':
           epochs=1, device='cpu', batch_size=1)
     print(test(mlp_model, loss, metrics, mnist_test))
 
-    dot_product(network=mlp_model, dataset=mnist_test, nb_teleport=50, network_descriptor='MLP on MNIST')
-
-    mnist_train = CIFAR10('/tmp', train=True, download=True, transform=trans)
-    mnist_val = CIFAR10('/tmp', train=False, download=True, transform=trans)
-    mnist_test = CIFAR10('/tmp', train=False, download=True, transform=trans)
-
-    mlp_model = torch.nn.Sequential(
-        Flatten(),
-        nn.Linear(3072, 64),
-        nn.ReLU(),
-        nn.Linear(64, 32),
-        nn.ReLU(),
-        nn.Linear(32, 16),
-        nn.ReLU(),
-        nn.Linear(16, 10)
-    )
-
-    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
-
-    train(mlp_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1, device='cpu', batch_size=1)
-    print(test(mlp_model, loss, metrics, mnist_test))
-
-    dot_product(network=mlp_model, dataset=mnist_test, network_descriptor='MLP on CIFAR10')
+    dot_product(network=mlp_model, dataset=mnist_test, network_descriptor='MLP on CIFAR100')
