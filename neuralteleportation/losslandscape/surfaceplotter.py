@@ -19,7 +19,7 @@ import torch.nn as nn
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-from matplotlib import cm
+from matplotlib import cm, ticker
 
 import neuralteleportation.losslandscape.scheduler as scheduler
 import neuralteleportation.losslandscape.net_plotter as net_plotter
@@ -348,7 +348,12 @@ class SurfacePlotter:
         x, y, z = self.__get_values_from_file__(surf_key)
 
         fig = plt.figure()
-        cs = plt.contour(x, y, z, cmap='summer', levels=np.arange(vmin, vmax, vlevel))
+        if vmin and vmax and vlevel:
+            cs = plt.contourf(x, y, z, cmap='gist_rainbow', levels=np.arange(vmin, vmax, vlevel))
+        else:
+            cs = plt.contourf(x, y, z, cmap='gist_rainbow')
+        # cs = plt.contourf(x, y, z, cmap='coolwarm')
+        plt.colorbar(cs)
         plt.clabel(cs, inline=1, fontsize=8)
 
         if save:
