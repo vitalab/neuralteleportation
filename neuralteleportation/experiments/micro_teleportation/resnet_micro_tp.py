@@ -6,7 +6,7 @@ import numpy as np
 
 from collections import defaultdict
 from tqdm import tqdm
-from models.model_zoo import vggcob, resnetcob
+from models.model_zoo import resnetcob
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 # ANSI escape code for colored console text
@@ -237,13 +237,13 @@ if __name__ == '__main__':
     mnist_val.data = mnist_val.data[:50, :, :]
     mnist_test.data = mnist_test.data[:50, :, :]
 
-    vgg_model = vggcob.vgg11COB(input_channels=1)
+    resnet_model = resnetcob.resnet18COB(input_channels=1)
 
-    optim = torch.optim.Adam(params=vgg_model.parameters(), lr=.01)
+    optim = torch.optim.Adam(params=resnet_model.parameters(), lr=.01)
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
-    train(vgg_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+    train(resnet_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
           epochs=1, device='cpu', batch_size=16)
-    print(test(vgg_model, loss, metrics, mnist_test))
+    print(test(resnet_model, loss, metrics, mnist_test))
 
-    dot_product(vgg_model, dataset=mnist_test, network_descriptor='VGG')
+    dot_product(resnet_model, dataset=mnist_test, network_descriptor='VGG')

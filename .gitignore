@@ -131,4 +131,4 @@ dataset/*
 !dataset/*.py
 
 # output
-neuralteleportation/experiments/images/**
+neuralteleportation/experiments/micro_teleportation/images/**
