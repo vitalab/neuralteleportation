@@ -1,11 +1,8 @@
 import torch
 import matplotlib.pyplot as plt
 import argparse
-import numpy as np
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from matplotlib.cm import get_cmap
-from matplotlib.colors import ListedColormap
 
 from neuralteleportation.training.training import train
 from neuralteleportation.training.config import *
