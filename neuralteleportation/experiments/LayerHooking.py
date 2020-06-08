@@ -1,8 +1,11 @@
 import torch
 import matplotlib.pyplot as plt
 import argparse
+import numpy as np
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from matplotlib.cm import get_cmap
+from matplotlib.colors import ListedColormap
 
 from neuralteleportation.training.training import train
 from neuralteleportation.training.config import *
@@ -24,7 +27,7 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description='Simple argument parser for the layer hook experiment.')
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--model", type=str, default="resnet18COB", choices=__models__)
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
     parser.add_argument("--layer_name", type=str, default="conv1",
@@ -49,6 +52,7 @@ if __name__ == "__main__":
         plt.figure()
         plt.imshow(np_out[0, 0, :, :])
         plt.colorbar()
+        plt.clim(vmin=-100, vmax=256)
 
 
     args = argument_parser()
@@ -61,18 +65,24 @@ if __name__ == "__main__":
 
     transform = transforms.ToTensor()
     if args.dataset == "mnist":
-        trainset, valset, testset = experiment_setup.get_mnist_datasets()
+        transform = transforms.Compose([transforms.Grayscale(num_output_channels=1),
+                                       transforms.ToTensor()])
+        trainset, valset, testset = experiment_setup.get_mnist_datasets(transform)
     elif args.dataset == "cifar10":
         trainset, valset, testset = experiment_setup.get_cifar10_datasets()
 
     data_train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     data_test_loader = DataLoader(testset, batch_size=batch_size, shuffle=True)
 
-    w, h, dims = trainset.data.shape[1:]
+    w, h = trainset.data.shape[1:3]
+    if trainset.data.ndim == 4:
+        dims = trainset.data.shape[3]
+    else:
+        dims = 1
 
-    test_img = torch.as_tensor(testset.data[0], dtype=torch.float32)
-    test_img = torch.unsqueeze(test_img, 0).permute(0, 3, 1, 2)
-    test_img = test_img.to(device=device)
+    test_img = torch.as_tensor(testset.data[0], dtype=torch.float32).to(device=device)
+    test_img = torch.reshape(test_img, (1, w, h, dims))
+    test_img = test_img.permute(0, 3, 1, 2)
 
     if args.show_original:
         plt.figure()

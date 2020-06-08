@@ -17,10 +17,13 @@ from neuralteleportation.models.model_zoo.vggcob import __all__ as __vggnets__
 from neuralteleportation.models.model_zoo.densenetcob import __all__ as __densenets__
 
 
-def get_mnist_datasets() -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
-    train_set = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
-    val_set = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
-    test_set = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+def get_mnist_datasets(transform=None) -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
+    if not transform:
+        transform = transforms.ToTensor()
+
+    train_set = MNIST('/tmp', train=True, download=True, transform=transform)
+    val_set = MNIST('/tmp', train=False, download=True, transform=transform)
+    test_set = MNIST('/tmp', train=False, download=True, transform=transform)
     return train_set, val_set, test_set
 
 
