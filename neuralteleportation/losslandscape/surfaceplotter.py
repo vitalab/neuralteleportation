@@ -237,8 +237,9 @@ class SurfacePlotter:
 
     def crunch(self, criterion, w, s, dataloader, loss_key: str, acc_key: str, device: str = 'cpu'):
         """
-            Calculate the loss values and accuracies of modified model by replacing the weights
-            with a new set of weights. These are computed off the f(a,b) = L(theta + a*d1 + b*d2)
+        Calculate the loss values and accuracies of modified model by replacing the weights with a new set of
+        weights. These are computed off the f(a,b) = L(theta + a*d1 + b*d2) if direction has x and y. Or it is computed
+        off the f(a) = (1-a)theta + a*theta
         """
 
         d = self.__load_directions__()
@@ -355,6 +356,9 @@ class SurfacePlotter:
             fig.savefig(self.surf_file + '_' + surf_key + '_2dcontour' + '.pdf', dpi=300,
                         bbox_inches='tight', format='pdf')
 
+    def get_surface_filename(self):
+        return self.surf_file
+
     @staticmethod
     def show():
         plt.show()
@@ -378,6 +382,38 @@ class SurfacePlotter:
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
         f.close()
+        plt.show()
+
+    def plot_1d_loss(self, log=False):
+        f = h5py.File(self.surf_file, 'r')
+        x = f['xcoordinates'][:]
+
+        assert 'train_loss' in f.keys(), "'train_loss' does not existe!"
+
+        train_loss = f['train_loss'][:]
+        train_acc = f['train_acc'][:]
+
+        xmin = min(x)
+        xmax = max(x)
+        loss_max = train_loss.max()
+
+        fig, ax = plt.subplots()
+        ax2 = ax.twinx()
+
+        if log:
+            tr_loss = ax.semilogy(x, train_loss, 'b-o', label='Training Loss', linewidth=2)
+        else:
+            tr_loss = ax.plot(x, train_loss, 'b-o', label='Training Loss', linewidth=2)
+        tr_acc = ax2.plot(x, train_acc, 'r-o', label='Training accuracy', linewidth=2)
+
+        plt.xlim(xmin, xmax)
+        ax.set_ylabel('Loss', color='b', fontsize='xx-large')
+        ax.tick_params('y', colors='b', labelsize='x-large')
+        ax.tick_params('x', labelsize='x-large')
+        ax.set_ylim(0, loss_max)
+        ax2.set_ylabel('Accuracy', color='r', fontsize='xx-large')
+        ax2.tick_params('y', colors='r', labelsize='x-large')
+        ax2.set_ylim(0, 100)  # accuracy cannot be above 100.
         plt.show()
 
 
