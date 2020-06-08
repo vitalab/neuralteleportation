@@ -4,11 +4,12 @@ import argparse
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.losslandscape import net_plotter
-from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_mnist_datasets
+from neuralteleportation.training.experiment_setup import get_cifar10_datasets
 from neuralteleportation.training.training import train
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
+from neuralteleportation.models.model_zoo.vggcob import vgg11COB
 from neuralteleportation.losslandscape.surfaceplotter import SurfacePlotter
 
 
@@ -34,12 +35,12 @@ if __name__ == '__main__':
     trainset, valset, testset = get_cifar10_datasets()
     trainloader = torch.utils.data.DataLoader(trainset, shuffle=False, batch_size=args.batch_size)
 
-    net = resnet18COB(num_classes=10, input_channels=3).to(device=device)
+    net = vgg11COB(num_classes=10, input_channels=3).to(device=device)
     net = NeuralTeleportationModel(net, (32, 3, 32, 32))
 
     metric = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
     config = TrainingConfig(lr=args.lr, epochs=args.epochs, batch_size=args.batch_size, device=device)
-    train(net, trainset, metric, config)
+    train(net, trainset, metric, config, val_dataset=valset)
 
     w = net_plotter.get_weights(net)
 
