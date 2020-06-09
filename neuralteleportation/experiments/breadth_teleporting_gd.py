@@ -35,6 +35,9 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
+    # Always move model to GPU before training
+    model.cuda()
+
     stopping_epoch = min(config.starting_epoch + config.teleport_every_n_epochs, config.epochs + 1)
     for epoch in range(config.starting_epoch, stopping_epoch):
         print(f'Training epoch {epoch} for {model_name} ...')
@@ -43,12 +46,15 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
             val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))
 
+    # Always move model off-GPU after training
+    model.cpu()
+
     # Update new starting epoch for the next iteration of model training
     config.starting_epoch += config.teleport_every_n_epochs
 
     # Determine if training has reached its end
     # TODO Add test for convergence
-    is_train_end = config.starting_epoch == config.epochs + 1
+    is_train_end = config.starting_epoch >= config.epochs + 1
 
     if is_train_end:
         trained_models = {f'{model_name}_0': model}
@@ -84,27 +90,14 @@ def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, met
 
 
 if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import (
-        get_mnist_models, get_mnist_datasets, get_cifar10_models, get_cifar10_datasets
-    )
+    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.experiment_run import run_multi_output_training
-    import warnings
-
-    warnings.warn("Running this script with larger models over many epochs or with many parallel teleporations "
-                  "may cause 'CUDA out of memory' errors. This issue will be looked into in a later update.")
-    # TODO Fix the swapping of models on-off the GPU during recursive training to solve CUDA memory errors
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
-
-    # Run on MNIST
-    mnist_train, mnist_val, mnist_test = get_mnist_datasets()
-    config = TeleportationTrainingConfig(device='cuda')
-    run_multi_output_training(train, get_mnist_models(device='cuda'), config, metrics,
-                              mnist_train, mnist_test, val_set=mnist_val)
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
     config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
-    run_multi_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
+    run_multi_output_training(train, get_cifar10_models(), config, metrics,
                               cifar10_train, cifar10_test, val_set=cifar10_val)

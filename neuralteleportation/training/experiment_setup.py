@@ -46,7 +46,6 @@ def get_mnist_models() -> List[nn.Module]:
 @to_device
 def get_cifar10_models() -> List[nn.Module]:
     return [
-        MLPCOB(input_shape=(3, 32, 32)),
         vgg16COB(num_classes=10, input_channels=3),
         resnet18COB(num_classes=10, input_channels=3),
         densenet121COB(num_classes=10, input_channels=3),

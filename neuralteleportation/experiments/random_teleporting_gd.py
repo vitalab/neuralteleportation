@@ -16,7 +16,7 @@ from neuralteleportation.training.training import test, train_epoch
 class TeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
     teleport_every_n_epochs: int = 2
-    teleport_prob: float = 1.   # Always teleport by default when reaching `teleport_every_n_epochs`
+    teleport_prob: float = 1.  # Always teleport by default when reaching `teleport_every_n_epochs`
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
@@ -33,6 +33,9 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
             if random.random() < config.teleport_prob:
                 print("Applying random COB to model in training")
                 model.random_teleport()
+
+                # Initialze a new optimizer using the model's new parameters
+                optimizer = optim.SGD(model.parameters(), lr=config.lr)
             else:
                 print("Skipping COB")
 
@@ -46,19 +49,11 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 
 
 if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import (
-        get_mnist_models, get_mnist_datasets, get_cifar10_models, get_cifar10_datasets
-    )
+    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.experiment_run import run_single_output_training
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
-
-    # Run on MNIST
-    mnist_train, mnist_val, mnist_test = get_mnist_datasets()
-    config = TeleportationTrainingConfig(device='cuda')
-    run_single_output_training(train, get_mnist_models(device='cuda'), config, metrics,
-                               mnist_train, mnist_test, val_set=mnist_val)
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
