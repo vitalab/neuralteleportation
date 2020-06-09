@@ -24,16 +24,16 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description='Simple argument parser for the layer hook experiment.')
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--model", type=str, default="resnet18COB", choices=__models__)
-    parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
+    parser.add_argument("--dataset", type=str, default="mnist", choices=["mnist", "cifar10"])
     parser.add_argument("--layer_name", type=str, default="conv1",
                         help="the name of the layer that is going to be hooked. user must go verify the right naming "
                              "format for the model they are trying to hook")
     parser.add_argument("--num_teleportation", type=int, default=2)
-    parser.add_argument("--cob_range", type=float, default=0.5)
+    parser.add_argument("--cob_range", type=float, default=10.0)
     parser.add_argument("--cob_sampling", type=str, default="usual")
-    parser.add_argument("--show_original", action="store_true", default=False,
+    parser.add_argument("--show_original", action="store_true", default=True,
                         help="enable the plotting of the original image.")
     return parser.parse_args()
 
