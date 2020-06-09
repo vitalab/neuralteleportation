@@ -11,6 +11,7 @@ class TrainingConfig:
     epochs: int = 10
     batch_size: int = 32
     device: str = 'cpu'
+    shuffle_batches: bool = False
 
 
 @dataclass

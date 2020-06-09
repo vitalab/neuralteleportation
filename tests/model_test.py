@@ -64,8 +64,7 @@ def test_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), verbo
         print("Diff weight average: ", np.mean(np.abs((w1 - w2))))
         print("Diff prediction average: ", diff_average)
 
-    # assert not np.allclose(w1, w2)
-    assert np.all(~np.isclose(w1, w2))
+    assert not np.allclose(w1, w2)
     assert np.allclose(pred1, pred2, atol=atol), "Teleporation did not work for model {}. Average difference: {}". \
         format(model_name, diff_average)
 

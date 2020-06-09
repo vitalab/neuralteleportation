@@ -1,92 +1,90 @@
 import torch
 import torch.nn as nn
-from torchvision.datasets import MNIST
-from torchvision.transforms import transforms
 
-from neuralteleportation.layers.activation import ReLUCOB
-from neuralteleportation.layers.neuralteleportation import FlattenCOB
-from neuralteleportation.layers.neuron import LinearCOB
 from neuralteleportation.metrics import accuracy
+from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
+from neuralteleportation.training.experiment_setup import get_mnist_datasets
 from neuralteleportation.training.training import train, test
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-config = TrainingConfig(epochs=0, device=device)
-metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
-
-mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
-mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+import argparse
 
 
-class Model(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(FlattenCOB(),
-                                 LinearCOB(784, 128),
-                                 ReLUCOB(),
-                                 LinearCOB(128, 128),
-                                 ReLUCOB(),
-                                 LinearCOB(128, 10),
-                                 )
+def argument_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--weights1", type=str, default=None, help='Weights for the first model')
+    parser.add_argument("--weights2", type=str, default=None, help='Weights for the second model')
+    parser.add_argument("--epochs", type=int, default=0, help='Number of epochs to train the networks')
+    parser.add_argument("--save_path", type=str, default='coboptim', help='Path to save weights without extension')
+    return parser.parse_args()
 
-    def forward(self, input):
-        return self.net(input)
 
-sample_input_shape = (1, 1, 28, 28)
+if __name__ == '__main__':
 
-model1 = Model().to(device)
-model1 = NeuralTeleportationModel(network=model1, input_shape=sample_input_shape)
-# model1.load_state_dict(torch.load('initial_model.pt'))
-# model1.load_state_dict(torch.load('model1.pt'))
-train(model1, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
-# torch.save(model1.state_dict(), 'model1.pt')
-print(test(model1, mnist_test, metrics, config))
+    args = argument_parser()
 
-model2 = Model().to(device)
-model2 = NeuralTeleportationModel(network=model2, input_shape=sample_input_shape)
-# model2.load_state_dict(torch.load('initial_model.pt'))
-# model2.load_state_dict(torch.load('model2.pt'))
-train(model2, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
-# torch.save(model2.state_dict(), 'model2.pt')
-print(test(model2, mnist_test, metrics, config))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    config = TrainingConfig(epochs=args.epochs, device=device, shuffle_batches=True)
+    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
-# x = torch.rand(sample_input_shape)
-x, y = mnist_train[0]
+    mnist_train, mnist_val, mnist_test = get_mnist_datasets()
 
-pred1 = model1(x.to(device))
-pred2 = model2(x.to(device))
+    sample_input_shape = (1, 1, 28, 28)
 
-print("Model 1 prediction: ", pred1)
-print("Model 2 prediction: ", pred2)
-print("Pred diff", (pred1 - pred2).abs())
+    model1 = MLPCOB().to(device)
+    model1 = NeuralTeleportationModel(network=model1, input_shape=sample_input_shape)
+    if args.weights1 is not None:
+        model1.load_state_dict(torch.load(args.weights1))
+    train(model1, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
+    torch.save(model1.state_dict(), args.save_path + '_model1.pt')
+    print("Model 1 test results: ", test(model1, mnist_test, metrics, config))
 
-print("Initial: w1 - w2: ", (model1.get_weights() - model2.get_weights()).abs())
+    model2 = MLPCOB().to(device)
+    model2 = NeuralTeleportationModel(network=model2, input_shape=sample_input_shape)
+    if args.weights2 is not None:
+        model2.load_state_dict(torch.load(args.weights2))
+    train(model2, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
+    torch.save(model2.state_dict(), args.save_path + '_model2.pt')
+    print("Model 2 test results: ", test(model2, mnist_test, metrics, config))
 
-print("Before")
-w1 = model1.get_weights()
-w2 = model2.get_weights()
-diff = (w1.detach().cpu() - w2.detach().cpu()).abs().mean()
-print("Initial weight diff :", diff)
+    x, y = mnist_train[0]
 
-w1 = model1.get_weights(concat=False, flatten=False, bias=False)
-w2 = model2.get_weights(concat=False, flatten=False, bias=False)
-calculated_cob = model1.calculate_cob(w1, w2, concat=True)
+    pred1 = model1(x.to(device))
+    pred2 = model2(x.to(device))
 
-model1.set_change_of_basis(calculated_cob)
-model1.teleport()
+    print("Model 1 prediction: ", pred1)
+    print("Model 2 prediction: ", pred2)
+    print("Pred diff", (pred1 - pred2).abs())
+    print("Pred diff mean", (pred1 - pred2).abs().mean())
 
-print("After")
-w1 = model1.get_weights()
-w2 = model2.get_weights()
-diff = (w1.detach().cpu() - w2.detach().cpu()).abs().mean()
-print("Predicted weight diff :", diff)
+    print("Initial: w1 - w2 ([:100]): ", (model1.get_weights() - model2.get_weights()).abs()[:100])
+    print("Initial: w1 - w2 ([-100:]): ", (model1.get_weights() - model2.get_weights()).abs()[-100:])
 
-w1 = model1.get_weights(concat=False, flatten=False, bias=False)
-w2 = model2.get_weights(concat=False, flatten=False, bias=False)
+    print("Before")
+    w1 = model1.get_weights()
+    w2 = model2.get_weights()
+    diff = (w1.detach().cpu() - w2.detach().cpu()).abs().mean()
+    print("Initial weight difference :", diff)
 
-for i in range(len(w1)):
-    print('layer : ', i)
-    print("w1  - w2 = ", (w1[i].detach().cpu() - w2[i].detach().cpu()).abs().sum())
-    print("w1: ", w1[i].detach().cpu().flatten()[:10])
-    print("w2: ", w2[i].detach().cpu().flatten()[:10])
+    w1 = model1.get_weights(concat=False, flatten=False, bias=False)
+    w2 = model2.get_weights(concat=False, flatten=False, bias=False)
+    calculated_cob = model1.calculate_cob(w1, w2, concat=True, eta=0.00001, steps=6000)
+    torch.save(calculated_cob, args.save_path + '_calculated_cob.pt')
+
+    model1.set_change_of_basis(calculated_cob)
+    model1.teleport()
+
+    print("After")
+    w1 = model1.get_weights()
+    w2 = model2.get_weights()
+    diff = (w1.detach().cpu() - w2.detach().cpu()).abs().mean()
+    print("Predicted weight difference :", diff)
+
+    w1 = model1.get_weights(concat=False, flatten=False, bias=False)
+    w2 = model2.get_weights(concat=False, flatten=False, bias=False)
+
+    for i in range(len(w1)):
+        print('layer : ', i)
+        print("w1  - w2 = ", (w1[i].detach().cpu() - w2[i].detach().cpu()).abs().sum())
+        print("w1: ", w1[i].detach().cpu().flatten()[:10])
+        print("w2: ", w2[i].detach().cpu().flatten()[:10])

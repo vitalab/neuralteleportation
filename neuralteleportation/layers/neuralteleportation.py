@@ -26,7 +26,7 @@ class COBForwardMixin(object):
 
         if self.reshape_cob:
             cob_shape = (input.shape[1],) + tuple([1 for _ in range(input.dim() - 2)])
-            cob_view = getattr(self, self.cob_field).view(cob_shape).float().type_as(input)
+            cob_view = getattr(self, self.cob_field).view(cob_shape).float().type_as(input).detach()
             setattr(self, self.cob_field, cob_view)
 
         return self._forward(input)

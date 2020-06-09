@@ -34,73 +34,41 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-    def initialize_cob(self):
+    def get_cob_size(self) -> int:
+        """
+            Get size of network change of basis without input and output.
+
+        Returns:
+            (int) cob size
+        """
         size = 0
         neuron_layers = self.get_neuron_layers()
         for i in range(len(neuron_layers) - 1):
             size += neuron_layers[i].out_features
+        return size
 
-        cob = torch.ones(size)
+    def initialize_cob(self) -> None:
+        """
+            Set the cob to ones.
+        """
 
+        cob = torch.ones(self.get_cob_size())
         self.set_change_of_basis(cob)
         self.apply_cob()
 
-    def generate_random_cob(self, cob_range=10):
-        size = 0
-        neuron_layers = self.get_neuron_layers()
-        for i in range(len(neuron_layers) - 1):
-            size += neuron_layers[i].out_features
-
-        return get_random_cob(range_cob=cob_range, size=size, requires_grad=True)
-
-    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual'):
+    def generate_random_cob(self, cob_range=10, sampling_type='usual', requires_grad=False) -> torch.Tensor:
         """
-          Compute random change of basis for every layer in the network.
+            Generate random cob with the correct size for the network.
+        Args:
+            cob_range (float): range_cob for the change of basis. Recommended between 0 and 1, but can take any
+                                positive range_cob.
+            sampling_type (str): label for type of sampling for change of basis
+
+        Returns:
+            (Tensor) cob
         """
-
-        current_cob = None  # Cob for last neuron layer to be applied following to non-neuron layers ie. Activations
-
-        for i, layer in enumerate(self.graph):
-            if isinstance(layer['module'], NeuronLayerMixin):
-                # Check if this is the last neuron layer
-                if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
-                    current_cob = layer['module'].get_output_cob()
-
-                # Check if this is the first neuron layer
-                elif not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[:i]]).any():
-                    initial_cob = layer['module'].get_input_cob()
-                    layer['prev_cob'] = initial_cob
-
-                    # Apply change of basis for all previous layers.
-                    for l in self.graph[:i]:
-                        l['prev_cob'] = initial_cob
-                        l['cob'] = initial_cob
-                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type)
-                else:
-                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type)
-
-            if isinstance(layer['module'], Add):
-                connection_layer_index = min(layer['in'])  # Get the first layer
-
-                if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
-                    '''If there is no layer after, previous layer must be ones. '''
-                    raise ValueError("NOT SUPPORTED YET: Must have neuron layer after residual connection")
-
-                current_cob = self.graph[connection_layer_index]['cob']
-
-            if isinstance(layer['module'], Concat):
-                '''If the layer is concatenation the change of basis for this layer is the concatenation of all change
-                   of basis of previous connected layers.
-                '''
-                previous_layer_indexes = self.graph[i]['in']
-                current_cob = np.concatenate([self.graph[j]['cob'] for j in previous_layer_indexes])
-
-            if i > 0:
-                # if multiple inputs, get input that is i-1 else get the first input
-                input_layer_index = max(layer['in'])
-                layer['prev_cob'] = self.graph[input_layer_index]['cob']
-
-            layer['cob'] = current_cob
+        return get_random_cob(range_cob=cob_range, size=self.get_cob_size(), requires_grad=requires_grad,
+                              sampling_type=sampling_type)
 
     def random_teleport(self, cob_range=0.5, sampling_type='usual'):
         """
@@ -109,7 +77,7 @@ class NeuralTeleportationModel(nn.Module):
         Returns:
             nn.Module of the network after teleportation
         """
-        self.get_random_change_of_basis(cob_range)
+        self.set_change_of_basis(self.generate_random_cob(cob_range, sampling_type))
         self.teleport()
 
     def teleport(self):
@@ -182,7 +150,7 @@ class NeuralTeleportationModel(nn.Module):
                    of basis of previous connected layers.
                 '''
                 previous_layer_indexes = self.graph[i]['in']
-                current_cob = np.concatenate([self.graph[j]['cob'] for j in previous_layer_indexes])
+                current_cob = torch.cat([self.graph[j]['cob'] for j in previous_layer_indexes])
 
             if i > 0:
                 # if multiple inputs, get input that is i-1 else get the first input
@@ -306,7 +274,7 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return cob
 
-    def calculate_cob(self, initial_weights, target_weights, concat=True):
+    def calculate_cob(self, initial_weights, target_weights, concat=True, eta=0.1, steps=1000):
         layers = self.get_neuron_layers()
 
         cob = [layers[0].get_input_cob()]
@@ -316,62 +284,9 @@ class NeuralTeleportationModel(nn.Module):
 
         cob.append(layers[-2].calculate_last_cob(initial_weights[-2], target_weights[-2],
                                                  initial_weights[-1], target_weights[-1],
-                                                 cob[-1]))
+                                                 cob[-1], eta, steps))
 
-        # t = []
-        # for i in range(layers[-2].out_features):
-        #     w0 = initial_weights[-2][i, :]
-        #     w0_hat = target_weights[-2][i, :]
-        #     w1 = initial_weights[-1][:, i]
-        #     w1_hat = target_weights[-1][:, i]
-        #     t0 = cob[-1]
-        #     t2 = layers[-1].get_output_cob()
-        #
-        #     print(w0.shape)
-        #     print(w1.shape)
-        #     print(w0_hat.shape)
-        #     print(w1_hat.shape)
-        #     print(t0.shape)
-        #     print(t2.shape)
-        #
-        #     exit(0)
-        #
-        #
-        #     ti = torch.tensor(1.0)
-        #
-        #     eta = 0.1
-        #
-        #     grads = []
-        #
-        #     for _ in range(200):
-        #         # print((w0 / t0).dot(w0 / t0))
-        #         # print((w0 / t0).dot(w0_hat))
-        #         # print((w1 * t2).dot(w1 * t2))
-        #         # print((w1 * t2).dot(w1_hat))
-        #         grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
-        #                 2 * (w0 / t0).dot(w0_hat) -
-        #                 2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
-        #                 2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
-        #         print("ti: ", ti)
-        #         print("grad: ", grad)
-        #         ti = ti - eta * grad
-        #         grads.append(grad.item())
-        #
-        #     plt.figure()
-        #     plt.plot(grads)
-        #     plt.show()
-        #     #
-        #     # if i == 2:
-        #     #     exit(0)
-        #
-        #
-        #     # print("final ti: ", ti)
-        #     t.append(ti)
-        #
-        # cob.append(torch.tensor(t))
-
-        cob.pop(0)
-        # cob.pop(-1)
+        cob.pop(0)  # Remove input layer cob.
 
         if concat:
             return torch.cat(cob)

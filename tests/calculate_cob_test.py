@@ -27,7 +27,8 @@ def test_calculate_cob(network, model_name=None, input_shape=(1, 1, 28, 28), noi
         print("cob error ", (calculated_cob - cob).flatten()[:10])
         print("cob error : ", error)
 
-    assert np.allclose(cob, calculated_cob), "Calculate cob FAILED for " + model_name + " model."
+    assert np.allclose(cob.detach().numpy(), calculated_cob.detach().numpy(), atol=1e-6),\
+        "Calculate cob FAILED for " + model_name + " model."
 
     print("Calculate cob successful for " + model_name + " model.")
 

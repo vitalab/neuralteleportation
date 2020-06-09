@@ -3,6 +3,7 @@ from typing import Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 
 from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.layers.neuralteleportation import NeuralTeleportationLayerMixin, COBForwardMixin
@@ -17,12 +18,15 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Create new tensor for weight and bias to allow gradient to be computed with respect to cob.
-        self.w = self.weight.clone().detach().requires_grad_(True)
-        if self.bias is not None:
-            self.b = self.bias.clone().detach().requires_grad_(True)
+        self._set_proxy_weights()
 
-    def get_cob(self, basis_range: int = 0.5, sampling_type='usual') -> torch.Tensor:
+    def _set_proxy_weights(self):
+        # Create new tensor for weight and bias to allow gradient to be computed with respect to cob.
+        self.w = self.weight.clone().detach().requires_grad_(True).type_as(self.weight)
+        if self.bias is not None:
+            self.b = self.bias.clone().detach().requires_grad_(True).type_as(self.bias)
+
+    def get_cob(self, basis_range: float = 0.5, sampling_type: str='usual') -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
 
         Args:
@@ -59,7 +63,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         if self.bias is not None:
             nb_params += np.prod(self.bias.shape)
 
-        return nb_params
+        return int(nb_params)
 
     def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
         """Get the weights from the layer.
@@ -67,27 +71,21 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         Returns:
             tuple of weight tensors.
         """
-        # if self.bias is not None and bias:
-        #     if flatten:
-        #         return self.w.flatten(), self.b.flatten()
-        #     else:
-        #         return self.w, self.b
-        # else:
-        #     if flatten:
-        #         return self.w.flatten(),
-        #     else:
-        #         return self.w,
+
+        # Check if the weights were updated during training on loading weights.
+        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))):
+            self._set_proxy_weights()
 
         if self.bias is not None and bias:
             if flatten:
-                return self.weight.flatten(), self.bias.flatten()
+                return self.w.flatten(), self.b.flatten()
             else:
-                return self.weight, self.bias
+                return self.w, self.b
         else:
             if flatten:
-                return self.weight.flatten(),
+                return self.w.flatten(),
             else:
-                return self.weight,
+                return self.w,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
@@ -128,16 +126,16 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         raise NotImplementedError
 
     @staticmethod
-    def calculate_cob(weights, target_weights, prev_cob, concat=True):
+    def calculate_cob(initial_weights, target_weights, prev_cob, concat=True):
         """
-        Compute the cob to teleport from the current weights to the target_weights
+        Compute the cob to teleport from the initial_weights to the target_weights
         """
         raise NotImplementedError
 
     @staticmethod
-    def calculate_last_cob(initial_weights1, initial_weights2, target_weights1, target_weights2, prev_cob):
+    def calculate_last_cob(initial_weights1, initial_weights2, target_weights1, target_weights2, prev_cob, eta, steps):
         """
-        Compute the cob to teleport from the current weights to the target_weight for the last cob.
+        Compute the cob to teleport from the initial_weights to the target_weight for the last cob.
         """
         raise NotImplementedError
 
@@ -149,8 +147,8 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
             feature_map_size = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
             for i, c in enumerate(prev_cob):
-                cob.extend(np.repeat(c, repeats=feature_map_size).tolist())
-            prev_cob = np.array(cob)
+                cob.append(c.repeat(feature_map_size))
+            prev_cob = torch.cat(cob, dim=0)
 
         super().apply_cob(prev_cob, next_cob)
 
@@ -171,27 +169,21 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
         return torch.tensor(cob)
 
     @staticmethod
-    def calculate_last_cob(initial_weights1, target_weights1, initial_weights2, target_weights2, prev_cob):
+    def calculate_last_cob(initial_weights1, target_weights1, initial_weights2, target_weights2, prev_cob, eta, steps):
         t = []
-        prev_cob = prev_cob.type_as(initial_weights1)
-        last_cob = torch.ones(target_weights2.shape[0]).type_as(initial_weights1)
+        t0 = prev_cob.type_as(initial_weights1)
+        t2 = torch.ones(target_weights2.shape[0]).type_as(initial_weights1)
 
-        for i in range(initial_weights1.shape[0]):
+        for i in tqdm(range(initial_weights1.shape[0])):
             w0 = initial_weights1[i, :]
             w0_hat = target_weights1[i, :]
             w1 = initial_weights2[:, i]
             w1_hat = target_weights2[:, i]
-            t0 = prev_cob
-            t2 = last_cob
 
             ti = torch.tensor(1.0)
 
-            eta = 0.00001
-
-            # print("COB")
-
             grads = []
-            for _ in range(6000):
+            for _ in range(steps):
                 grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
                         2 * (w0 / t0).dot(w0_hat) -
                         2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
@@ -199,13 +191,13 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
                 # print("ti: ", ti)
                 # print("grad: ", grad)
                 ti = ti - eta * grad
-                grads.append(grad.item())
+                # grads.append(grad.item())
 
-            plt.figure()
-            plt.title("{}".format(i))
-            plt.plot(grads)
-            plt.show()
-
+            # plt.figure()
+            # plt.title("{}".format(i))
+            # plt.plot(grads)
+            # plt.show()
+            #
             # print("final ti: ", ti)
             t.append(ti)
 

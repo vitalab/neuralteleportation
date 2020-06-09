@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 
-def get_random_cob(range_cob: int, size: int, sampling_type='usual', requires_grad=False) -> torch.Tensor:
+def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', requires_grad: bool=False) -> torch.Tensor:
     """
         Return random change of basis between -range_cob+1 and range_cob+1.
         'usual' - in interval [1-range_cob,1+range_cob]
@@ -11,10 +11,11 @@ def get_random_cob(range_cob: int, size: int, sampling_type='usual', requires_gr
         'zero' - in interval [-range_cob,range_cob]
 
     Args:
-        range_cob (int): range_cob for the change of basis. Recommended between 0 and 1, but can take any
+        range_cob (float): range_cob for the change of basis. Recommended between 0 and 1, but can take any
         positive range_cob.
         size (int): size of the returned array.
-        sampling_type: label for type of sampling for change of basis
+        sampling_type (str): label for type of sampling for change of basis
+        requires_grad (bool): wheter the cob tensor should require gradients
 
     Returns:
         ndarray of size size.
