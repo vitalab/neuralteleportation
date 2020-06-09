@@ -31,7 +31,7 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual'):
+    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual', center=1):
         """
           Compute random change of basis for every layer in the network.
         """
@@ -53,9 +53,9 @@ class NeuralTeleportationModel(nn.Module):
                     for l in self.graph[:i]:
                         l['prev_cob'] = initial_cob
                         l['cob'] = initial_cob
-                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type)
+                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type, center=center)
                 else:
-                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type)
+                    current_cob = layer['module'].get_cob(basis_range=basis_range, sampling_type=sampling_type, center=center)
 
             if isinstance(layer['module'], Add):
                 connection_layer_index = min(layer['in'])  # Get the first layer
@@ -80,14 +80,14 @@ class NeuralTeleportationModel(nn.Module):
 
             layer['cob'] = current_cob
 
-    def random_teleport(self, cob_range=0.5, sampling_type='usual'):
+    def random_teleport(self, cob_range=0.5, sampling_type='usual', center=1):
         """
           Applies random change of basis to each of the network layers.
 
         Returns:
             neural teleportation model after teleportation
         """
-        self.get_random_change_of_basis(cob_range, sampling_type)
+        self.get_random_change_of_basis(cob_range, sampling_type, center=center)
 
         for k, layer in enumerate(self.graph):
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
