@@ -10,10 +10,12 @@ import torch
 def plot_angle_teleported_gradient(model, loss_func, input_shape = (32, 3, 32, 32), n_iter=20):
     x = torch.rand(input_shape, dtype=torch.float).to(device='cuda')
     y = torch.randint(low=0, high=9, size=(32,)).to(device='cuda')
+    original_weights = model.get_weights()
     grad1 = model.get_grad(x, y, loss_func, zero_grad=False).cpu()
     angle_results = []
 
     for _ in range(n_iter):
+        model.set_weights(original_weights)
         model.random_teleport(cob_range=50, sampling_type='positive')
         grad2 = model.get_grad(x, y, loss_func, zero_grad=False).cpu()
         dot_prod = np.longfloat(np.dot(grad1, grad2) /
@@ -39,17 +41,19 @@ def plot_angle_teleported_gradient(model, loss_func, input_shape = (32, 3, 32, 3
 def plot_magnitude_teleported_gradient(model, loss_func, input_shape = (32, 3, 32, 32), n_iter=20):
     x = torch.rand(input_shape, dtype=torch.float).to(device='cuda')
     y = torch.randint(low=0, high=9, size=(32,)).to(device='cuda')
+    original_weights = model.get_weights()
     grad1 = model.get_grad(x, y, loss_func, zero_grad=False).cpu()
     weights1 = model.get_weights().cpu().detach().numpy()
     grad1 = grad1 / np.linalg.norm(weights1)
     differences = []
 
     for _ in range(n_iter):
+        model.set_weights(original_weights)
         model.random_teleport(cob_range=50, sampling_type='positive')
         grad2 = model.get_grad(x, y, loss_func, zero_grad=False).cpu()
         weights2 = model.get_weights().cpu().detach().numpy()
         grad2 = grad2 / np.linalg.norm(weights2)
-        diff = np.linalg.norm(grad1)-np.linalg.norm(grad2)
+        diff = abs(np.linalg.norm(grad1)-np.linalg.norm(grad2))
 
         differences.append(diff)
 
@@ -58,41 +62,39 @@ def plot_magnitude_teleported_gradient(model, loss_func, input_shape = (32, 3, 3
     plt.plot(differences)
     plt.title('Difference of normalized magnitude between teleportations of the gradient')
     #plt.xlim(x_min, x_max)
+    plt.xlabel('| |||| - |||| |')
+    plt.ylabel('cob_range')
     plt.show()
 
 
-def plot_grad_over_weights(model, loss_func, input_shape = (32, 3, 32, 32), n_iter=30):
+def plot_grad_over_weights(model, loss_func, input_shape = (32, 3, 32, 32), n_iter=20):
     x = torch.rand(input_shape, dtype=torch.float).to(device='cuda')
     y = torch.randint(low=0, high=9, size=(32,)).to(device='cuda')
-
-    cob_range = 0.2
+    original_weights = model.get_weights().clone().detach()
+    cob_range = 0.1
     result = []
 
     for _ in range(n_iter):
-        cob_range += 0.1
+        cob_range += 0.05
         same_cob_ratios = []
 
-        for _ in range(20):
+        for _ in range(5):
+            model.set_weights(original_weights)
             model.random_teleport(cob_range=cob_range, sampling_type='positive')
             weights = model.get_weights().cpu().detach().numpy()
-            #weights = weights/np.linalg.norm(weights)
-            #model.set_weights(weights)
             grad = model.get_grad(x, y, loss_func, zero_grad=False).cpu()
-            z =  np.linalg.norm(grad)/ np.linalg.norm(weights)
-            print(np.linalg.norm(grad))
-            print(np.linalg.norm(weights))
-            print('------')
-            same_cob_ratios.append(z)
+            same_cob_ratios.append(np.linalg.norm(grad)/np.linalg.norm(weights))
 
-        ratio = np.mean(same_cob_ratios)
-        result.append(ratio)
+        result.append(np.mean(same_cob_ratios))
 
     result = np.array(result)
 
-    plt.title('vgg16COB, cob_range vs ||Grad||/||W||')
+    plt.title('vgg16COB')
     plt.xlim(0, n_iter*0.1 + 1)
     plt.ylim(np.amin(result), np.amax(result))
     plt.plot(result)
+    plt.xlabel('cob_range')
+    plt.ylabel('||Grad||/||W||')
     plt.show()
 
 
@@ -120,6 +122,7 @@ if __name__ == '__main__':
 
     #train(model.to(device='cuda'), train_dataset=CIFAR10_train, metrics=metrics, config=config,
     #      val_dataset=CIFAR10_val)
-    #plot_grad_over_weights(model, loss_func)
-    plot_magnitude_teleported_gradient(model, loss_func)
+    #plot_angle_teleported_gradient(model, loss_func)
+    #plot_magnitude_teleported_gradient(model, loss_func)
+    plot_grad_over_weights(model, loss_func)
 
