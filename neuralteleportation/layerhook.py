@@ -1,9 +1,11 @@
+import torch.nn as nn
+
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 
 class LayerHook:
     """
-    This class serves as an anchor point for a specific layer to be able to catch the output on a foward pass.
+    This class serves as an anchor point for a specific layer to be able to catch the output on a forward pass.
     The created object is a wrapper for the RemovableHandle that torch.nn.register_forward_hook returns to better
     handle when the hook is active or inactive.
 
@@ -35,6 +37,7 @@ class LayerHook:
         self.model = model
         if state[0] is None:
             self.layer = None
+            self.hook = None
         else:
             self.set_hooked_layer(state[0], state[1])
 
@@ -80,8 +83,6 @@ class LayerHook:
 if __name__ == "__main__":
     # This is the toy example in the Class description.
     import torch
-    import torch.nn as nn
-    from neuralteleportation.layerhook import LayerHook
     from neuralteleportation.models.generic_models.dense_models import DenseNet
 
     def hook(self, input, output):
@@ -91,5 +92,5 @@ if __name__ == "__main__":
 
     hook = LayerHook(net, ("conv1", hook))
 
-    x = torch.ones((1, 1, 28, 28))
+    x = torch.ones((1, 3, 32, 32))
     net(x)
