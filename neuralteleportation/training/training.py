@@ -25,7 +25,6 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         train_epoch(model, metrics.criterion, optimizer, train_loader, epoch, device=config.device)
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
-            print("Validation: {}".format(val_res))
 
 
 def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
@@ -65,10 +64,11 @@ def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: T
                 for k in batch_results.keys():
                     results[k].append(batch_results[k])
 
-            pbar.set_postfix(loss=pd.DataFrame(results['loss']).mean(),
-                             accuracy=pd.DataFrame(results['accuracy']).mean())
-            pbar.clear()
+            pbar.update()
+            pbar.set_postfix(loss=pd.DataFrame(results['loss']).mean().values,
+                             accuracy=pd.DataFrame(results['accuracy']).mean().values)
 
+    pbar.close()
     results = pd.DataFrame(results)
     return dict(results.mean())
 
