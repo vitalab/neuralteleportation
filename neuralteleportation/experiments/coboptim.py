@@ -1,3 +1,7 @@
+"""
+Closed form optimisation on a network's change of basis to find the change of basis that teleports
+to a given set of weights.
+"""
 import torch
 import torch.nn as nn
 
@@ -31,7 +35,7 @@ if __name__ == '__main__':
 
     sample_input_shape = (1, 1, 28, 28)
 
-    model1 = MLPCOB().to(device)
+    model1 = MLPCOB(num_classes=10).to(device)
     model1 = NeuralTeleportationModel(network=model1, input_shape=sample_input_shape)
     if args.weights1 is not None:
         model1.load_state_dict(torch.load(args.weights1))
@@ -39,7 +43,7 @@ if __name__ == '__main__':
     torch.save(model1.state_dict(), args.save_path + '_model1.pt')
     print("Model 1 test results: ", test(model1, mnist_test, metrics, config))
 
-    model2 = MLPCOB().to(device)
+    model2 = MLPCOB(num_classes=10).to(device)
     model2 = NeuralTeleportationModel(network=model2, input_shape=sample_input_shape)
     if args.weights2 is not None:
         model2.load_state_dict(torch.load(args.weights2))
@@ -47,11 +51,10 @@ if __name__ == '__main__':
     torch.save(model2.state_dict(), args.save_path + '_model2.pt')
     print("Model 2 test results: ", test(model2, mnist_test, metrics, config))
 
+    # Compare the output of the two models for a given input.
     x, y = mnist_train[0]
-
     pred1 = model1(x.to(device))
     pred2 = model2(x.to(device))
-
     print("Model 1 prediction: ", pred1)
     print("Model 2 prediction: ", pred2)
     print("Pred diff", (pred1 - pred2).abs())
@@ -60,7 +63,6 @@ if __name__ == '__main__':
     print("Initial: w1 - w2 ([:100]): ", (model1.get_weights() - model2.get_weights()).abs()[:100])
     print("Initial: w1 - w2 ([-100:]): ", (model1.get_weights() - model2.get_weights()).abs()[-100:])
 
-    print("Before")
     w1 = model1.get_weights()
     w2 = model2.get_weights()
     diff = (w1.detach().cpu() - w2.detach().cpu()).abs().mean()
@@ -74,7 +76,6 @@ if __name__ == '__main__':
     model1.set_change_of_basis(calculated_cob)
     model1.teleport()
 
-    print("After")
     w1 = model1.get_weights()
     w2 = model2.get_weights()
     diff = (w1.detach().cpu() - w2.detach().cpu()).abs().mean()
@@ -83,6 +84,7 @@ if __name__ == '__main__':
     w1 = model1.get_weights(concat=False, flatten=False, bias=False)
     w2 = model2.get_weights(concat=False, flatten=False, bias=False)
 
+    print("Weight difference by layer:")
     for i in range(len(w1)):
         print('layer : ', i)
         print("w1  - w2 = ", (w1[i].detach().cpu() - w2[i].detach().cpu()).abs().sum())

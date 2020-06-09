@@ -5,6 +5,16 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 
 
 def test_calculate_cob(network, model_name=None, input_shape=(1, 1, 28, 28), noise=False, verbose=False):
+    """
+        Test if the correct change of basis can be calculated for a random teleportation.
+
+    Args:
+        network (nn.Module): Network to be tested
+        model_name (str): The name or label assigned to differentiate the model
+        input_shape (tuple): Input shape of network
+        noise (bool): whether to add noise to the target weights before optimisation.
+        verbose (bool): whether to display sample ouputs during the test
+    """
     model_name = model_name or network.__class__.__name__
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 
@@ -34,6 +44,16 @@ def test_calculate_cob(network, model_name=None, input_shape=(1, 1, 28, 28), noi
 
 
 def test_calculate_cob_weights(network, model_name=None, input_shape=(1, 1, 28, 28), noise=False, verbose=True):
+    """
+        Test if the correct change of basis and re-teleport a model to the target weights.
+
+    Args:
+        network (nn.Module): Network to be tested
+        model_name (str): The name or label assigned to differentiate the model
+        input_shape (tuple): Input shape of network
+        noise (bool): whether to add noise to the target weights before optimisation.
+        verbose (bool): whether to display sample ouputs during the test
+    """
     model_name = model_name or network.__class__.__name__
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 
@@ -78,6 +98,16 @@ def test_calculate_cob_weights(network, model_name=None, input_shape=(1, 1, 28, 
 
 
 def test_calculate_ones(network, model_name=None, input_shape=(1, 1, 28, 28), noise=False, verbose=False):
+    """
+        Test if the correct change of basis can be calculated for a cob of ones.
+
+    Args:
+        network (nn.Module): Network to be tested
+        model_name (str): The name or label assigned to differentiate the model
+        input_shape (tuple): Input shape of network
+        noise (bool): whether to add noise to the target weights before optimisation.
+        verbose (bool): whether to display sample ouputs during the test
+    """
     model_name = model_name or network.__class__.__name__
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 

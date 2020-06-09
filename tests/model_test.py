@@ -93,6 +93,16 @@ def test_reset_weights(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), 
 
 
 def test_set_cob(network, model_name, input_shape=(1, 1, 28, 28), verbose=False):
+    """
+        Test if the set_change_of_basis method works.
+
+    Args:
+        network (nn.Module): Network to be tested
+        model_name (str): The name or label assigned to differentiate the model
+        input_shape (tuple): Input shape of network
+        verbose (bool): Flag to print comparision between network and a teleportation
+
+    """
     x = torch.rand(input_shape)
     model = NeuralTeleportationModel(network, input_shape=input_shape)
     model.random_teleport()

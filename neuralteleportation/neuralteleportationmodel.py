@@ -4,12 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.changeofbasisutils import get_random_cob
+from neuralteleportation.layers.neuron import NeuronLayerMixin
 from neuralteleportation.network_graph import NetworkGrapher
 from neuralteleportation.layers.merge import Add, Concat
-
-from matplotlib import pyplot as plt
 
 
 class NeuralTeleportationModel(nn.Module):
@@ -63,6 +61,7 @@ class NeuralTeleportationModel(nn.Module):
             cob_range (float): range_cob for the change of basis. Recommended between 0 and 1, but can take any
                                 positive range_cob.
             sampling_type (str): label for type of sampling for change of basis
+            requires_grad (bool): whether the cob tensor should require gradients
 
         Returns:
             (Tensor) cob
@@ -81,13 +80,16 @@ class NeuralTeleportationModel(nn.Module):
         self.teleport()
 
     def teleport(self):
+        """
+            Teleport the network with the current change of basis.
+        """
         for k, layer in enumerate(self.graph):
             layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def apply_cob(self):
         """
-        Apply change of basis for layers without teleporting.
-        Only changes the chages of basis for activation layer, pooling, ...
+        Apply the current change of basis for layers without teleporting.
+        Only changes the changes of basis for activation layer, pooling, ...
 
         """
         for k, layer in enumerate(self.graph):
@@ -96,9 +98,13 @@ class NeuralTeleportationModel(nn.Module):
 
         return self.network
 
-    def set_change_of_basis(self, cob, contains_ones=False):
+    def set_change_of_basis(self, cob: torch.Tensor, contains_ones: bool = False):
         """
             Set the change of basis for the network.
+
+        Args:
+            cob (torch.Tensor): change of basis to be applied to the model.
+            contains_ones (bool): whether the cob contains input and output ones.
         """
 
         counter = 0
@@ -184,6 +190,8 @@ class NeuralTeleportationModel(nn.Module):
         Args:
             concat (bool): if true weights are returned as concatenated torch tensor,
                             else in the form of a list of Tensors
+            flatten (bool): if true weights are flattened
+            bias (bool): if true bias is included
 
         Returns:
             torch.Tensor or list containing model weights
@@ -217,6 +225,7 @@ class NeuralTeleportationModel(nn.Module):
                  concat: bool = True, zero_grad: bool = True) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
             Return model gradients for data, target and loss function.
+
         Args:
             data (torch.Tensor): input data for the network
             target (torch.Tensor): target ouput
@@ -251,6 +260,10 @@ class NeuralTeleportationModel(nn.Module):
         """
             Get change of basis for network.
 
+        Args:
+            concat (bool): if true, cobs are concatenated into one tensor
+            contain_ones (bool): if true, cob contains input and ouput cob of ones.
+
         Returns:
             List of change of basis for each layer.
         """
@@ -274,7 +287,24 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return cob
 
-    def calculate_cob(self, initial_weights, target_weights, concat=True, eta=0.1, steps=1000):
+    def calculate_cob(self, initial_weights: List[torch.Tensor], target_weights: List[torch.Tensor],
+                      concat: bool = True, eta: float = 0.1, steps: int = 1000):
+        """
+            Calculate the change of basis to teleport the initial weights to the target weights.
+            Each cob is calculated individually following a closed form solution to
+                        min_T ||T(initial_weights) - target_weights||
+
+
+        Args:
+            initial_weights (List[torch.Tensor]): initial weights on which teleportation is applied
+            target_weights (List[torch.Tensor]): target weigths to obtain with teleportation.
+            concat (bool): whether to concat cob into one tensor
+            eta (float): learning rate for the gradient descent for the last cob optimisation
+            steps (int): number of gradient descent steps for the last cob optimisation
+
+        Returns:
+            (torch.Tensor) calculated change of basis
+        """
         layers = self.get_neuron_layers()
 
         cob = [layers[0].get_input_cob()]

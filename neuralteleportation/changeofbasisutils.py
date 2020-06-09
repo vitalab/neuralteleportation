@@ -15,10 +15,10 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', re
         positive range_cob.
         size (int): size of the returned array.
         sampling_type (str): label for type of sampling for change of basis
-        requires_grad (bool): wheter the cob tensor should require gradients
+        requires_grad (bool): whether the cob tensor should require gradients
 
     Returns:
-        ndarray of size size.
+        torch.Tensor of size size.
     """
     # Change of basis in interval [1-range_cob,1+range_cob]
     if sampling_type == 'usual':

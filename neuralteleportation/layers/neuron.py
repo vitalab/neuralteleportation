@@ -21,12 +21,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         self._set_proxy_weights()
 
     def _set_proxy_weights(self):
-        # Create new tensor for weight and bias to allow gradient to be computed with respect to cob.
+        """
+            Create new tensor for weight and bias to allow gradient to be computed with respect to cob.
+        """
         self.w = self.weight.clone().detach().requires_grad_(True).type_as(self.weight)
         if self.bias is not None:
             self.b = self.bias.clone().detach().requires_grad_(True).type_as(self.bias)
 
-    def get_cob(self, basis_range: float = 0.5, sampling_type: str='usual') -> torch.Tensor:
+    def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'usual') -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
 
         Args:
@@ -126,16 +128,45 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         raise NotImplementedError
 
     @staticmethod
-    def calculate_cob(initial_weights, target_weights, prev_cob, concat=True):
+    def calculate_cob(initial_weights, target_weights, prev_cob, ) -> torch.Tensor:
         """
-        Compute the cob to teleport from the initial_weights to the target_weights
+        Compute the cob to teleport from the initial_weights to the target_weights.
+        Using the closed form solution to:
+
+                    min_T ||T(initial_weights) - target_weights||
+
+        Args:
+            initial_weights (torch.Tensor): initial weights on which teleportation is applied
+            target_weights (torch.Tensor): target weigths to obtain with teleportation.
+            prev_cob (torch.Tensor): Change of basis from the previous layer
+
+        Returns:
+            torch.Tensor, calculated cob
+
         """
         raise NotImplementedError
 
     @staticmethod
-    def calculate_last_cob(initial_weights1, initial_weights2, target_weights1, target_weights2, prev_cob, eta, steps):
+    def calculate_last_cob(initial_weights1, initial_weights2,
+                           target_weights1, target_weights2, prev_cob, eta, steps) -> torch.Tensor:
         """
-        Compute the cob to teleport from the initial_weights to the target_weight for the last cob.
+        Compute the cob to teleport from the initial_weights to the target_weight for the last cob considering that the
+        output cob is always ones.
+
+        prev_cob -- w1 --> cob -- w2 --> ones
+
+        Args:
+            initial_weights1 (torch.Tensor): layer n-1 initial weights on which teleportation is applied
+            initial_weights2 (torch.Tensor): layer n initial weights on which teleportation is applied
+            target_weights1 (torch.Tensor): layer n-1 target weigths to obtain with teleportation.
+            target_weights2 (torch.Tensor): layer n target weigths to obtain with teleportation.
+            prev_cob (torch.Tensor): Change of basis from the previous layer
+            eta (float): learning rate for the gradient descent
+            steps (int): number of gradient descent steps
+
+        Returns:
+            torch.Tensor, calculated cob
+
         """
         raise NotImplementedError
 
@@ -156,7 +187,7 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
         return next_cob[..., None] / prev_cob[None, ...]
 
     @staticmethod
-    def calculate_cob(weights, target_weights, prev_cob, concat=True):
+    def calculate_cob(weights, target_weights, prev_cob) -> torch.Tensor:
         """
         Compute the cob to teleport from the current weights to the target_weights
         """
@@ -169,7 +200,8 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
         return torch.tensor(cob)
 
     @staticmethod
-    def calculate_last_cob(initial_weights1, target_weights1, initial_weights2, target_weights2, prev_cob, eta, steps):
+    def calculate_last_cob(initial_weights1, target_weights1,
+                           initial_weights2, target_weights2, prev_cob, eta, steps) -> torch.Tensor:
         t = []
         t0 = prev_cob.type_as(initial_weights1)
         t2 = torch.ones(target_weights2.shape[0]).type_as(initial_weights1)
@@ -183,22 +215,21 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
             ti = torch.tensor(1.0)
 
             grads = []
+
             for _ in range(steps):
                 grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
                         2 * (w0 / t0).dot(w0_hat) -
                         2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
                         2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
-                # print("ti: ", ti)
-                # print("grad: ", grad)
                 ti = ti - eta * grad
-                # grads.append(grad.item())
+                grads.append(grad.item())
 
+            """ Uncomment to debug the gradient descent. """
             # plt.figure()
             # plt.title("{}".format(i))
             # plt.plot(grads)
             # plt.show()
-            #
-            # print("final ti: ", ti)
+
             t.append(ti)
 
         return torch.tensor(t)

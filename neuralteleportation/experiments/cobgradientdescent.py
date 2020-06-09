@@ -1,3 +1,8 @@
+"""
+Perform gradient descent on a network's change of basis to find the change of basis that teleports
+to a given set of weights.
+"""
+
 import argparse
 import torch
 
@@ -24,7 +29,7 @@ if __name__ == '__main__':
 
     torch.manual_seed(args.seed)
 
-    model = NeuralTeleportationModel(network=MLPCOB(), input_shape=(1, 1, 28, 28))
+    model = NeuralTeleportationModel(network=MLPCOB(num_classes=10), input_shape=(1, 1, 28, 28))
 
     # Get the initial set of weights and teleport.
     initial_weights = model.get_weights()
@@ -79,7 +84,9 @@ if __name__ == '__main__':
     print("Inital weights sample: ", initial_weights[:10])
     print("Target weights sample: ", target_weights[:10])
     print("Cob teleported weights sample: ", weights[:10])
-    print("Target weights/teleported weights  diff: ", (target_weights[:10] - weights[:10]).abs())
+    # print("Target weights/teleported weights  diff ([:10]): ", (target_weights[:10] - weights[:10]).abs())
+    # print("Target weights/teleported weights  diff ([-10:]): ", (target_weights[-10:] - weights[-10:]).abs())
+    print("Target weights/teleported weights  diff: ", (target_weights - weights).abs())
     print("Target weights/teleported weights diff mean: ", (target_weights - weights).abs().mean())
 
     plt.figure()

@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch.nn.modules import Flatten
 
