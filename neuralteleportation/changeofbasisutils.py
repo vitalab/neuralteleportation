@@ -12,6 +12,7 @@ def get_random_cob(range_cob: int, size: int, sampling_type='usual') -> np.ndarr
         Return random change of basis between -range_cob+1 and range_cob+1.
         'usual' - in interval [1-range_cob,1+range_cob]
         'symmetric' - equally in intervals [-1-range_cob,-1+range_cob] and [1-range_cob,1+range_cob]
+        'positive' - in interval [0, range_cob]
         'negative' - in interval [-1-range_cob,-1+range_cob]
         'zero' - in interval [-range_cob,range_cob]
 
@@ -23,11 +24,11 @@ def get_random_cob(range_cob: int, size: int, sampling_type='usual') -> np.ndarr
     Returns:
         ndarray of size size.
     """
-    # Change of basis in interval [1-range_cob,1+range_cob]
+    # Change of basis in interval [1-range_cob, 1+range_cob]
     if sampling_type == 'usual':
         return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float) + 1
 
-    # Change of basis in intervals [-1-range_cob,-1+range_cob] and [1-range_cob,1+range_cob]
+    # Change of basis in intervals [-1-range_cob, -1+range_cob] and [1-range_cob, 1+range_cob]
     elif sampling_type == 'symmetric':
         samples = np.random.randint(0, 2, size=size)
         cob = np.zeros_like(samples, dtype=np.float)
@@ -37,11 +38,15 @@ def get_random_cob(range_cob: int, size: int, sampling_type='usual') -> np.ndarr
             low=1-range_cob, high=1+range_cob, size=(len(samples) - samples.sum()))
         return cob
 
-    # Change of basis in interval [-1-range_cob,-1+range_cob]
+    # Change of basis in interval [0, range_cob]
+    elif sampling_type == 'positive':
+        return np.random.uniform(low=0, high=range_cob, size=size).astype(np.float)
+
+    # Change of basis in interval [-1-range_cob, -1+range_cob]
     elif sampling_type == 'negative':
         return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float) - 1
 
-    # Change of basis in interval [-range_cob,range_cob]
+    # Change of basis in interval [-range_cob, range_cob]
     # This will produce very big weights in the network. Use only if needed.
     elif sampling_type == 'zero':
         return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float)
