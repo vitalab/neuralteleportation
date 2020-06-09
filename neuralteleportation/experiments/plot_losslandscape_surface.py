@@ -6,10 +6,6 @@ from itertools import chain
 from neuralteleportation.losslandscape.surfaceplotter import SurfacePlotter
 from neuralteleportation.losslandscape import net_plotter as net_plotter
 
-from neuralteleportation.models.model_zoo import resnetcob, densenetcob, vggcob
-from neuralteleportation.models.model_zoo.resnetcob import __all__ as __resnets__
-from neuralteleportation.models.model_zoo.densenetcob import __all__ as __densenets__
-from neuralteleportation.models.model_zoo.vggcob import __all__ as __vggnets__
 from neuralteleportation.training import experiment_setup
 from neuralteleportation.training.training import train
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
@@ -18,7 +14,7 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 
 
 # Creating a list of all the possible models.
-__models__ = list(chain.from_iterable([__resnets__, __densenets__, __vggnets__]))
+__models__ = experiment_setup.get_model_list()
 
 
 def argument_parser():
@@ -53,19 +49,6 @@ def argument_parser():
     return parser.parse_args()
 
 
-def get_model_from_string(args):
-    if args.model in __resnets__:
-        func = getattr(resnetcob, args.model)
-    elif args.model in __densenets__:
-        func = getattr(densenetcob, args.model)
-    elif args.model in __vggnets__:
-        func = getattr(vggcob, args.model)
-    else:
-        raise Exception("%s was not found in the model zoo" % args.model)
-    model = func(pretrained=False, num_classes=10)
-    return model
-
-
 if __name__ == "__main__":
     args = argument_parser()
 
@@ -81,12 +64,15 @@ if __name__ == "__main__":
 
     data_size = (args.batch_size, trainset.data.shape[3], trainset.data.shape[1], trainset.data.shape[2])
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False)
-
+    dims = trainset.data.shape[3]
     if args.load_model:
         net = torch.load(args.load_model, map_location=device)
         net = NeuralTeleportationModel(net, input_shape=data_size).to(device)
     else:
-        net = NeuralTeleportationModel(get_model_from_string(args), input_shape=data_size).to(device)
+        net = experiment_setup.get_model_from_string(args,
+                                                     num_classes=10,
+                                                     input_channels=dims),
+        net = NeuralTeleportationModel(input_shape=data_size).to(device)
 
     criterion = nn.CrossEntropyLoss()
     if args.train:
