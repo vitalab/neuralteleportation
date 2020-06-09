@@ -25,7 +25,6 @@ def argument_parser():
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=10,
                         help='How many epoch to train the network if train set to true')
-    parser.add_argument("--cuda", "-c", action="store_true", default=False, help='use cuda if it is availble')
     parser.add_argument("--load_model", type=str, default="", help="file path of the h5 network state file.")
     parser.add_argument("--train", "-t", action="store_true", default=False,
                         help="if the model should be train before teleportation")
@@ -53,8 +52,7 @@ if __name__ == "__main__":
     args = argument_parser()
 
     device = torch.device('cpu')
-    if torch.cuda.is_available() and args.cuda:
-        use_cuda = True
+    if torch.cuda.is_available():
         device = torch.device('cuda')
 
     if args.dataset == "cifar10":
@@ -69,10 +67,10 @@ if __name__ == "__main__":
         net = torch.load(args.load_model, map_location=device)
         net = NeuralTeleportationModel(net, input_shape=data_size).to(device)
     else:
-        net = experiment_setup.get_model_from_string(args,
+        net = experiment_setup.get_model_from_string(args.model,
                                                      num_classes=10,
-                                                     input_channels=dims),
-        net = NeuralTeleportationModel(input_shape=data_size).to(device)
+                                                     input_channels=dims)
+        net = NeuralTeleportationModel(network=net, input_shape=data_size).to(device)
 
     criterion = nn.CrossEntropyLoss()
     if args.train:
