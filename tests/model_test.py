@@ -44,30 +44,36 @@ def test_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), verbo
         float with the average of the difference between the weights of the network and a teleportation
     """
     model_name = model_name or network.__class__.__name__
-    model = NeuralTeleportationModel(network=network, input_shape=input_shape)
-    x = torch.rand(input_shape)
-    pred1 = model(x).detach().numpy()
-    w1 = model.get_weights().detach().numpy()
 
-    model.random_teleport()
+    for sampling_type in ['usual', 'symmetric', 'negative', 'zero']:
+        print('SAMPLING TYPE IS ', sampling_type)
 
-    pred2 = model(x).detach().numpy()
-    w2 = model.get_weights().detach().numpy()
+        model = NeuralTeleportationModel(network=network, input_shape=input_shape)
+        x = torch.rand(input_shape)
+        pred1 = model(x).detach().numpy()
+        w1 = model.get_weights().detach().numpy()
 
-    diff_average = np.mean(np.abs((pred1 - pred2)))
+        model.random_teleport(sampling_type=sampling_type)
+        model.random_teleport(sampling_type=sampling_type)
 
-    if verbose:
-        print("Sample outputs: ")
-        print("Pre teleportation: ", pred1.flatten()[:10])
-        print("Post teleportation: ", pred2.flatten()[:10])
-        print("Diff weight average: ", np.mean(np.abs((w1 - w2))))
-        print("Diff prediction average: ", diff_average)
+        pred2 = model(x).detach().numpy()
+        w2 = model.get_weights().detach().numpy()
 
-    assert not np.allclose(w1, w2)
-    assert np.allclose(pred1, pred2, atol=atol), "Teleporation did not work for model {}. Average difference: {}".\
-        format(model_name, diff_average)
 
-    print("Teleportation successful for " + model_name + " model.")
+        diff_average = np.mean(np.abs((pred1 - pred2)))
+        print(w1)
+        print(w2)
+        if verbose:
+            print("Sample outputs: ")
+            print("Pre teleportation: ", pred1.flatten()[:10])
+            print("Post teleportation: ", pred2.flatten()[:10])
+            print("Diff weight average: ", np.mean(np.abs((w1 - w2))))
+            print("Diff prediction average: ", diff_average)
+
+        assert not np.allclose(w1, w2)
+        assert np.allclose(pred1, pred2, atol=atol), "Teleporation did not work. Average difference: {}".format(diff_average)
+
+        print("Teleportation successful for " + model_name + " model.")
     return diff_average
 
 
@@ -118,10 +124,10 @@ if __name__ == '__main__':
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
     test_set_weights(network=mlp_model, model_name="MLP")
-    test_teleport(network=mlp_model, model_name="MLP")
+    test_teleport(network=mlp_model, model_name="MLP", verbose=True)
     test_reset_weights(network=mlp_model, model_name="MLP")
 
     test_set_weights(network=cnn_model, model_name="Convolutional")
-    test_teleport(network=cnn_model, model_name="Convolutional")
+    test_teleport(network=cnn_model, model_name="Convolutional", verbose=False)
     test_reset_weights(network=cnn_model, model_name="Convolutional")
 

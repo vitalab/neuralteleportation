@@ -20,8 +20,10 @@ def run_single_output_training(train_fct: Callable, models: Sequence[nn.Module],
         # This avoids problem in case models are shuffled between CPU and GPU during training
         trained_model.to(config.device)
 
-        print("Testing {}: {} \n".format(model.__class__.__name__, test(trained_model, test_set, metrics, config)))
+        test_res = test(trained_model, test_set, metrics, config)
+        print("Testing {}: {} \n".format(model.__class__.__name__, test_res))
         print()
+        return test_res
 
 
 def run_multi_output_training(train_fct: Callable, models: Sequence[nn.Module],

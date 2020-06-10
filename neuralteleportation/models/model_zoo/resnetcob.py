@@ -165,7 +165,8 @@ class ResNetCOB(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = AdaptiveAvgPool2dCOB((1, 1))
-        self.fc = LinearCOB(512 * block.expansion, num_classes)
+        self.fc = LinearCOB(256 * block.expansion, num_classes)
+        self.fc_conv = conv1x1(61, num_classes)
         self.flatten = FlattenCOB()
 
         for m in self.modules():
@@ -218,7 +219,7 @@ class ResNetCOB(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
+        #x = self.layer4(x)
 
         x = self.avgpool(x)
         x = self.flatten(x)

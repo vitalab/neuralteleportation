@@ -14,9 +14,9 @@ from neuralteleportation.training.training import test, train_epoch
 
 @dataclass
 class TeleportationTrainingConfig(TrainingConfig):
-    input_shape: Tuple[int, int, int] = (1, 28, 28)
-    teleport_every_n_epochs: int = 4
-    teleport_prob: float = 1.  # Always teleport by default when reaching `teleport_every_n_epochs`
+    input_shape: Tuple[int, int, int] = (1, 32, 32)
+    teleport_every_n_epochs: int = 2
+    teleport_prob: float = 1.0   # Always teleport by default when reaching `teleport_every_n_epochs`
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
@@ -31,8 +31,14 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     for epoch in range(config.epochs):
         if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
             if random.random() < config.teleport_prob:
+
+                val_res = test(model, val_dataset, metrics, config)
+                print("Validation right before teleportation : ", val_res)
+
                 print("Applying random COB to model in training")
                 model.random_teleport()
+                val_res = test(model, val_dataset, metrics, config)
+                print("Validation right after teleportation : ", val_res)
 
                 # Initialze a new optimizer using the model's new parameters
                 optimizer = optim.SGD(model.parameters(), lr=config.lr)
@@ -44,6 +50,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))
+            print(flush=True)
 
     return model
 
@@ -55,8 +62,15 @@ if __name__ == '__main__':
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
+
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
     config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
-    run_single_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
-                               cifar10_train, cifar10_test, val_set=cifar10_val)
+
+    test_results = []
+    for i in range(15):
+        test_res = run_single_output_training(train, get_cifar10_models(device='cuda'), config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
+        test_results.append(test_res)
+
+    print(test_results)
+

@@ -43,12 +43,14 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
     tol = 1e-2
 
     for sampling_type in sampling_types:
-        for power in range(-2, 2):
+        for power in range(-3, 1):
             cob = 10 ** power
             angle_results = []
             rand_angle_results = []
             rand_rand_angle_results = []
             rand_micro_angle_results = []
+            grad_grad_angle_results = []
+
             for _ in iterations:
                 x = torch.rand(input_shape, dtype=torch.float)
                 y = torch.rand((100, 10), dtype=torch.float)
@@ -57,6 +59,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
                 model.set_weights(w1)
                 model.random_teleport(cob_range=cob, sampling_type=sampling_type)
                 w2 = model.get_weights().detach().numpy()
+                grad_tele = model.get_grad(x, y, loss_func, zero_grad=False)
                 micro_teleport_vec = (w2 - w1)
 
                 random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
@@ -66,6 +69,10 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
                 dot_prod = np.longfloat(np.dot(grad, micro_teleport_vec) /
                                         (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
                 angle = np.degrees(np.arccos(dot_prod))
+
+                grad_grad_prod = np.longfloat(np.dot(grad, grad_tele) /
+                                              (np.linalg.norm(grad)*np.linalg.norm(grad_tele)))
+                grad_grad_angle = np.degrees(np.arccos(grad_grad_prod))
 
                 rand_dot_prod = np.longfloat(np.dot(grad, random_vector) /
                                              (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
@@ -89,11 +96,13 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
                 rand_angle_results.append(rand_angle)
                 rand_rand_angle_results.append(rand_rand_angle)
                 rand_micro_angle_results.append(rand_micro_angle)
+                grad_grad_angle_results.append(grad_grad_angle)
 
             angle_results = np.array(angle_results)
             rand_angle_results = np.array(rand_angle_results)
             rand_rand_angle_results = np.array(rand_rand_angle_results)
             rand_micro_angle_results = np.array(rand_micro_angle_results)
+            grad_grad_angle = np.array(grad_grad_angle)
 
             print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
                   f'{red * failed}{np.round(angle_results.mean(), abs(int(np.log10(tol))))}',
@@ -116,7 +125,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
             x_min = 90-delta
             x_max = 90+delta
 
-            plt.subplot(4, 1, 1)
+            plt.subplot(5, 1, 1)
 
             bin_height, bin_boundary = np.histogram(np.array(angle_results))
             width = bin_boundary[1] - bin_boundary[0]
@@ -129,7 +138,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
             bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            plt.subplot(4, 1, 2)
+            plt.subplot(5, 1, 2)
             plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
             plt.xlim(x_min, x_max)
             plt.legend(['Micro-teleportation\n vs \n Random Vector'])
@@ -137,7 +146,7 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
             bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            plt.subplot(4, 1, 3)
+            plt.subplot(5, 1, 3)
             plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
             plt.xlim(x_min, x_max)
             plt.legend(['Gradient\n vs \n Random Vector'])
@@ -145,10 +154,18 @@ def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, net
             bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            plt.subplot(4, 1, 4)
+            plt.subplot(5, 1, 4)
             plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
             plt.xlim(x_min, x_max)
             plt.legend(['Random Vector\n vs \n Random Vector'])
+
+            bin_height, bin_boundary = np.histogram(np.array(grad_grad_angle_results))
+            width = bin_boundary[1] - bin_boundary[0]
+            bin_height = bin_height / float(max(bin_height))
+            plt.subplot(5, 1, 5)
+            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            plt.xlim(0, 100)
+            plt.legend(['Grad \n vs \n Teleported grad'])
 
             plt.xlabel('Angle in degrees')
             plt.show()
