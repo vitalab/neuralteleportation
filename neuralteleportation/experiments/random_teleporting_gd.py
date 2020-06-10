@@ -15,7 +15,7 @@ from neuralteleportation.training.training import test, train_epoch
 @dataclass
 class TeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
-    teleport_every_n_epochs: int = 2
+    teleport_every_n_epochs: int = 4
     teleport_prob: float = 1.  # Always teleport by default when reaching `teleport_every_n_epochs`
 
 
