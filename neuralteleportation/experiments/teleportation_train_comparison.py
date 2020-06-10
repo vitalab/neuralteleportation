@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.distributions.bernoulli import Bernoulli
 
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
@@ -27,7 +28,7 @@ def argumentparser():
     parser.add_argument("--dataset", type=str, default="mnist", choices=["mnist", "cifar10"])
     parser.add_argument("--cob_range", type=float, default=0.5)
     parser.add_argument("--cob_sampling", type=str, default="usual",
-                        choices=["usual", "symmetric", "symmetric", "zero"])
+                        choices=["usual", "symmetric", "negative", "zero"])
 
     return parser.parse_args()
 
@@ -84,8 +85,9 @@ if __name__ == '__main__':
     print("===============================")
     print("========Training 5050=======")
     print("===============================")
+    b = Bernoulli(torch.tensor([0.5]))
     for e in np.arange(1, args.epochs + 1):
-        if e % args.teleport_every == 0 and torch.rand(1) >= 0.5:
+        if e % args.teleport_every == 0 and b.sample() == 1:
             print("teleported model")
             net_5050.random_teleport()
         train_epoch(model=net_5050,
@@ -103,8 +105,8 @@ if __name__ == '__main__':
     print("===============================")
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0:
-            net_teleport.random_teleport()
             print("teleported model")
+            net_teleport.random_teleport()
         train_epoch(model=net_teleport,
                     criterion=metric.criterion,
                     optimizer=optim_teleport,
