@@ -40,7 +40,7 @@ def plot_angle_teleported_gradient(model, loss_func, input_shape = (4, 3, 32, 32
     plt.show()
 
 
-def plot_magnitude_teleported_gradient(model, loss_func, input_shape = (4, 3, 32, 32), n_iter=50):
+def plot_magnitude_teleported_gradient(model, loss_func, input_shape = (4, 3, 32, 32), n_iter=20):
     x = torch.rand(input_shape, dtype=torch.float)
     y = torch.randint(low=0, high=9, size=(4,))
     original_weights = model.get_weights().detach().numpy()
@@ -55,7 +55,7 @@ def plot_magnitude_teleported_gradient(model, loss_func, input_shape = (4, 3, 32
         center += 0.05
         xaxis.append(center)
         to_compute_mean = []
-        for j in range(100):
+        for j in range(10):
             model.set_weights(original_weights)
             model.random_teleport(cob_range=0.001, sampling_type='positive_centered', center=center)
 
@@ -65,9 +65,6 @@ def plot_magnitude_teleported_gradient(model, loss_func, input_shape = (4, 3, 32
             diff = abs(np.linalg.norm(original_grad)-np.linalg.norm(teleported_grad))
 
             to_compute_mean.append(diff)
-            print(j)
-            print(diff)
-            print('----')
 
         variance.append(np.var(to_compute_mean))
         differences.append(np.mean(to_compute_mean))
@@ -108,6 +105,6 @@ if __name__ == '__main__':
 
     #train(model.to(device='cuda'), train_dataset=CIFAR10_train, metrics=metrics, config=config,
     #      val_dataset=CIFAR10_val)
-    plot_angle_teleported_gradient(model, loss_func)
-    plot_angle_teleported_gradient(model, loss_func)
+    plot_magnitude_teleported_gradient(model, loss_func)
+    #plot_angle_teleported_gradient(model, loss_func)
 
