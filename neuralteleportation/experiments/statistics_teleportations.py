@@ -6,7 +6,7 @@ import torch
 from numpy import save
 
 
-def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32), n_iter=200):
+def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32), n_iter=100):
     """
     This method plots a histogram of the angles between the gradient of the network model and the gradients of
      n_iter teleportations of it.
@@ -24,31 +24,84 @@ def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32),
     y = torch.randint(low=0, high=9, size=(4,))
 
     original_weights = model.get_weights()
-    grad1 = model.get_grad(x, y, loss_func, zero_grad=False)
+    original_grad = model.get_grad(x, y, loss_func, zero_grad=False)
     angle_results = []
+    original_rand_angle_results = []
+    teleported_rand_angle_results = []
+    rand_rand_angle_results = []
 
-    for _ in range(n_iter):
+    for i in range(n_iter):
         model.set_weights(original_weights)
-        model.random_teleport(cob_range=100, sampling_type='positive')
-        grad2 = model.get_grad(x, y, loss_func, zero_grad=False)
-        dot_prod = np.longfloat(np.dot(grad1, grad2) /
-                                (np.linalg.norm(grad1) * np.linalg.norm(grad2)))
+        model.random_teleport(cob_range=0.001, sampling_type='usual')
+        teleported_grad = model.get_grad(x, y, loss_func, zero_grad=False)
+        random_vector = torch.rand(original_grad.shape, dtype=torch.float) - 0.5
+        random_vector2 = torch.rand(original_grad.shape, dtype=torch.float) - 0.5
+
+        dot_prod = np.longfloat(np.dot(original_grad, teleported_grad) /
+                                (np.linalg.norm(original_grad) * np.linalg.norm(teleported_grad)))
         angle = np.degrees(np.arccos(dot_prod))
+
+        original_rand_prod = np.longfloat(np.dot(original_grad, random_vector) /
+                                     (np.linalg.norm(original_grad) * np.linalg.norm(random_vector)))
+        original_rand_angle = np.degrees(np.arccos(original_rand_prod))
+
+        teleported_rand_dot_prod = np.longfloat(np.dot(teleported_grad, random_vector) /
+                                          (np.linalg.norm(teleported_grad) * np.linalg.norm(random_vector)))
+        teleported_rand_angle = np.degrees(np.arccos(teleported_rand_dot_prod))
+
+        rand_rand_dot_prod = np.longfloat(np.dot(random_vector2, random_vector) /
+                                           (np.linalg.norm(random_vector2) * np.linalg.norm(random_vector)))
+        rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
+
         angle_results.append(angle)
+        original_rand_angle_results.append(original_rand_angle)
+        teleported_rand_angle_results.append(teleported_rand_angle)
+        rand_rand_angle_results.append(rand_rand_angle)
 
     angle_results = np.array(angle_results)
+    original_rand_angle_results = np.array(original_rand_angle_results)
+    teleported_rand_angle_results = np.array(teleported_rand_angle_results)
+    rand_rand_angle_results = np.array(rand_rand_angle_results)
 
     delta = np.maximum(1.0, angle_results.std() * 3)
     x_min = 90 - delta
     x_max = 90 + delta
+
+    plt.subplot(4, 1, 1)
 
     bin_height, bin_boundary = np.histogram(np.array(angle_results))
     width = bin_boundary[1] - bin_boundary[0]
     bin_height = bin_height / float(max(bin_height))
     plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
     plt.title('Histogram of angles of gradient with multiple teleported gradients')
-    plt.xlabel('Angle')
+    plt.legend(['Original Grad\n vs \n Teleported Grad'])
     plt.xlim(x_min, x_max)
+
+    bin_height, bin_boundary = np.histogram(np.array(original_rand_angle_results))
+    width = bin_boundary[1] - bin_boundary[0]
+    bin_height = bin_height / float(max(bin_height))
+    plt.subplot(4, 1, 2)
+    plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+    plt.xlim(x_min, x_max)
+    plt.legend(['Original Grad\n vs \n Random Vector'])
+
+    bin_height, bin_boundary = np.histogram(np.array(teleported_rand_angle_results))
+    width = bin_boundary[1] - bin_boundary[0]
+    bin_height = bin_height / float(max(bin_height))
+    plt.subplot(4, 1, 3)
+    plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+    plt.xlim(x_min, x_max)
+    plt.legend(['Teleported Grad\n vs \n Random Vector'])
+
+    bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
+    width = bin_boundary[1] - bin_boundary[0]
+    bin_height = bin_height / float(max(bin_height))
+    plt.subplot(4, 1, 4)
+    plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+    plt.xlim(x_min, x_max)
+    plt.legend(['Random Vector\n vs \n Random Vector'])
+
+    plt.xlabel('Angle in degrees')
     plt.show()
 
 
@@ -123,5 +176,5 @@ if __name__ == '__main__':
     network = vgg16COB(pretrained=False, num_classes=10, input_channels=3)
     network = NeuralTeleportationModel(network, input_shape=input_shape)
 
-    plot_difference_teleported_gradients(network, loss)
+    #plot_difference_teleported_gradients(network, loss)
     plot_angle_teleported_gradient(network, loss)
