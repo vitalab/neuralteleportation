@@ -54,10 +54,10 @@ def _teleport_model(model: nn.Module, config: TeleportationTrainingConfig) -> Li
     model.cpu()  # Move model to CPU before teleporting it (to avoid possible CUDA OOM error)
 
     # Include the non-teleported, original model as a possible model
-    models = [deepcopy(model)]
+    models = [model]
 
     # Teleport the model to obtain N different models corresponding to the same function
-    models.extend(deepcopy(model.random_teleport()) for _ in range(config.num_teleportations))
+    models.extend(deepcopy(model).random_teleport() for _ in range(config.num_teleportations))
 
     return models
 
