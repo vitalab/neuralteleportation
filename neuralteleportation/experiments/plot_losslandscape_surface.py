@@ -14,7 +14,7 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 
 
 # Creating a list of all the possible models.
-__models__ = experiment_setup.get_model_list()
+__models__ = experiment_setup.get_model_names()
 
 
 def argument_parser():
@@ -67,9 +67,9 @@ if __name__ == "__main__":
         net = torch.load(args.load_model, map_location=device)
         net = NeuralTeleportationModel(net, input_shape=data_size).to(device)
     else:
-        net = experiment_setup.get_model_from_string(args.model,
-                                                     num_classes=10,
-                                                     input_channels=dims)
+        net = experiment_setup.get_model_from_name(args.model,
+                                                   num_classes=10,
+                                                   input_channels=dims)
         net = NeuralTeleportationModel(network=net, input_shape=data_size).to(device)
 
     criterion = nn.CrossEntropyLoss()
