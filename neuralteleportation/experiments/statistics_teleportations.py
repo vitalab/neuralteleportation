@@ -6,7 +6,7 @@ import torch
 from numpy import save
 
 
-def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32), n_iter=100):
+def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32), n_iter=200):
     """
     This method plots a histogram of the angles between the gradient of the network model and the gradients of
      n_iter teleportations of it.
@@ -57,11 +57,21 @@ def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32),
         original_rand_angle_results.append(original_rand_angle)
         teleported_rand_angle_results.append(teleported_rand_angle)
         rand_rand_angle_results.append(rand_rand_angle)
+        print(i)
+        print(angle)
+        print(original_rand_angle)
+        print(teleported_rand_angle)
+        print(rand_rand_angle)
 
     angle_results = np.array(angle_results)
     original_rand_angle_results = np.array(original_rand_angle_results)
     teleported_rand_angle_results = np.array(teleported_rand_angle_results)
     rand_rand_angle_results = np.array(rand_rand_angle_results)
+
+    #save('angle_results.npy', angle_results)
+    #save('original_rand_angle_results.npy', original_rand_angle_results)
+    #save('teleported_rand_angle_results.npy', teleported_rand_angle_results)
+    #save('rand_rand_angle_results.npy', rand_rand_angle_results)
 
     delta = np.maximum(1.0, angle_results.std() * 3)
     x_min = 90 - delta
@@ -105,7 +115,8 @@ def plot_angle_teleported_gradient(model, loss_func, input_shape=(4, 3, 32, 32),
     plt.show()
 
 
-def plot_difference_teleported_gradients(model, loss_func, input_shape=(4, 3, 32, 32), n_iter=20, save_to_files=False):
+def plot_difference_teleported_gradients(model, loss_func, input_shape=(4, 3, 32, 32), n_iter=20,
+                                         save_to_files=False):
     """
     This method plots the difference of the gradient of model and the gradient of a teleportation, by increasing the
     cob_range from 0.1 to 0.9 in n_iter iterations for usual cob_sampling. Each gradient is normalized by the norm of
@@ -169,6 +180,7 @@ def plot_difference_teleported_gradients(model, loss_func, input_shape=(4, 3, 32
 
 if __name__ == '__main__':
     import torch.nn as nn
+    from numpy import load
 
     input_shape = (4, 3, 32, 32)
     loss = nn.CrossEntropyLoss()
@@ -176,5 +188,9 @@ if __name__ == '__main__':
     network = vgg16COB(pretrained=False, num_classes=10, input_channels=3)
     network = NeuralTeleportationModel(network, input_shape=input_shape)
 
-    #plot_difference_teleported_gradients(network, loss)
+    #for i in range(10):
+    #    print(i)
+    #    network.random_teleport(cob_range=0.5, sampling_type='symmetric')
+    #    plot_difference_teleported_gradients(network, loss)
     plot_angle_teleported_gradient(network, loss)
+
