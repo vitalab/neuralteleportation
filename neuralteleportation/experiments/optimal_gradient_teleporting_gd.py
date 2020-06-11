@@ -109,6 +109,6 @@ if __name__ == '__main__':
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
-    config = TeleportationTrainingConfig(lr=1e-3, epochs=20, input_shape=(3, 32, 32), device='cuda')
+    config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
     run_single_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
                                cifar10_train, cifar10_test, val_set=cifar10_val)
