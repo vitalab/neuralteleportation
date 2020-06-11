@@ -45,7 +45,7 @@ def to_device(func: Callable[[], List[nn.Module]]):
 @to_device
 def get_mnist_models() -> List[nn.Module]:
     return [
-        MLPCOB(),
+        MLPCOB(num_classes=10),
         vgg16COB(num_classes=10, input_channels=1),
         resnet18COB(num_classes=10, input_channels=1),
         densenet121COB(num_classes=10, input_channels=1),
