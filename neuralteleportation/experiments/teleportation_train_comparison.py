@@ -1,10 +1,11 @@
 import argparse
-
+import h5py
 import matplotlib.pyplot as plt
 import numpy as np
+import random
+
 import torch
 import torch.nn as nn
-from torch.distributions.bernoulli import Bernoulli
 
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
@@ -68,6 +69,14 @@ if __name__ == '__main__':
     res_5050 = []
     res_teleport = []
 
+    val_res = test(model=net_vanilla, dataset=valset, metrics=metric, config=config)
+    res_vanilla.append(val_res['accuracy'])
+    val_res = test(model=net_5050, dataset=valset, metrics=metric, config=config)
+    res_vanilla.append(val_res['accuracy'])
+    val_res = test(model=net_teleport, dataset=valset, metrics=metric, config=config)
+    res_vanilla.append(val_res['accuracy'])
+
+    print()
     print("===============================")
     print("========Training Vanilla=======")
     print("===============================")
@@ -85,11 +94,10 @@ if __name__ == '__main__':
     print("===============================")
     print("========Training 5050=======")
     print("===============================")
-    b = Bernoulli(torch.tensor([0.5]))
     for e in np.arange(1, args.epochs + 1):
-        if e % args.teleport_every == 0 and b.sample() == 1:
+        if e % args.teleport_every == 0 and random.random() <= 0.5:
             print("teleported model")
-            net_5050.random_teleport()
+            net_5050.random_teleport(cob_range=args.cob_range)
         train_epoch(model=net_5050,
                     criterion=metric.criterion,
                     optimizer=optim_5050,
@@ -106,7 +114,7 @@ if __name__ == '__main__':
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0:
             print("teleported model")
-            net_teleport.random_teleport()
+            net_teleport.random_teleport(cob_range=args.cob_range)
         train_epoch(model=net_teleport,
                     criterion=metric.criterion,
                     optimizer=optim_teleport,
@@ -117,11 +125,21 @@ if __name__ == '__main__':
         res_teleport.append(val_res['accuracy'])
 
     plt.figure()
-    plt.title("SGD %s epochs training, %s, %s" % (args.epochs, args.model, args.dataset))
-    plt.plot(res_vanilla, '-o', label="vanilla", markersize=2)
-    plt.plot(res_5050, '-o', label="net_5050", markersize=2)
-    plt.plot(res_teleport, '-o', label="net_teleport", markersize=2)
+    title = "SGD %s epochs training at %e, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
+    plt.title(title)
+    plt.plot(res_vanilla, '-o', label="vanilla", markersize=3)
+    plt.plot(res_5050, '-o', label="net_5050", markersize=3)
+    plt.plot(res_teleport, '-o', label="net_teleport", markersize=3)
     plt.xlabel("Epochs")
     plt.ylabel("Accuracy")
+    plt.xlim([0, args.epochs])
+    plt.ylim([0, 1])
     plt.legend()
     plt.show()
+
+    res_vanilla = np.array(res_vanilla)
+    res_5050 = np.array(res_5050)
+    res_teleport = np.array(res_teleport)
+
+    file_path = ("./neuralteleportation/experiments/results/" + title + ".h5").replace(" ", "_")
+    h5py.File(file_path, 'a')
