@@ -26,7 +26,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         optimizer = optim.SGD(model.parameters(), lr=config.lr)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
-    model = NeuralTeleportationModel(network=model, input_shape=(1,) + config.input_shape)
+    model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
 
     for epoch in range(config.epochs):
         if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
