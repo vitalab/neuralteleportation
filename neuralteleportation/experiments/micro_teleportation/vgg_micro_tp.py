@@ -22,6 +22,12 @@ def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, met
 
 
 def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+    else:
+        model = model.cpu()
+
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -90,17 +96,17 @@ if __name__ == '__main__':
     loss = nn.CrossEntropyLoss()
 
     if torch.cuda.is_available():
-        loss = loss.cuda()
         device = 'cuda'
     else:
-        loss = loss.cpu()
         device = 'cpu'
+
+    vgg_model = vggcob.vgg11COB(pretrained=False, input_channels=3)
 
     train(vgg_model, criterion=loss, train_dataset=train_set, val_dataset=val_set, optimizer=optim, metrics=metrics,
           epochs=1, device=device, batch_size=1)
     print(test(vgg_model, loss, metrics, test_set, device=device))
 
-    dot_product(network=vgg_model, dataset=test_set, network_descriptor='VGG on CIFAR10')
+    dot_product(network=vgg_model, dataset=test_set, network_descriptor='VGG on CIFAR10', device=device)
 
     train_set = CIFAR100('/tmp', train=True, download=True,
                         transform=transforms.Compose([transforms.RandomHorizontalFlip(),
@@ -109,8 +115,10 @@ if __name__ == '__main__':
     val_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
     test_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
 
+    vgg_model = vggcob.vgg11COB(pretrained=False, input_channels=3)
+
     train(vgg_model, criterion=loss, train_dataset=train_set, val_dataset=val_set, optimizer=optim, metrics=metrics,
           epochs=1, device=device, batch_size=1)
     print(test(vgg_model, loss, metrics, test_set, device=device))
 
-    dot_product(network=vgg_model, dataset=test_set, network_descriptor='VGG on CIFAR100')
+    dot_product(network=vgg_model, dataset=test_set, network_descriptor='VGG on CIFAR100', device=device)

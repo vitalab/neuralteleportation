@@ -22,6 +22,12 @@ def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, met
 
 
 def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+    else:
+        model = model.cpu()
+
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -66,7 +72,7 @@ def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
 
 
 if __name__ == '__main__':
-    from torchvision.datasets import MNIST
+    from torchvision.datasets import MNIST, CIFAR10, CIFAR100
     import torchvision.transforms as transforms
     from neuralteleportation.metrics import accuracy
     import torch.nn as nn
@@ -96,11 +102,17 @@ if __name__ == '__main__':
 
     cnn_model = swap_model_modules_for_COB_modules(cnn_model)
 
-    optim = torch.optim.Adam(params=cnn_model.parameters(), lr=.01)
+    optim = torch.optim.SGD(params=cnn_model.parameters(), lr=.0001)
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
-    train(cnn_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1, device='cpu', batch_size=1)
-    print(test(cnn_model, loss, metrics, mnist_test))
 
-    dot_product(network=cnn_model, dataset=mnist_test, network_descriptor='CNN on MNIST')
+    if torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
+    train(cnn_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+          epochs=1, device=device, batch_size=16)
+    print(test(cnn_model, loss, metrics, mnist_test, device=device))
+
+    dot_product(network=cnn_model, dataset=mnist_test, network_descriptor='CNN on MNIST', device=device)

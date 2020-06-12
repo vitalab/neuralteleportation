@@ -50,7 +50,12 @@ def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
 
 def test(model, criterion, metrics, dataset, batch_size=32, device='cpu'):
     test_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
-    model = model.cuda()
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+    else:
+        model = model.cpu()
+
     model.eval()
     results = defaultdict(list)
     with torch.no_grad():
@@ -103,7 +108,7 @@ if __name__ == '__main__':
 
     mlp_model = swap_model_modules_for_COB_modules(mlp_model)
 
-    optim = torch.optim.SGD(params=mlp_model.parameters(), lr=.01)
+    optim = torch.optim.SGD(params=mlp_model.parameters(), lr=.001)
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
 
@@ -116,7 +121,10 @@ if __name__ == '__main__':
           epochs=1, device=device, batch_size=1)
     print(test(mlp_model, loss, metrics, test_set, device=device))
 
-    dot_product(network=mlp_model, dataset=test_set, network_descriptor='MLP on MNIST', device=device)
+    dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on MNIST',
+                                     reset_weights=False, device=device)
+    dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on MNIST',
+                                     reset_weights=True, device=device)
 
     train_set = CIFAR10('/tmp', train=True, download=True, transform=trans)
     val_set = CIFAR10('/tmp', train=False, download=True, transform=trans)
@@ -148,7 +156,10 @@ if __name__ == '__main__':
           epochs=1, device=device, batch_size=1)
     print(test(mlp_model, loss, metrics, test_set, device=device))
 
-    dot_product(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR10', device=device)
+    dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR10',
+                                     reset_weights=False, device=device)
+    dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR10',
+                                     reset_weights=True, device=device)
 
     train_set = CIFAR100('/tmp', train=True, download=True, transform=trans)
     val_set = CIFAR100('/tmp', train=False, download=True, transform=trans)
@@ -180,4 +191,7 @@ if __name__ == '__main__':
           epochs=1, device=device, batch_size=1)
     print(test(mlp_model, loss, metrics, test_set, device=device))
 
-    dot_product(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR100', device=device)
+    dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR100',
+                                     reset_weights=False, device=device)
+    dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR100',
+                                     reset_weights=True, device=device)

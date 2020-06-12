@@ -1,162 +1,13 @@
-import pandas as pd
-import torch
 import torch.optim as optim
-import matplotlib.pyplot as plt
-import numpy as np
 
 from collections import defaultdict
-from tqdm import tqdm
 from models.model_zoo import resnetcob
-from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
+from micro_teleportation.micro_tp_utils import *
 
 # ANSI escape code for colored console text
 red = "\033[31m"
 reset = "\033[0m"
 
-
-def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
-                sampling_types=['usual', 'symmetric', 'negative', 'zero'], device='cpu') -> None:
-    """
-    This method tests the scalar product between the teleporation line and the gradient, as well as between a random
-    vector and the gradient for nullity. It then displays the histograms of the calculated scalar products.
-
-    Args:
-        network :               the model to which we wish to assign weights
-
-        input_shape :           the shape of the input.  By default, simulate batched of 100 grayscale 28x28 images
-                                (it will be used by the networkgrapher of the model,
-                                the values is not important for the test at hand)
-
-        nb_teleport:            The number of time the network is teleported and the scalar product calculated. An
-                                average is then calculated.
-
-        network_descriptor:     String describing the content of the network
-
-        sampling_types :        Teleportation sampling types
-
-        device:                 Device used to compute the netork operations (Typically 'cpu' or 'cuda')
-    """
-
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=16)
-    data, target = next(iter(dataloader))
-
-    model = NeuralTeleportationModel(network=network, input_shape=data.shape)
-
-    w1 = model.get_weights().detach().numpy()
-
-    iterations = range(0, nb_teleport)
-    loss_func = torch.nn.CrossEntropyLoss()
-
-    # Arbitrary precision threshold for nullity comparison
-    tol = 1e-2
-
-    for sampling_type in sampling_types:
-        for power in range(-2, 2):
-            cob = 10 ** power
-            angle_results = []
-            rand_angle_results = []
-            rand_rand_angle_results = []
-            rand_micro_angle_results = []
-            for _ in iterations:
-                data, target = data.to(device), target.to(device)
-                grad = model.get_grad(data, target, loss_func, zero_grad=False)
-
-                model.set_weights(w1)
-                model.random_teleport(cob_range=cob, sampling_type=sampling_type)
-                w2 = model.get_weights().detach().numpy()
-                micro_teleport_vec = (w2 - w1)
-
-                random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
-                random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
-
-                # Normalized scalar product
-                dot_prod = np.longfloat(np.dot(grad, micro_teleport_vec) /
-                                        (np.linalg.norm(grad)*np.linalg.norm(micro_teleport_vec)))
-                angle = np.degrees(np.arccos(dot_prod))
-
-                rand_dot_prod = np.longfloat(np.dot(grad, random_vector) /
-                                             (np.linalg.norm(grad)*np.linalg.norm(random_vector)))
-                rand_angle = np.degrees(np.arccos(rand_dot_prod))
-
-                rand_rand_dot_prod = np.longfloat(np.dot(random_vector2, random_vector) /
-                                                  (np.linalg.norm(random_vector2)*np.linalg.norm(random_vector)))
-                rand_rand_angle = np.degrees(np.arccos(rand_rand_dot_prod))
-
-                rand_micro_dot_prod = np.longfloat(np.dot(random_vector2, micro_teleport_vec) /
-                                                  (np.linalg.norm(random_vector2)*np.linalg.norm(micro_teleport_vec)))
-                rand_micro_angle = np.degrees(np.arccos(rand_micro_dot_prod))
-
-                failed = (not np.allclose(dot_prod, 0, atol=tol))
-                rand_failed = (not np.allclose(rand_dot_prod, 0, atol=tol))
-                target_angle = 90
-
-                angle_results.append(angle)
-                rand_angle_results.append(rand_angle)
-                rand_rand_angle_results.append(rand_rand_angle)
-                rand_micro_angle_results.append(rand_micro_angle)
-
-            angle_results = np.array(angle_results)
-            rand_angle_results = np.array(rand_angle_results)
-            rand_rand_angle_results = np.array(rand_rand_angle_results)
-            rand_micro_angle_results = np.array(rand_micro_angle_results)
-
-            print(f'The result of the scalar product between the gradient and a micro-teleporation vector is: '
-                  f'{red * failed}{np.round(angle_results.mean(), abs(int(np.log10(tol))))}',
-                  f' (!=0 => FAILED!)' * failed,
-                  f'{reset}',
-                  f' using {sampling_type} sampling type',
-                  f', the angle is {angle}°',
-                  f', the delta in angle is {angle - target_angle}°\n',
-                  f'The result of the scalar product  between the gradient and a random vector is: ',
-                  f'{red * rand_failed}{rand_angle_results.mean()}',
-                  f' (!=0 => FAILED!)' * rand_failed,
-                  f'{reset}',
-                  f', and the angle is {rand_angle}°',
-                  f', the delta in angle is {rand_angle - target_angle}°\n',
-                  sep='')
-
-            # This conditional display is necessary because some sampling type/COB combinations produce such a narrow
-            # distribution for micro-teleportation that pyplot is not able to display them at all
-            delta = np.maximum(1.0, rand_rand_angle_results.std()*3)
-            x_min = 90-delta
-            x_max = 90+delta
-
-            plt.subplot(4, 1, 1)
-
-            bin_height, bin_boundary = np.histogram(np.array(angle_results))
-            width = bin_boundary[1] - bin_boundary[0]
-            bin_height = bin_height / float(max(bin_height))
-            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
-            plt.title(f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}, 'f'{nb_teleport:} iter')
-            plt.legend(['Micro-teleportation\n vs \n Gradient'])
-            plt.xlim(x_min, x_max)
-
-            bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
-            width = bin_boundary[1] - bin_boundary[0]
-            bin_height = bin_height / float(max(bin_height))
-            plt.subplot(4, 1, 2)
-            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
-            plt.xlim(x_min, x_max)
-            plt.legend(['Micro-teleportation\n vs \n Random Vector'])
-
-            bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
-            width = bin_boundary[1] - bin_boundary[0]
-            bin_height = bin_height / float(max(bin_height))
-            plt.subplot(4, 1, 3)
-            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
-            plt.xlim(x_min, x_max)
-            plt.legend(['Gradient\n vs \n Random Vector'])
-
-            bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
-            width = bin_boundary[1] - bin_boundary[0]
-            bin_height = bin_height / float(max(bin_height))
-            plt.subplot(4, 1, 4)
-            plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
-            plt.xlim(x_min, x_max)
-            plt.legend(['Random Vector\n vs \n Random Vector'])
-
-            plt.xlabel('Angle in degrees')
-            plt.show()
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
           device='cpu'):
@@ -173,6 +24,12 @@ def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, met
 
 
 def train_step(model, criterion, optimizer, train_loader, epoch, device='cpu'):
+
+    if torch.cuda.is_available():
+        model = model.cuda()
+    else:
+        model = model.cpu()
+
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -217,7 +74,7 @@ def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
 
 
 if __name__ == '__main__':
-    from torchvision.datasets import MNIST
+    from torchvision.datasets import MNIST, CIFAR10, CIFAR100
     import torchvision.transforms as transforms
     from neuralteleportation.metrics import accuracy
     import torch.nn as nn
@@ -231,19 +88,58 @@ if __name__ == '__main__':
     mnist_val = MNIST('/tmp', train=False, download=True, transform=trans)
     mnist_test = MNIST('/tmp', train=False, download=True, transform=trans)
 
-    # GGS: reducing the dataset size since cuda is not available on local system due to unidentified bug as of
-    # may 28th 2020, this should be taken down once CUDA problem has been addressed
-    mnist_train.data = mnist_train.data[:50, :, :]
-    mnist_val.data = mnist_val.data[:50, :, :]
-    mnist_test.data = mnist_test.data[:50, :, :]
-
     resnet_model = resnetcob.resnet18COB(input_channels=1)
 
     optim = torch.optim.Adam(params=resnet_model.parameters(), lr=.01)
     metrics = [accuracy]
     loss = nn.CrossEntropyLoss()
-    train(resnet_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
-          epochs=1, device='cpu', batch_size=16)
-    print(test(resnet_model, loss, metrics, mnist_test))
 
-    dot_product(resnet_model, dataset=mnist_test, network_descriptor='VGG')
+    if torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
+    train(resnet_model, criterion=loss, train_dataset=mnist_train, val_dataset=mnist_val, optimizer=optim, metrics=metrics,
+          epochs=1, device=device, batch_size=16)
+    print(test(resnet_model, loss, metrics, mnist_test, device=device))
+
+    dot_product(resnet_model, dataset=mnist_test, network_descriptor='ResNet on MNIST')
+
+    trans = list()
+    trans.append(transforms.ToTensor())
+    trans.append(transforms.ToTensor())
+    trans = transforms.Compose(trans)
+
+    train_set = CIFAR10('/tmp', train=True, download=True,
+                        transform=transforms.Compose([transforms.RandomHorizontalFlip(),
+                                                      transforms.RandomCrop(32, 4),
+                                                      transforms.ToTensor()]))
+    val_set = CIFAR10('/tmp', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+    test_set = CIFAR10('/tmp', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+
+    resnet_model = resnetcob.resnet18COB(pretrained=False, input_channels=3)
+
+    optim = torch.optim.Adam(params=resnet_model.parameters(), lr=.01)
+    metrics = [accuracy]
+    loss = nn.CrossEntropyLoss()
+
+    train(resnet_model, criterion=loss, train_dataset=train_set, val_dataset=val_set, optimizer=optim, metrics=metrics,
+          epochs=1, device=device, batch_size=16)
+    print(test(resnet_model, loss, metrics, test_set, device=device))
+
+    dot_product(network=resnet_model, dataset=test_set, network_descriptor='VGG on CIFAR10', device=device)
+
+    train_set = CIFAR100('/tmp', train=True, download=True,
+                         transform=transforms.Compose([transforms.RandomHorizontalFlip(),
+                                                       transforms.RandomCrop(32, 4),
+                                                       transforms.ToTensor()]))
+    val_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+    test_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.Compose([transforms.ToTensor()]))
+
+    resnet_model = resnetcob.resnet18COB(pretrained=False, input_channels=3)
+
+    train(resnet_model, criterion=loss, train_dataset=train_set, val_dataset=val_set, optimizer=optim, metrics=metrics,
+          epochs=1, device=device, batch_size=16)
+    print(test(resnet_model, loss, metrics, test_set, device=device))
+
+    dot_product(network=resnet_model, dataset=test_set, network_descriptor='VGG on CIFAR100', device=device)
