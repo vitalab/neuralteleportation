@@ -1,17 +1,17 @@
 import operator
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Callable, Any
 
-import torch.optim as optim
-from torch import nn
+import torch
+from torch import nn, optim as optim
 from torch.optim.optimizer import Optimizer
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset, DataLoader
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
-from neuralteleportation.training.training import test, train_epoch
-from neuralteleportation.utils.gradient_eval import gradient_to_weight_norm
+from neuralteleportation.training.training import train_epoch, test
+from neuralteleportation.utils.gradient_eval import gradient_to_weight_norm, GradientEvalFunc
 
 
 @dataclass
@@ -19,7 +19,8 @@ class TeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
     teleport_every_n_epochs: int = 2
     num_teleportations: int = 10
-    comparison_metric = (gradient_to_weight_norm, operator.gt)
+    num_batches: int = 1
+    comparison_metric: Tuple[GradientEvalFunc, Callable[[Any, Any], bool]] = (gradient_to_weight_norm, operator.gt)
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
@@ -50,10 +51,13 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 def optimize_model_gradients(model: nn.Module, train_dataset: Dataset,
                              metrics: TrainingMetrics, config: TeleportationTrainingConfig) -> nn.Module:
     # Extract a single batch on which to compute gradients for each model to be compared
-    # TODO: Should we try accumulating the gradients over a whole epoch?
-    data, target = next(iter(DataLoader(train_dataset, batch_size=config.batch_size)))
-    data = data.to(device=config.device)
-    target = target.to(device=config.device)
+    dataloader = DataLoader(train_dataset, batch_size=config.batch_size)
+    data, target = [], []
+    for (data_batch, target_batch), _ in zip(dataloader, range(config.num_batches)):
+        data.append(data_batch)
+        target.append(target_batch)
+    data = torch.stack(data).to(device=config.device)
+    target = torch.stack(target).to(device=config.device)
 
     # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
     model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
@@ -61,31 +65,17 @@ def optimize_model_gradients(model: nn.Module, train_dataset: Dataset,
     # Unpack the configuration for the metric to use to optimize gradients
     metric_func, metric_compare = config.comparison_metric
 
-    optimal_metric = metric_func(model, data, target, metrics.criterion).cpu()
+    optimal_metric = metric_func(model, data, target, metrics.criterion)
     model.cpu()  # Move model to CPU to avoid having 2 models on the GPU (to avoid possible CUDA OOM error)
     optimal_model = model
 
     for _ in range(config.num_teleportations):
         teleported_model = deepcopy(model).random_teleport()
         teleported_model.to(config.device)  # Move model back to chosen device before computing gradients
-        metric = metric_func(teleported_model, data, target, metrics.criterion).cpu()
+        metric = metric_func(teleported_model, data, target, metrics.criterion)
         teleported_model.cpu()  # Move model back to CPU after computation is done (to avoid possible CUDA OOM error)
         if metric_compare(metric, optimal_metric):
             optimal_model = teleported_model
             optimal_metric = metric
 
     return optimal_model.network.to(config.device)
-
-
-if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
-    from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_run import run_single_output_training
-
-    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
-
-    # Run on CIFAR10
-    cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
-    config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
-    run_single_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
-                               cifar10_train, cifar10_test, val_set=cifar10_val)
