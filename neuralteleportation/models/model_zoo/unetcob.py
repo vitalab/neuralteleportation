@@ -133,7 +133,4 @@ if __name__ == '__main__':
     model = UNetCOB(input_channels=1, output_channels=4, bilinear=False)
 
     summary(model, (1, 256, 256), device='cpu')
-    test_teleport(model, 'Unet', (1, 1, 256, 256), verbose=True)
-
-
-
+    test_teleport(model, (1, 1, 256, 256), verbose=True, model_name='unet')

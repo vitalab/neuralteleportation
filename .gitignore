@@ -130,5 +130,8 @@ dataset/*
 !dataset/*.sh
 !dataset/*.py
 
+#vscode
+.vscode/
+
 # output
 neuralteleportation/experiments/micro_teleportation/images/**

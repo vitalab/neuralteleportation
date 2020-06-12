@@ -153,14 +153,15 @@ class DenseNetCOB(nn.Module):
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_
     """
 
-    def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
+    def __init__(self, growth_rate, block_config, num_init_features,
+                 num_classes, bn_size=4, drop_rate=0, input_channels=3,
+                 memory_efficient=False):
 
         super(DenseNetCOB, self).__init__()
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
-            ('conv0', Conv2dCOB(3, num_init_features, kernel_size=7, stride=2,
+            ('conv0', Conv2dCOB(input_channels, num_init_features, kernel_size=7, stride=2,
                                 padding=3, bias=False)),
             ('norm0', BatchNorm2dCOB(num_init_features)),
             ('relu0', ReLUCOB(inplace=True)),
@@ -301,5 +302,5 @@ def densenet201COB(pretrained=False, progress=True, **kwargs):
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    densenet = densenet121COB(pretrained=True)
+    densenet = densenet121COB(pretrained=True, num_classes=1000)
     test_teleport(densenet, (1, 3, 224, 224), verbose=True)
