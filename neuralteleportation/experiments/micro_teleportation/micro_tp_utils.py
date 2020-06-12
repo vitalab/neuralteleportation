@@ -265,8 +265,6 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
 
 def dot_product_between_telportation(network, dataset,
                                      network_descriptor=None,
-                                     criterion=None,
-                                     normalized=False,
                                      reset_weights=False,
                                      device='cpu') -> None:
 
@@ -293,44 +291,55 @@ def dot_product_between_telportation(network, dataset,
     else:
         model = model.cpu()
 
-    if torch.cuda.is_available():
-        w1 = model.get_weights().detach()
-    else:
-        w1 = model.get_weights().detach().numpy()
+    w1 = model.get_weights().detach().to(device)
 
     dot_product_results = []
+    unit_dot_product_results = []
+    angles = []
     for cob in cobs:
         # reset the weights for next teleportation
         if reset_weights:
             model.set_weights(w1)
         else:
-            if torch.cuda.is_available():
-                w1 = model.get_weights().detach()
-            else:
-                w1 = model.get_weights().detach().numpy()
+            w1 = model.get_weights().detach().to(device)
 
         # teleport and get the new weights
         model.random_teleport(cob_range=cob, sampling_type='usual')
-        if torch.cuda.is_available():
-            w2 = model.get_weights().detach()
-        else:
-            w2 = model.get_weights().detach().numpy()
+        w2 = model.get_weights().detach().to(device)
 
-        if normalized:
-            dot_product_results.append(normalized_dot_product(w1, w2))
-        else:
-            dot_product_results.append(torch.matmul(
-                torch.tensor(w1).to(device), torch.tensor(w2).to(device)))
+        unit_dot_product_results.append(torch.matmul(torch.tensor(w1).to(device)/tensor_norm(w1),
+                                                     torch.tensor(w2).to(device)/tensor_norm(w2)).item())
 
-    # plt.scatter(np.log10(cobs), dot_product_results, c='red', marker='o')
-    plt.plot(np.log10(cobs), dot_product_results)
+        dot_product_results.append(torch.matmul(torch.tensor(w1).to(device), torch.tensor(w2).to(device)).item())
+
+        angles.append(normalized_dot_product(w1, w2).item())
+
+    dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
+
+    # plt.scatter(cobs, dot_product_results, c='red', marker='o')
+    plt.plot(cobs, dot_product_results.cpu())
     plt.title(f'Sacalar product between original and \nteleported weights with '
               f'respect to COB\'s order of magnitude\n{network_descriptor}, '
               f'reset weights: {reset_weights}')
 
-    plt.ylabel('Sacalar product')
+    plt.ylabel('log10(|Sacalar product|)')
     plt.xlabel('log10(COB)')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_usual.png')
+    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_usual_'
+                f'reset_weights_{reset_weights}.png')
+    plt.show()
+
+
+    plt.plot(cobs, angles)
+    plt.title(f'Angle between original and \nteleported weights with '
+              f'respect to COB\'s order of magnitude\n{network_descriptor}, '
+              f'reset weights: {reset_weights}')
+
+    plt.ylabel('Theta')
+    plt.xlabel('log10(COB)')
+
+    Path(series_dir).mkdir(parents=True, exist_ok=True)
+    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_usual_'
+                f'reset_weights_{reset_weights}.png')
     plt.show()

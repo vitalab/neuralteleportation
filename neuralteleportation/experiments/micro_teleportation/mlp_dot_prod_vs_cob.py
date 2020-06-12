@@ -192,6 +192,7 @@ if __name__ == '__main__':
     print(test(mlp_model, loss, metrics, test_set, device=device))
 
     dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR100',
+                                     normalized=True,
                                      reset_weights=False, device=device)
     dot_product_between_telportation(network=mlp_model, dataset=test_set, network_descriptor='MLP on CIFAR100',
                                      reset_weights=True, device=device)
