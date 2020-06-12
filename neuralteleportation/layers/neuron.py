@@ -22,7 +22,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
     def _set_proxy_weights(self):
         """
-            Create new tensor for weight and bias to allow gradient to be computed with respect to cob.
+            Create new tensor for weights and bias to allow gradient to be computed with respect to cob.
         """
         self.w = self.weight.clone().detach().requires_grad_(True).type_as(self.weight)
         if self.bias is not None:
@@ -32,7 +32,8 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """Returns a random change of basis for the output features of the layer.
 
         Args:
-            basis_range: range for the change of basis.
+            basis_range (float): range for the change of basis.
+            sampling_type(str): label for type of sampling for change of basis
 
         Returns:
             change of basis.
@@ -221,8 +222,8 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
                         2 * (w0 / t0).dot(w0_hat) -
                         2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
                         2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
-                ti = ti - eta * grad
-                grads.append(grad.item())
+                ti = ti - eta * grad.item()
+                # grads.append(grad.detach().item())
 
             """ Uncomment to debug the gradient descent. """
             # plt.figure()

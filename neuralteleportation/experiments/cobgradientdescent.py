@@ -68,6 +68,7 @@ if __name__ == '__main__':
         loss = (weights - target_weights).square().mean()
 
         # Backwards pass
+        # add retain_graph=True to avoid error when running backward through the graph a second time
         loss.backward(retain_graph=True)
         optimizer.step()
         optimizer.zero_grad()
@@ -84,9 +85,8 @@ if __name__ == '__main__':
     print("Inital weights sample: ", initial_weights[:10])
     print("Target weights sample: ", target_weights[:10])
     print("Cob teleported weights sample: ", weights[:10])
-    # print("Target weights/teleported weights  diff ([:10]): ", (target_weights[:10] - weights[:10]).abs())
-    # print("Target weights/teleported weights  diff ([-10:]): ", (target_weights[-10:] - weights[-10:]).abs())
-    print("Target weights/teleported weights  diff: ", (target_weights - weights).abs())
+    print("Target weights/teleported weights  diff ([:10]): ", (target_weights[:10] - weights[:10]).abs())
+    print("Target weights/teleported weights  diff ([-10:]): ", (target_weights[-10:] - weights[-10:]).abs())
     print("Target weights/teleported weights diff mean: ", (target_weights - weights).abs().mean())
 
     plt.figure()

@@ -44,12 +44,7 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', re
     else:
         raise ValueError("Sampling type is invalid")
 
-    cob = torch.tensor(cob)
-
-    if requires_grad:
-        cob = cob.requires_grad_()
-
-    return cob
+    return torch.tensor(cob, requires_grad=requires_grad)
 
 
 if __name__ == '__main__':

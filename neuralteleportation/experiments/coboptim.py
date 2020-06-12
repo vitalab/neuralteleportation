@@ -12,6 +12,9 @@ from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 from neuralteleportation.training.experiment_setup import get_mnist_datasets
 from neuralteleportation.training.training import train, test
 import argparse
+from os.path import join as pjoin
+
+from neuralteleportation.utils.pathutils import get_nonexistent_path
 
 
 def argument_parser():
@@ -26,6 +29,7 @@ def argument_parser():
 if __name__ == '__main__':
 
     args = argument_parser()
+    save_path = get_nonexistent_path(args.save_path)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     config = TrainingConfig(epochs=args.epochs, device=device, shuffle_batches=True)
@@ -40,7 +44,7 @@ if __name__ == '__main__':
     if args.weights1 is not None:
         model1.load_state_dict(torch.load(args.weights1))
     train(model1, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
-    torch.save(model1.state_dict(), args.save_path + '_model1.pt')
+    torch.save(model1.state_dict(), pjoin(save_path, 'model1.pt'))
     print("Model 1 test results: ", test(model1, mnist_test, metrics, config))
 
     model2 = MLPCOB(num_classes=10).to(device)
@@ -48,7 +52,7 @@ if __name__ == '__main__':
     if args.weights2 is not None:
         model2.load_state_dict(torch.load(args.weights2))
     train(model2, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
-    torch.save(model2.state_dict(), args.save_path + '_model2.pt')
+    torch.save(model2.state_dict(), pjoin(save_path, 'model2.pt'))
     print("Model 2 test results: ", test(model2, mnist_test, metrics, config))
 
     # Compare the output of the two models for a given input.
@@ -71,7 +75,7 @@ if __name__ == '__main__':
     w1 = model1.get_weights(concat=False, flatten=False, bias=False)
     w2 = model2.get_weights(concat=False, flatten=False, bias=False)
     calculated_cob = model1.calculate_cob(w1, w2, concat=True, eta=0.00001, steps=6000)
-    torch.save(calculated_cob, args.save_path + '_calculated_cob.pt')
+    torch.save(calculated_cob, pjoin(save_path, 'calculated_cob.pt'))
 
     model1.set_change_of_basis(calculated_cob)
     model1.teleport()
