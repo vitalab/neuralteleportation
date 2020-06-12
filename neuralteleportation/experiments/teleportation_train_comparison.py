@@ -32,6 +32,7 @@ def argumentparser():
     parser.add_argument("--cob_range", type=float, default=0.5)
     parser.add_argument("--cob_sampling", type=str, default="usual",
                         choices=["usual", "symmetric", "negative", "zero"])
+    parser.add_argument("--plot", action="store_true", default=False)
 
     return parser.parse_args()
 
@@ -124,18 +125,19 @@ if __name__ == '__main__':
         val_res = test(model=net_teleport, dataset=valset, metrics=metric, config=config)
         res_teleport.append(val_res['accuracy'])
 
-    plt.figure()
-    title = "SGD %s epochs training at %e, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
-    plt.title(title)
-    plt.plot(res_vanilla, '-o', label="vanilla", markersize=3)
-    plt.plot(res_5050, '-o', label="net_5050", markersize=3)
-    plt.plot(res_teleport, '-o', label="net_teleport", markersize=3)
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy")
-    plt.xlim([0, args.epochs])
-    plt.ylim([0, 1])
-    plt.legend()
-    plt.show()
+    if args.plot:
+        plt.figure()
+        title = "SGD %s epochs training at %e, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
+        plt.title(title)
+        plt.plot(res_vanilla, '-o', label="vanilla", markersize=3)
+        plt.plot(res_5050, '-o', label="net_5050", markersize=3)
+        plt.plot(res_teleport, '-o', label="net_teleport", markersize=3)
+        plt.xlabel("Epochs")
+        plt.ylabel("Accuracy")
+        plt.xlim([0, args.epochs])
+        plt.ylim([0, 1])
+        plt.legend()
+        plt.show()
 
     res_vanilla = np.array(res_vanilla)
     res_5050 = np.array(res_5050)
@@ -143,13 +145,11 @@ if __name__ == '__main__':
 
     root = pathlib.Path().absolute()
     file_path = root/("results/" + title + ".h5").replace(" ", "_").replace(",", "")
+
     f = h5py.File(file_path, 'a')
     f.create_dataset("vanilla", data=res_vanilla)
     f.create_dataset("5050", data=res_5050)
     f.create_dataset("teleport", data=res_teleport)
-
-    for k in f.keys():
-        print(f[k][()])
 
     f.close()
 
