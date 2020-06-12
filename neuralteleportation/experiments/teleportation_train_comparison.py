@@ -3,6 +3,8 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import pathlib
+import copy
 
 import torch
 import torch.nn as nn
@@ -51,10 +53,10 @@ if __name__ == '__main__':
     dims = 1 if trainset.data.ndim < 4 else trainset.data.shape[3]
 
     net_vanilla = get_model_from_string(args.model, num_classes=10, input_channels=dims).to(device)
-    net_5050 = get_model_from_string(args.model, num_classes=10, input_channels=dims)
+    net_5050 = copy.deepcopy(net_vanilla)
     net_5050 = NeuralTeleportationModel(network=net_5050,
                                         input_shape=(args.batch_size, dims, w, h)).to(device).to(device)
-    net_teleport = get_model_from_string(args.model, num_classes=10, input_channels=dims)
+    net_teleport = copy.deepcopy(net_vanilla)
     net_teleport = NeuralTeleportationModel(network=net_teleport,
                                             input_shape=(args.batch_size, dims, w, h)).to(device).to(device)
 
@@ -71,10 +73,8 @@ if __name__ == '__main__':
 
     val_res = test(model=net_vanilla, dataset=valset, metrics=metric, config=config)
     res_vanilla.append(val_res['accuracy'])
-    val_res = test(model=net_5050, dataset=valset, metrics=metric, config=config)
-    res_vanilla.append(val_res['accuracy'])
-    val_res = test(model=net_teleport, dataset=valset, metrics=metric, config=config)
-    res_vanilla.append(val_res['accuracy'])
+    res_5050.append(val_res['accuracy'])
+    res_teleport.append(val_res['accuracy'])
 
     print()
     print("===============================")
@@ -141,5 +141,15 @@ if __name__ == '__main__':
     res_5050 = np.array(res_5050)
     res_teleport = np.array(res_teleport)
 
-    file_path = ("./neuralteleportation/experiments/results/" + title + ".h5").replace(" ", "_")
-    h5py.File(file_path, 'a')
+    root = pathlib.Path().absolute()
+    file_path = root/("results/" + title + ".h5").replace(" ", "_").replace(",", "")
+    f = h5py.File(file_path, 'a')
+    f.create_dataset("vanilla", data=res_vanilla)
+    f.create_dataset("5050", data=res_5050)
+    f.create_dataset("teleport", data=res_teleport)
+
+    for k in f.keys():
+        print(f[k][()])
+
+    f.close()
+
