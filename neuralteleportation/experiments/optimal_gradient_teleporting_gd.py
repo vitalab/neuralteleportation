@@ -1,18 +1,17 @@
+import operator
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Tuple, Sequence, List, Union
+from typing import Tuple
 
-import torch
 import torch.optim as optim
-from numpy import number
-from torch import nn, Tensor
-from torch.nn.modules.loss import _Loss
+from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
+from neuralteleportation.utils.gradient_eval import gradient_to_weight_norm
 
 
 @dataclass
@@ -20,6 +19,7 @@ class TeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
     teleport_every_n_epochs: int = 2
     num_teleportations: int = 10
+    comparison_metric = (gradient_to_weight_norm, operator.gt)
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
@@ -33,8 +33,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     for epoch in range(config.epochs):
         if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
             print(f"Applying {config.num_teleportations} random COB to compare gradients in training")
-            models = _teleport_model(model, config)
-            model = _select_optimal_model(models, train_dataset, metrics, config)
+            model = optimize_model_gradients(model, train_dataset, metrics, config)
 
             # Force a new optimizer in case a teleportation of the original model was chosen
             optimizer = optim.SGD(model.parameters(), lr=config.lr)
@@ -48,56 +47,34 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     return model
 
 
-def _teleport_model(model: nn.Module, config: TeleportationTrainingConfig) -> List[NeuralTeleportationModel]:
-    # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
-    model = NeuralTeleportationModel(network=model, input_shape=(1,) + config.input_shape)
-    model.cpu()  # Move model to CPU before teleporting it (to avoid possible CUDA OOM error)
-
-    # Include the non-teleported, original model as a possible model
-    models = [model]
-
-    # Teleport the model to obtain N different models corresponding to the same function
-    models.extend(deepcopy(model).random_teleport() for _ in range(config.num_teleportations))
-
-    return models
-
-
-def _select_optimal_model(models: Sequence[NeuralTeleportationModel], train_dataset: Dataset,
-                          metrics: TrainingMetrics, config: TeleportationTrainingConfig) -> nn.Module:
+def optimize_model_gradients(model: nn.Module, train_dataset: Dataset,
+                             metrics: TrainingMetrics, config: TeleportationTrainingConfig) -> nn.Module:
     # Extract a single batch on which to compute gradients for each model to be compared
     # TODO: Should we try accumulating the gradients over a whole epoch?
     data, target = next(iter(DataLoader(train_dataset, batch_size=config.batch_size)))
     data = data.to(device=config.device)
     target = target.to(device=config.device)
 
-    # Select the model that maximizes the overall ratio between gradients and weights
-    optimal_model = max(models,
-                        key=lambda model: _compute_gradient_to_weight_norm(model, data, target, metrics.criterion,
-                                                                           device=config.device))
+    # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
+    model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
 
-    # Move model with optimal gradient back to chosen device before resuming training
-    return optimal_model.to(config.device)
+    # Unpack the configuration for the metric to use to optimize gradients
+    metric_func, metric_compare = config.comparison_metric
 
+    optimal_metric = metric_func(model, data, target, metrics.criterion).cpu()
+    model.cpu()  # Move model to CPU to avoid having 2 models on the GPU (to avoid possible CUDA OOM error)
+    optimal_model = model
 
-def _compute_gradient_to_weight_norm(model: NeuralTeleportationModel, data: Tensor, target: Tensor,
-                                     loss_fn: _Loss, order: Union[str, number] = 'fro', device: str = 'cpu') \
-        -> Tensor:
-    model.to(device)  # Move model back to chosen device before computing gradients
-    weights = model.get_weights()
-    gradients = model.get_grad(data, target, loss_fn)
-    model.cpu()  # Move model back to CPU after computation is done (to avoid possible CUDA OOM error)
+    for _ in range(config.num_teleportations):
+        teleported_model = deepcopy(model).random_teleport()
+        teleported_model.to(config.device)  # Move model back to chosen device before computing gradients
+        metric = metric_func(teleported_model, data, target, metrics.criterion).cpu()
+        teleported_model.cpu()  # Move model back to CPU after computation is done (to avoid possible CUDA OOM error)
+        if metric_compare(metric, optimal_metric):
+            optimal_model = teleported_model
+            optimal_metric = metric
 
-    # Compute the gradient/weight ratio where possible
-    ratio = gradients / weights
-
-    # Identify where the ratio is numerically unstable (division by 0-valued weights)
-    nan_ratio_mask = torch.isnan(ratio)
-
-    # Replace unstable values by statistically representative measures
-    ratio[nan_ratio_mask] = ratio[~nan_ratio_mask].mean()
-
-    # Compute the norm of the ratio and move result to CPU (to avoid cluttering GPU if fct is called repeatedly)
-    return torch.norm(ratio, p=order).cpu()
+    return optimal_model.network.to(config.device)
 
 
 if __name__ == '__main__':
