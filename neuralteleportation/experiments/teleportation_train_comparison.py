@@ -89,11 +89,12 @@ if __name__ == '__main__':
                     epoch=e,
                     device=device)
         val_res = test(model=net_vanilla, dataset=valset, metrics=metric, config=config)
+        net_vanilla.train()
         res_vanilla.append(val_res['accuracy'])
 
     print()
     print("===============================")
-    print("========Training 5050=======")
+    print("========Training 5050==========")
     print("===============================")
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0 and random.random() <= 0.5:
@@ -106,6 +107,7 @@ if __name__ == '__main__':
                     epoch=e,
                     device=device)
         val_res = test(model=net_5050, dataset=valset, metrics=metric, config=config)
+        net_5050.train()
         res_5050.append(val_res['accuracy'])
 
     print()
@@ -123,6 +125,7 @@ if __name__ == '__main__':
                     epoch=e,
                     device=device)
         val_res = test(model=net_teleport, dataset=valset, metrics=metric, config=config)
+        net_teleport.train()
         res_teleport.append(val_res['accuracy'])
 
     if args.plot:
@@ -136,6 +139,8 @@ if __name__ == '__main__':
         plt.ylabel("Accuracy")
         plt.xlim([0, args.epochs])
         plt.ylim([0, 1])
+        for x in np.arange(args.teleport_every, args.epochs, args.teleport_every):
+            plt.axvline(x, linestyle='--', color='b')
         plt.legend()
         plt.show()
 
