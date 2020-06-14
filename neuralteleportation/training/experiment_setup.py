@@ -1,5 +1,6 @@
 import functools
 from typing import Tuple, List, Callable
+from itertools import chain
 
 import torchvision.transforms as transforms
 from torch import nn
@@ -10,11 +11,19 @@ from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 from neuralteleportation.models.model_zoo.vggcob import vgg16COB
 
+from neuralteleportation.models.model_zoo import resnetcob, vggcob, densenetcob
+from neuralteleportation.models.model_zoo.resnetcob import __all__ as __resnets__
+from neuralteleportation.models.model_zoo.vggcob import __all__ as __vggnets__
+from neuralteleportation.models.model_zoo.densenetcob import __all__ as __densenets__
 
-def get_mnist_datasets() -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
-    train_set = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
-    val_set = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
-    test_set = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+
+def get_mnist_datasets(transform=None) -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
+    if not transform:
+        transform = transforms.ToTensor()
+
+    train_set = MNIST('/tmp', train=True, download=True, transform=transform)
+    val_set = MNIST('/tmp', train=False, download=True, transform=transform)
+    test_set = MNIST('/tmp', train=False, download=True, transform=transform)
     return train_set, val_set, test_set
 
 
@@ -50,3 +59,20 @@ def get_cifar10_models() -> List[nn.Module]:
         resnet18COB(num_classes=10, input_channels=3),
         densenet121COB(num_classes=10, input_channels=3),
     ]
+
+
+def get_model_list() -> List[str]:
+    return list(chain.from_iterable([__resnets__, __vggnets__, __densenets__]))
+
+
+def get_model_from_string(model, num_classes: int, input_channels: int) -> nn.Module:
+    if model in __resnets__:
+        func = getattr(resnetcob, model)
+    elif model in __densenets__:
+        func = getattr(densenetcob, model)
+    elif model in __vggnets__:
+        func = getattr(vggcob, model)
+    else:
+        raise Exception("%s was not found in the model zoo" % model)
+    model = func(pretrained=False, num_classes=num_classes, input_channels=input_channels)
+    return model
