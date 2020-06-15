@@ -45,7 +45,8 @@ def test_calculate_cob(network, model_name=None, input_shape=(1, 1, 28, 28), noi
 
 def test_calculate_cob_weights(network, model_name=None, input_shape=(1, 1, 28, 28), noise=False, verbose=True):
     """
-        Test if the correct change of basis and re-teleport a model to the target weights.
+        Test if a cob can be calculated and applied to a network to teleport the network from the initial weights to
+        the targets weights.
 
     Args:
         network (nn.Module): Network to be tested
