@@ -12,20 +12,7 @@ class ActivationLayerMixin(COBForwardMixin, NeuralTeleportationLayerMixin):
         self.cob = prev_cob
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
-
-        activation_input = input / self.cob
-        activation_output = self.base_layer().forward(self, activation_input)
-        output = self.cob * activation_output
-        # print("cob activation input:", input)
-        # print("cob activation cob: ", self.cob)
-        # print("activation input:", activation_input)
-        # print("activation output:", activation_output)
-        # print("cob activation output: ", output)
-        return output
-
-        # return self.cob * self.base_layer().forward(self, input / self.cob)
-
-
+        return self.cob * self.base_layer().forward(self, input / self.cob)
 
 
 class ReLUCOB(ActivationLayerMixin, nn.ReLU):

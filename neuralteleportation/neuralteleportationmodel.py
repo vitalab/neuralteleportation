@@ -76,7 +76,7 @@ class NeuralTeleportationModel(nn.Module):
             Undo the current teleportation.
         """
         # Undo teleportation for weights
-        self._teleport(1 / self.get_cob())
+        self.teleport_weights(1 / self.get_cob())
         # Set cob for activations to 1.
         self.teleport_activations(torch.ones(self.get_cob_size()))
 
@@ -97,40 +97,39 @@ class NeuralTeleportationModel(nn.Module):
             cob (torch.Tensor): cob to teleport the network
             reset_teleportation (bool): if true, the previous teleportation is undone before teleporting with the cob
 
-
         """
         if reset_teleportation:
             self.undo_teleportation()
-            self._teleport(cob)
+            self.teleport_weights(cob)
+            self.teleport_activations(cob)
         else:
             previous_cob = self.get_cob()
             # Teleport weights
-            self._teleport(cob)
+            self.teleport_weights(cob)
             # Set activation cob to product of previous cobs and new cob
             self.teleport_activations(previous_cob * cob)
 
-    def _teleport(self, cob: torch.Tensor):
+        return self.network
+
+    def teleport_weights(self, cob: torch.Tensor):
         """
-            Teleport the network (weights and activations) with the cob
+            Teleport the network weights with the cob.
         """
         self.set_change_of_basis(cob)
 
         for k, layer in enumerate(self.graph):
-            layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+            if isinstance(layer['module'], NeuronLayerMixin):
+                layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def teleport_activations(self, cob: torch.Tensor):
         """
-        Apply the change of basis for layers without teleporting the weights.
-        Only changes the changes of basis for activation layer, pooling, ...
-
+            Teleport the network activations and non-weight layers with the cob.
         """
         self.set_change_of_basis(cob)
 
         for k, layer in enumerate(self.graph):
             if not isinstance(layer['module'], NeuronLayerMixin):
                 layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
-
-        return self.network
 
     def set_change_of_basis(self, cob: torch.Tensor, contains_ones: bool = False):
         """
@@ -362,7 +361,7 @@ if __name__ == '__main__':
     from tests.cobmodels_test import *
     from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 
-    model = resnet18COB(pretrained=False)
+    model = resnet18COB(pretrained=False, num_classes=10)
     sample_input_shape = (1, 3, 224, 224)
 
     model = NeuralTeleportationModel(network=model, input_shape=sample_input_shape)
