@@ -32,7 +32,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
     model = NeuralTeleportationModel(
-        network=model, input_shape=(1,) + config.input_shape)
+        network=model, input_shape=(2,) + config.input_shape)
     if config.exp_logger is not None:
         config.exp_logger.add_text(
             "Config",
