@@ -77,8 +77,7 @@ if __name__ == '__main__':
     calculated_cob = model1.calculate_cob(w1, w2, concat=True, eta=0.00001, steps=6000)
     torch.save(calculated_cob, pjoin(save_path, 'calculated_cob.pt'))
 
-    model1.set_change_of_basis(calculated_cob)
-    model1.teleport()
+    model1.teleport(calculated_cob)
 
     w1 = model1.get_weights()
     w2 = model2.get_weights()

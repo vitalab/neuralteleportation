@@ -75,8 +75,7 @@ def test_calculate_cob_weights(network, model_name=None, input_shape=(1, 1, 28, 
     calculated_cob = model.calculate_cob(w1, w2)
 
     model.set_weights(initial_weights)
-    model.set_change_of_basis(calculated_cob)
-    model.teleport()
+    model.teleport(calculated_cob)
 
     calculated_weights = model.get_weights()
 

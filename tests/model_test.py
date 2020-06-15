@@ -46,6 +46,7 @@ def test_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), verbo
     """
     model_name = model_name or network.__class__.__name__
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
+    model.eval()  # model must be set to eval because of dropout
     x = torch.rand(input_shape)
     pred1 = model(x).detach().numpy()
     w1 = model.get_weights().detach().numpy()
@@ -113,9 +114,8 @@ def test_set_cob(network, model_name, input_shape=(1, 1, 28, 28), verbose=False)
     model.reset_weights()
     pred2 = model(x)
 
-    model.set_change_of_basis(t1)
     model.set_weights(w1)
-    model.apply_cob()
+    model.teleport_activations(t1)
 
     pred3 = model(x)
 
@@ -128,6 +128,39 @@ def test_set_cob(network, model_name, input_shape=(1, 1, 28, 28), verbose=False)
     assert np.allclose(pred1.detach().numpy(), pred3.detach().numpy(), atol=1e-5), "Set cob/weights did not work."
 
     print("Set cob successful for " + model_name + " model.")
+
+
+def test_multiple_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 28), verbose: bool = False,
+                           atol: float = 1e-5, model_name: str = None):
+    """
+        Test multiple successive teleporations.
+
+    Args:
+        network (nn.Module): Network to be tested
+        input_shape (tuple): Input shape of network
+        verbose (bool): Flag to print comparision between network and a teleportation
+        atol (float): Absolute tolerance allowed between outputs to pass the test
+        model_name (str): The name or label assigned to differentiate the model
+
+    """
+    model_name = model_name or network.__class__.__name__
+    model = NeuralTeleportationModel(network=network, input_shape=input_shape)
+    model.eval()  # model must be set to eval because of dropout
+    x = torch.rand(input_shape)
+    pred1 = model(x).detach().numpy()
+
+    for _ in range(10):
+        model.random_teleport(cob_range=10, sampling_type='symmetric')
+
+        pred2 = model(x).detach().numpy()
+
+        diff_average = np.mean(np.abs((pred1 - pred2)))
+
+        assert np.allclose(pred1, pred2,
+                           atol=atol), "Multiple Teleporation did not work for model {}. Average difference: {}".format(
+            model_name, diff_average)
+
+    print("Multiple Teleportations successful for " + model_name + " model.")
 
 
 if __name__ == '__main__':
@@ -146,7 +179,7 @@ if __name__ == '__main__':
         nn.Linear(128, 10, bias=False)
     )
 
-    mlp_model = torch.nn.Sequential(
+    mlp_relu_model = torch.nn.Sequential(
         Flatten(),
         nn.Linear(784, 128),
         nn.ReLU(),
@@ -155,17 +188,30 @@ if __name__ == '__main__':
         nn.Linear(128, 10, bias=False)
     )
 
-    cnn_model = swap_model_modules_for_COB_modules(cnn_model)
-    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
+    mlp_nonlinear_model = torch.nn.Sequential(
+        Flatten(),
+        nn.Linear(784, 128),
+        nn.Tanh(),
+        nn.Linear(128, 128),
+        nn.Sigmoid(),
+        nn.Linear(128, 10, bias=False)
+    )
 
-    test_set_weights(network=mlp_model, model_name="MLP")
-    test_teleport(network=mlp_model, model_name="MLP")
-    test_reset_weights(network=mlp_model, model_name="MLP")
+    cnn_model = swap_model_modules_for_COB_modules(cnn_model)
+    mlp_relu_model = swap_model_modules_for_COB_modules(mlp_relu_model)
+    mlp_nonlinear_model = swap_model_modules_for_COB_modules(mlp_nonlinear_model)
+
+    test_set_weights(network=mlp_relu_model, model_name="MLP")
+    test_teleport(network=mlp_relu_model, model_name="MLP")
+    test_reset_weights(network=mlp_relu_model, model_name="MLP")
 
     test_set_weights(network=cnn_model, model_name="Convolutional")
     test_teleport(network=cnn_model, model_name="Convolutional")
     test_reset_weights(network=cnn_model, model_name="Convolutional")
 
-    test_set_cob(network=mlp_model, model_name="MLP")
+    test_set_cob(network=mlp_relu_model, model_name="MLP")
     test_set_cob(network=cnn_model, model_name="Convolutional")
 
+    test_multiple_teleport(network=mlp_relu_model, model_name="MLP")
+    test_multiple_teleport(network=cnn_model, model_name="Convolutional")
+    test_multiple_teleport(network=mlp_nonlinear_model, model_name="MLP")

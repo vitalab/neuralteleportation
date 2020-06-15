@@ -60,8 +60,7 @@ if __name__ == '__main__':
         model.set_weights(initial_weights)
 
         # Teleport with this cob
-        model.set_change_of_basis(cob)
-        model.teleport()
+        model.teleport(cob)
 
         # Get the new weights and calculate the loss
         weights = model.get_weights()
