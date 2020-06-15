@@ -60,21 +60,22 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
         trained_models = {f'{model_name}_0': model}
     else:
         # Teleport the model and train each teleportation recursively
-        trained_models = teleport_and_train((model_name, model), train_dataset, metrics, config, optimizer,
-                                            val_dataset=val_dataset)
+        trained_models = _teleport_and_train((model_name, model), train_dataset, metrics, config, optimizer,
+                                             val_dataset=val_dataset)
 
     return trained_models
 
 
-def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, metrics: TrainingMetrics,
-                       config: TeleportationTrainingConfig, optimizer: Optimizer, val_dataset: Dataset = None) \
+def _teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, metrics: TrainingMetrics,
+                        config: TeleportationTrainingConfig, optimizer: Optimizer, val_dataset: Dataset = None) \
         -> Dict[str, nn.Module]:
     model_name, model = model
 
     # Teleport the model to obtain N different models corresponding to the same function
     # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
     teleportation_model = NeuralTeleportationModel(network=deepcopy(model), input_shape=(2,) + config.input_shape)
-    teleported_models = [deepcopy(teleportation_model.random_teleport()) for _ in range(config.num_teleportations)]
+    teleported_models = [deepcopy(teleportation_model.random_teleport().network)
+                         for _ in range(config.num_teleportations)]
 
     # Call recursively the training algorithm on teleported models, with less epochs left to perform
     # The non-teleported model uses the previous training iterations' optimizer,
