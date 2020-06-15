@@ -1,3 +1,6 @@
+"""
+
+"""
 import argparse
 import h5py
 import matplotlib.pyplot as plt
@@ -21,17 +24,21 @@ __models__ = get_model_list()
 
 def argumentparser():
     parser = argparse.ArgumentParser(description="Simple argument parser for traininng teleportation")
-    parser.add_argument("--cuda", action="store_true", default=False)
-    parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--model", type=str, default="resnet18COB", choices=__models__)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--epochs", type=int, default=50, help="How many epoch should all models train on")
+    parser.add_argument("--model", type=str, default="resnet18COB", choices=__models__,
+                        help="Which model should be train")
+    parser.add_argument("--lr", type=float, default=1e-3, help="The applied learning rate for all models when training")
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--teleport_every", type=int, default=4)
+    parser.add_argument("--teleport_every", type=int, default=4,
+                        help="After how many epoch should the model be teleported")
     parser.add_argument("--dataset", type=str, default="mnist", choices=["mnist", "cifar10"])
-    parser.add_argument("--cob_range", type=float, default=0.5)
+    parser.add_argument("--cob_range", type=float, default=0.5, help="Sets the range of change of basis")
     parser.add_argument("--cob_sampling", type=str, default="usual",
-                        choices=["usual", "symmetric", "negative", "zero"])
-    parser.add_argument("--plot", action="store_true", default=False)
+                        choices=["usual", "symmetric", "negative", "zero"],
+                        help="What type of sampling should be used for the teleportation")
+    parser.add_argument("--plot", action="store_true", default=False, help="")
+    parser.add_argument("--targeted_teleportation", action="store_true", default=False,
+                        help="Specify if the teleportation should use a specific change of basis or use a random one.")
 
     return parser.parse_args()
 
@@ -40,7 +47,7 @@ if __name__ == '__main__':
     args = argumentparser()
 
     device = 'cpu'
-    if torch.cuda.is_available() and args.cuda:
+    if torch.cuda.is_available():
         device = 'cuda'
 
     if args.dataset == 'cifar10':
@@ -91,8 +98,7 @@ if __name__ == '__main__':
         net_vanilla.train()
         res_vanilla.append(val_res['accuracy'])
 
-    # Force the netowrk to go out of the cuda mem.
-    net_vanilla.cpu()
+    net_vanilla.cpu()  # Force the netowrk to go out of the cuda mem.
 
     print()
     print("===============================")
@@ -101,7 +107,11 @@ if __name__ == '__main__':
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0 and random.random() <= 0.5:
             print("teleported model")
-            net_5050.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
+            if args.targeted_teleportation:
+                # TODO: use teleportation function here when they are available.
+                raise NotImplementedError
+            else:
+                net_5050.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
         train_epoch(model=net_5050,
                     criterion=metric.criterion,
                     optimizer=optim_5050,
@@ -112,7 +122,7 @@ if __name__ == '__main__':
         net_5050.train()
         res_5050.append(val_res['accuracy'])
 
-    net_5050.cpu()
+    net_5050.cpu()  # Force the netowrk to go out of the cuda mem.
 
     print()
     print("===============================")
@@ -121,7 +131,11 @@ if __name__ == '__main__':
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0:
             print("teleported model")
-            net_teleport.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
+            if args.targeted_teleportation:
+                # TODO: use teleportation function here when they are available.
+                raise NotImplementedError
+            else:
+                net_teleport.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
         train_epoch(model=net_teleport,
                     criterion=metric.criterion,
                     optimizer=optim_teleport,
