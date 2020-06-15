@@ -115,8 +115,8 @@ class NeuralTeleportationModel(nn.Module):
                 # Check if this is the last neuron layer
                 if not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[i + 1:]]).any():
                     if contains_ones:
-                        # TODO check that these are ones.
                         current_cob = cob[counter: counter + layer['module'].out_features]
+                        assert torch.all(current_cob == 1), "Output layer cob values must be all ones."
                         counter += layer['module'].out_features
                     else:
                         current_cob = layer['module'].get_output_cob()
@@ -124,8 +124,8 @@ class NeuralTeleportationModel(nn.Module):
                 # Check if this is the first neuron layer
                 elif not np.array([isinstance(l['module'], NeuronLayerMixin) for l in self.graph[:i]]).any():
                     if contains_ones:
-                        # TODO check that these are ones.
                         initial_cob = cob[counter: counter + layer['module'].in_features]
+                        assert torch.all(current_cob == 1), "Input layer cob values must be all ones."
                         counter += layer['module'].in_features
                     else:
                         initial_cob = layer['module'].get_input_cob()

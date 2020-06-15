@@ -1,5 +1,5 @@
 """
-Closed form optimisation on a network's change of basis to find the change of basis that teleports
+Closed form optimization on a network's change of basis to find the change of basis that teleports
 to a given set of weights.
 """
 import torch
