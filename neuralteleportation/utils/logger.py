@@ -11,23 +11,22 @@ class BaseLogger:
         super(BaseLogger, self).__init__()
 
     def add_scalar(self, name, value, step):
-        raise NotImplementedError
+        pass
 
     def add_figure(self, name, fig):
-        raise NotImplementedError
+        pass
 
     def add_text(self, name, text):
-        raise NotImplementedError
+        pass
 
     def add_video(self, name, video, fps):
-        raise NotImplementedError
+        pass
 
     def add_graph(self, name, graph, graph_input):
-        raise NotImplementedError
+        pass
 
     def add_histogram(self, model, step):
-        raise NotImplementedError
-
+        pass
 
 
 class VisdomLogger(BaseLogger):
@@ -121,42 +120,24 @@ class MultiLogger(BaseLogger):
 
     def add_scalar(self, name, value, step):
         for logger in self.sub_loggers:
-            try:
-                logger.add_scalar(name, value, step)
-            except NotImplementedError:
-                warn("add_scalar not supported by {}".format(type(logger)))
+            logger.add_scalar(name, value, step)
 
     def add_figure(self, name, fig):
         for logger in self.sub_loggers:
-            try:
-                logger.add_figure(name, fig)
-            except NotImplementedError:
-                warn("add_figure not supported by {}".format(type(logger)))
+            logger.add_figure(name, fig)
 
     def add_text(self, name, text):
         for logger in self.sub_loggers:
-            try:
-                logger.add_text(name, text)
-            except NotImplementedError:
-                warn("add_text not supported by {}".format(type(logger)))
+            logger.add_text(name, text)
 
     def add_video(self, name, video, fps=1):
         for logger in self.sub_loggers:
-            try:
-                logger.add_video(name, video, fps)
-            except NotImplementedError:
-                warn("add_video not supported by {}".format(type(logger)))
+            logger.add_video(name, video, fps)
 
     def add_graph(self, name, graph, graph_input):
         for logger in self.sub_loggers:
-            try:
-                logger.add_graph(name, graph, graph_input)
-            except NotImplementedError:
-                warn("add_graph not supported by {}".format(type(logger)))
+            logger.add_graph(name, graph, graph_input)
 
     def add_histogram(self, model, step):
         for logger in self.sub_loggers:
-            try:
-                logger.add_histogram(model, step)
-            except NotImplementedError:
-                warn("add_histogram not supported by {}".format(type(logger)))
+            logger.add_histogram(model, step)

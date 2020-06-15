@@ -46,9 +46,9 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
                                                                               loss.item())
             pbar.set_postfix_str(output)
         if batch_idx % 500 == 0 and config is not None:
-            if config.vis_logger is not None:
+            if config.exp_logger is not None:
                 step = len(train_loader.dataset) * (epoch - 1) + batch_idx * len(data)
-                config.vis_logger.add_scalar("train_loss", loss.item(), step)
+                config.exp_logger.add_scalar("train_loss", loss.item(), step)
     pbar.close()
 
 
