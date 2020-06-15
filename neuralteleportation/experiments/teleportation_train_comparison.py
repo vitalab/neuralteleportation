@@ -16,7 +16,6 @@ from neuralteleportation.training.experiment_setup import get_model_list, get_mo
 from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_mnist_datasets
 from neuralteleportation.training.training import train_epoch, test
 
-
 __models__ = get_model_list()
 
 
@@ -92,6 +91,9 @@ if __name__ == '__main__':
         net_vanilla.train()
         res_vanilla.append(val_res['accuracy'])
 
+    # Force the netowrk to go out of the cuda mem.
+    net_vanilla.cpu()
+
     print()
     print("===============================")
     print("========Training 5050==========")
@@ -99,7 +101,7 @@ if __name__ == '__main__':
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0 and random.random() <= 0.5:
             print("teleported model")
-            net_5050.random_teleport(cob_range=args.cob_range)
+            net_5050.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
         train_epoch(model=net_5050,
                     criterion=metric.criterion,
                     optimizer=optim_5050,
@@ -110,6 +112,8 @@ if __name__ == '__main__':
         net_5050.train()
         res_5050.append(val_res['accuracy'])
 
+    net_5050.cpu()
+
     print()
     print("===============================")
     print("=======Training Every 4========")
@@ -117,7 +121,7 @@ if __name__ == '__main__':
     for e in np.arange(1, args.epochs + 1):
         if e % args.teleport_every == 0:
             print("teleported model")
-            net_teleport.random_teleport(cob_range=args.cob_range)
+            net_teleport.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
         train_epoch(model=net_teleport,
                     criterion=metric.criterion,
                     optimizer=optim_teleport,
@@ -149,7 +153,7 @@ if __name__ == '__main__':
     res_teleport = np.array(res_teleport)
 
     root = pathlib.Path().absolute()
-    file_path = root/("results/" + title + ".h5").replace(" ", "_").replace(",", "")
+    file_path = root / ("results/" + title + ".h5").replace(" ", "_").replace(",", "")
 
     f = h5py.File(file_path, 'a')
     f.create_dataset("vanilla", data=res_vanilla)
@@ -157,4 +161,3 @@ if __name__ == '__main__':
     f.create_dataset("teleport", data=res_teleport)
 
     f.close()
-
