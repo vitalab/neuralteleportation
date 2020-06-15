@@ -28,7 +28,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 
 
 def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
-                device: str = 'cpu', progress_bar: bool = True):
+                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None):
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
@@ -45,6 +45,10 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
                                                                               100. * batch_idx / len(train_loader),
                                                                               loss.item())
             pbar.set_postfix_str(output)
+        if batch_idx % 500 == 0 and config is not None:
+            if config.vis_logger is not None:
+                step = len(train_loader.dataset) * (epoch - 1) + batch_idx * len(data)
+                config.vis_logger.add_scalar("train_loss", loss.item(), step)
     pbar.close()
 
 

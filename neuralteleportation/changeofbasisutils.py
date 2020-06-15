@@ -1,5 +1,11 @@
 import numpy as np
 
+available_sampling_types = ["usual", "symmetric", "negative", "zero"]
+
+
+def get_available_cob_sampling_types():
+    return available_sampling_types
+
 
 def get_random_cob(range_cob: int, size: int, sampling_type='usual') -> np.ndarray:
     """
@@ -25,8 +31,10 @@ def get_random_cob(range_cob: int, size: int, sampling_type='usual') -> np.ndarr
     elif sampling_type == 'symmetric':
         samples = np.random.randint(0, 2, size=size)
         cob = np.zeros_like(samples, dtype=np.float)
-        cob[samples == 1] = np.random.uniform(low=-1-range_cob, high=-1+range_cob, size=samples.sum())
-        cob[samples == 0] = np.random.uniform(low=1-range_cob, high=1+range_cob, size=(len(samples) - samples.sum()))
+        cob[samples == 1] = np.random.uniform(
+            low=-1-range_cob, high=-1+range_cob, size=samples.sum())
+        cob[samples == 0] = np.random.uniform(
+            low=1-range_cob, high=1+range_cob, size=(len(samples) - samples.sum()))
         return cob
 
     # Change of basis in interval [-1-range_cob,-1+range_cob]
