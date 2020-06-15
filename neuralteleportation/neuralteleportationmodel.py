@@ -69,16 +69,6 @@ class NeuralTeleportationModel(nn.Module):
         return get_random_cob(range_cob=cob_range, size=self.get_cob_size(), requires_grad=requires_grad,
                               sampling_type=sampling_type)
 
-    def random_teleport(self, cob_range=0.5, sampling_type='usual'):
-        """
-          Applies random change of basis to each of the network layers.
-
-        Returns:
-            nn.Module of the network after teleportation
-        """
-        self.set_change_of_basis(self.generate_random_cob(cob_range, sampling_type))
-        self.teleport()
-
     def teleport(self):
         """
             Teleport the network with the current change of basis.
@@ -164,6 +154,20 @@ class NeuralTeleportationModel(nn.Module):
                 layer['prev_cob'] = self.graph[input_layer_index]['cob']
 
             layer['cob'] = current_cob
+
+    def random_teleport(self, cob_range=0.5, sampling_type='usual'):
+        """
+          Applies random change of basis to each of the network layers.
+
+        Returns:
+            neural teleportation model after teleportation
+        """
+        self.get_random_change_of_basis(cob_range, sampling_type)
+
+        for k, layer in enumerate(self.graph):
+            layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+
+        return self
 
     def reset_weights(self):
         """Reset all layers."""
