@@ -34,6 +34,7 @@ class CompareTrainingConfig(TrainingConfig):
 def argumentparser():
     parser = argparse.ArgumentParser(description="Simple argument parser for traininng teleportation")
     parser.add_argument("--epochs", type=int, default=50, help="How many epochs should all models train on")
+    parser.add_argument("--run", type=int, default=1, help="How many times should a scenario be run.")
     parser.add_argument("--model", type=str, default="resnet18COB", choices=__models__,
                         help="Which model should be train")
     parser.add_argument("--lr", type=float, default=1e-3, help="The applied learning rate for all models when training")
@@ -155,20 +156,23 @@ if __name__ == '__main__':
     print("===============================")
     print("======== Training =============")
     print("===============================")
-    res_vanilla = np.concatenate((res_vanilla,
-                                  start_training(net1, trainloader, valset, metric, config, teleport_chance=0.0)))
+    for _ in range(args.run):
+        res_vanilla = np.concatenate((res_vanilla,
+                                      start_training(net1, trainloader, valset, metric, config, teleport_chance=0.0)))
 
     print("===============================")
     print("======== Training 5050=========")
     print("===============================")
-    res_5050 = np.concatenate((res_5050,
-                               start_training(net2, trainloader, valset, metric, config, teleport_chance=0.5)))
+    for _ in range(args.run):
+        res_5050 = np.concatenate((res_5050,
+                                   start_training(net2, trainloader, valset, metric, config, teleport_chance=0.5)))
 
     print("===============================")
     print("======== Training Teleport=====")
     print("===============================")
-    res_teleport = np.concatenate((res_teleport,
-                                   start_training(net3, trainloader, valset, metric, config, teleport_chance=1.0)))
+    for _ in range(args.run):
+        res_teleport = np.concatenate((res_teleport,
+                                       start_training(net3, trainloader, valset, metric, config, teleport_chance=1.0)))
 
     title = "SGD %s epochs training at %e, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
     if args.plot:
