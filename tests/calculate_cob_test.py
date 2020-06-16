@@ -75,8 +75,9 @@ def test_calculate_cob_weights(network, model_name=None, input_shape=(1, 1, 28, 
 
     calculated_cob = model.calculate_cob(w1, w2)
 
+    model.initialize_cob()
     model.set_weights(initial_weights)
-    model.teleport(calculated_cob)
+    model.teleport(calculated_cob, reset_teleportation=True)
 
     calculated_weights = model.get_weights()
 
@@ -144,6 +145,8 @@ if __name__ == '__main__':
     mlp_model = torch.nn.Sequential(
         Flatten(),
         nn.Linear(784, 128),
+        nn.ReLU(),
+        nn.Linear(128, 128),
         nn.ReLU(),
         nn.Linear(128, 128),
         nn.ReLU(),

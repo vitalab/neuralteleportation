@@ -160,6 +160,17 @@ def test_multiple_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 2
                            atol=atol), "Multiple Teleporation did not work for model {}. Average difference: {}".format(
             model_name, diff_average)
 
+    for _ in range(10):
+        model.random_teleport(cob_range=10, sampling_type='symmetric', reset_teleportation=False)
+
+        pred2 = model(x).detach().numpy()
+
+        diff_average = np.mean(np.abs((pred1 - pred2)))
+
+        assert np.allclose(pred1, pred2,
+                           atol=atol), "Multiple Teleporation did not work for model {}. Average difference: {}".format(
+            model_name, diff_average)
+
     print("Multiple Teleportations successful for " + model_name + " model.")
 
 
