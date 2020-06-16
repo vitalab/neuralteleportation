@@ -17,6 +17,4 @@ class TeleportationTrainingConfig(TrainingConfig):
     teleport_every_n_epochs: int = 2
     num_teleportations: int = 10
     num_batches: int = 1
-    cob_range: float = 0.5
-    cob_sampling: str = 'usual'
     comparison_metric: Tuple[ModelEvalFunc, Callable[[Any, Any], bool]] = None  # Required

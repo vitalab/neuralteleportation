@@ -32,7 +32,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
             if random.random() < config.teleport_prob:
                 print("Applying random COB to model in training")
-                model.random_teleport()
+                model.random_teleport(cob_range=config.cob_range, sampling_type=config.cob_sampling)
 
                 # Initialze a new optimizer using the model's new parameters
                 optimizer = optim.SGD(model.parameters(), lr=config.lr)
