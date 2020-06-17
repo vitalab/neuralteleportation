@@ -1,5 +1,6 @@
 import argparse
 from dataclasses import dataclass
+from typing import Tuple
 
 import h5py
 import matplotlib.pyplot as plt
@@ -16,11 +17,11 @@ from torchvision.datasets import VisionDataset
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
-from neuralteleportation.training.experiment_setup import get_model_list, get_model_from_string
+from neuralteleportation.training.experiment_setup import get_model_names, get_model_from_name
 from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_mnist_datasets
 from neuralteleportation.training.training import train_epoch, test
 
-__models__ = get_model_list()
+__models__ = get_model_names()
 
 
 @dataclass
@@ -39,8 +40,8 @@ def argumentparser():
                         help="Which model should be train")
     parser.add_argument("--lr", type=float, default=1e-3, help="The applied learning rate for all models when training")
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--dataset", type=str, default="mnist", choices=["mnist", "cifar10"])
-    parser.add_argument("--teleport_chance", tpye=float, default=0.5,
+    parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"])
+    parser.add_argument("--teleport_chance", type=float, default=0.5,
                         help="probability of teleporting in the 2nd scenario")
     parser.add_argument("--teleport_every", type=int, default=4,
                         help="After how many epoch should the model be teleported")
@@ -55,19 +56,23 @@ def argumentparser():
     return parser.parse_args()
 
 
-def generate_experience_models(model: str, device: str = 'cpu') -> tuple:
+def generate_experience_models(model: str, batch_size, input_dims: Tuple[int, int, int], device: str = 'cpu') -> tuple:
     """
-        Creates 3 models base on the same initial set of weights.
+        Creates 3 models based on the same initial set of weights.
     """
-    net_vanilla = get_model_from_string(model, num_classes=10, input_channels=dims).to(device)
-    net_5050 = copy.deepcopy(net_vanilla)
-    net_5050 = NeuralTeleportationModel(network=net_5050,
-                                        input_shape=(args.batch_size, dims, w, h)).to(device).to(device)
-    net_teleport = copy.deepcopy(net_vanilla)
-    net_teleport = NeuralTeleportationModel(network=net_teleport,
-                                            input_shape=(args.batch_size, dims, w, h)).to(device).to(device)
+    w, h, dims = input_dims
+    net1 = get_model_from_name(model, num_classes=10, input_channels=dims)
+    net1 = NeuralTeleportationModel(network=net1,
+                                    input_shape=(batch_size, dims, w, h)).to(device)
 
-    return net_vanilla, net_5050, net_teleport
+    net2 = copy.deepcopy(net1)
+    net2 = NeuralTeleportationModel(network=net2,
+                                    input_shape=(batch_size, dims, w, h)).to(device)
+    net3 = copy.deepcopy(net1)
+    net3 = NeuralTeleportationModel(network=net3,
+                                    input_shape=(args.batch_size, dims, w, h)).to(device)
+
+    return net1, net2, net3
 
 
 def start_training(model: NeuralTeleportationModel,
@@ -77,10 +82,10 @@ def start_training(model: NeuralTeleportationModel,
                    config: CompareTrainingConfig,
                    teleport_chance: float) -> np.ndarray:
     """
-        This function start a model training with a specific scerio configuraions.
+        This function starts a model training with a specific Scenario configuration.
 
         Scenario 1: train the model without using teleportation (teleportation_chance = 0.0)
-        Scenario 2: train the model using a probability of teleporting teleportation every Xth epochs
+        Scenario 2: train the model using a probability of teleporting every Xth epochs
         (0 < teleportation_chance < 1.0)
         Scenario 3: train the model using teleportation every Xth epochs (teleportation_chance = 1.0)
 
@@ -108,6 +113,7 @@ def start_training(model: NeuralTeleportationModel,
                 raise NotImplementedError
             else:
                 model.random_teleport(cob_range=config.cob_range, sampling_type=config.cob_sampling)
+                optimizer = torch.optim.SGD(lr=config.lr, params=model.parameters())
 
     model.cpu()  # Force the network to go out of the cuda mem.
 
@@ -125,12 +131,15 @@ if __name__ == '__main__':
         trainset, valset, testset = get_cifar10_datasets()
     elif args.dataset == 'mnist':
         trainset, valset, testset = get_mnist_datasets()
+    # trainset.data = trainset.data[:args.batch_size*100]
+    # valset.data = valset.data[:args.batch_size*10]
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size)
 
     w, h = trainset.data.shape[1:3]
     dims = 1 if trainset.data.ndim < 4 else trainset.data.shape[3]
 
-    net1, net2, net3 = generate_experience_models(args.model, device=device)
+    nets = generate_experience_models(args.model, args.batch_size, (w, h, dims), device=device)
+    init_weights = nets[0].get_weights()
 
     metric = TrainingMetrics(criterion=nn.CrossEntropyLoss(), metrics=[accuracy])
     config = CompareTrainingConfig(lr=args.lr,
@@ -143,57 +152,65 @@ if __name__ == '__main__':
                                    teleport_every_n_epochs=args.teleport_every
                                    )
 
-    res_vanilla = []
-    res_5050 = []
-    res_teleport = []
+    res_vanilla = np.empty((args.run, args.epochs + 1))
+    res_5050 = np.empty((args.run, args.epochs + 1))
+    res_teleport = np.empty((args.run, args.epochs + 1))
 
-    val_res = test(model=net1, dataset=valset, metrics=metric, config=config)
-    res_vanilla.append(val_res['accuracy'])
-    res_5050.append(val_res['accuracy'])
-    res_teleport.append(val_res['accuracy'])
+    results = [res_vanilla, res_5050, res_teleport]
 
-    print()
-    print("===============================")
-    print("======== Training =============")
-    print("===============================")
-    for _ in range(args.run):
-        res_vanilla = np.concatenate((res_vanilla,
-                                      start_training(net1, trainloader, valset, metric, config, teleport_chance=0.0)))
+    # No need to run test for each since they all have the same weights at start.
+    init_val_res = test(model=nets[0], dataset=valset, metrics=metric, config=config)['accuracy']
+    teleport_probs = [0.0, args.teleport_chance, 1,0]
+    for net in nets:
+        scenarion_num = nets.index(net)
+        print("Starting scenario {}".format(scenarion_num + 1))
+        for n in range(args.run):
+            print("run no {}".format(n + 1))
+            net.set_weights(init_weights)
+            results[scenarion_num][n] = np.concatenate(([init_val_res],
+                                                        start_training(net, trainloader, valset, metric, config,
+                                                                       teleport_chance=teleport_probs[scenarion_num])))
 
-    print("===============================")
-    print("======== Training 5050=========")
-    print("===============================")
-    for _ in range(args.run):
-        res_5050 = np.concatenate((res_5050,
-                                   start_training(net2, trainloader, valset, metric, config, teleport_chance=0.5)))
+    mean_vanilla = res_vanilla.mean(axis=0)
+    std_vanilla = res_vanilla.std(axis=0) if args.run > 1 else 0
 
-    print("===============================")
-    print("======== Training Teleport=====")
-    print("===============================")
-    for _ in range(args.run):
-        res_teleport = np.concatenate((res_teleport,
-                                       start_training(net3, trainloader, valset, metric, config, teleport_chance=1.0)))
+    mean_5050 = res_5050.mean(axis=0)
+    std_5050 = res_5050.std(axis=0) if args.run > 1 else np.zeros(args.epochs+1)
 
-    title = "SGD %s epochs training at %e, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
+    mean_teleport = res_teleport.mean(axis=0)
+    std_teleport = res_teleport.std(axis=0) if args.run > 1 else np.zeros(args.epochs+1)
+
+    title = "SGD %s epochs training at %e.1, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
     if args.plot:
+        x = np.arange(args.epochs + 1)
         plt.figure()
         plt.title(title)
-        plt.plot(res_vanilla, '-o', label="vanilla", markersize=3)
-        plt.plot(res_5050, '-o', label="net_5050", markersize=3)
-        plt.plot(res_teleport, '-o', label="net_teleport", markersize=3)
+        plt.errorbar(x, mean_vanilla, yerr=std_vanilla, fmt='-o', label="vanilla", markersize=3)
+        plt.errorbar(x, mean_5050, yerr=std_vanilla, fmt='-o', label="net_5050", markersize=3)
+        plt.errorbar(x, mean_teleport, yerr=std_vanilla, fmt='-o', label="net_teleport", markersize=3)
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
         plt.xlim([0, args.epochs])
-        plt.ylim([0, 1])
+        # plt.ylim([0, 1])
         for x in np.arange(args.teleport_every, args.epochs, args.teleport_every):
             plt.axvline(x, linestyle='--', color='b')
         plt.legend()
         plt.show()
 
     root = pathlib.Path().absolute()
-    file_path = root / ("results/" + title + ".h5").replace(" ", "_").replace(",", "")
+    file_path = root / "results/"
 
+    if not file_path.exists():
+        file_path.mkdir()
+
+    file_path = file_path.joinpath((title + ".h5").replace(" ", "_").replace(",", ""))
     f = h5py.File(file_path, 'a')
+
+    # Flush the existing data in the existing file.
+    if file_path.exists():
+        for k in f.keys():
+            del f[k]
+
     f.create_dataset("vanilla", data=res_vanilla)
     f.create_dataset("5050", data=res_5050)
     f.create_dataset("teleport", data=res_teleport)

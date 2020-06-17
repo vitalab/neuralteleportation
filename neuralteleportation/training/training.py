@@ -40,11 +40,12 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
         optimizer.step()
         if progress_bar:
             output = 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch,
-                                                                              batch_idx * train_loader.batch_size,
+                                                                              (batch_idx+1) * train_loader.batch_size,
                                                                               len(train_loader.dataset),
                                                                               100. * batch_idx / len(train_loader),
                                                                               loss.item())
             pbar.set_postfix_str(output)
+    pbar.update()
     pbar.close()
 
 
