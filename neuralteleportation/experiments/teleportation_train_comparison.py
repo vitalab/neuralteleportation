@@ -131,8 +131,6 @@ if __name__ == '__main__':
         trainset, valset, testset = get_cifar10_datasets()
     elif args.dataset == 'mnist':
         trainset, valset, testset = get_mnist_datasets()
-    # trainset.data = trainset.data[:args.batch_size*100]
-    # valset.data = valset.data[:args.batch_size*10]
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size)
 
     w, h = trainset.data.shape[1:3]
@@ -160,7 +158,7 @@ if __name__ == '__main__':
 
     # No need to run test for each since they all have the same weights at start.
     init_val_res = test(model=nets[0], dataset=valset, metrics=metric, config=config)['accuracy']
-    teleport_probs = [0.0, args.teleport_chance, 1,0]
+    teleport_probs = [0.0, args.teleport_chance, 1, 0]
     for net in nets:
         scenarion_num = nets.index(net)
         print("Starting scenario {}".format(scenarion_num + 1))
@@ -191,7 +189,6 @@ if __name__ == '__main__':
         plt.xlabel("Epochs")
         plt.ylabel("Accuracy")
         plt.xlim([0, args.epochs])
-        # plt.ylim([0, 1])
         for x in np.arange(args.teleport_every, args.epochs, args.teleport_every):
             plt.axvline(x, linestyle='--', color='b')
         plt.legend()
