@@ -73,6 +73,8 @@ def plot_single_training_curves(path: pathlib.Path, figure: plt.Figure = None, s
             plt.grid()
         if show:
             plt.show()
+    else:
+        fig = plt.figure(figure.number)
 
     f = h5py.File(path, "r")
     for k in f.keys():
