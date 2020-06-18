@@ -1,7 +1,7 @@
 import pathlib
 import argparse
 
-from neuralteleportation.utils.plot_hft5_training_curves import plot_training_curves
+from neuralteleportation.utils.plot_hft5_training_curves import plot_training_curves, plot_single_training_curves
 
 
 def argument_parser():
