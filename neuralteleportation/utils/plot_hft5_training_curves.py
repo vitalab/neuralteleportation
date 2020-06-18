@@ -23,7 +23,7 @@ def plot_training_curves(path: pathlib.Path, show_err: bool = False,
 
     fig = plt.figure()
     for fpath in glob.glob(str(path / "*.h5"), recursive=True):
-        plot_single_training_curves(fpath, fig)
+        plot_single_model_training_curves(fpath, fig)
 
     assert len(fig.get_axes()) > 0, "Nothing was drawn onto the graph! Verify the folder used for this script!"
 
@@ -40,8 +40,8 @@ def plot_training_curves(path: pathlib.Path, show_err: bool = False,
     return fig
 
 
-def plot_single_training_curves(path: pathlib.Path, figure: plt.Figure = None, show_err: bool = False,
-                                std_err: bool = False, show_grid: bool = False, show: bool = True):
+def plot_single_model_training_curves(path: pathlib.Path, figure: plt.Figure = None, show_err: bool = False,
+                                      std_err: bool = False, show_grid: bool = False, show: bool = True):
     """
         Plot a single hft5 file containing the training curves of the models comparison
 

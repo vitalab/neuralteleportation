@@ -1,7 +1,7 @@
 import pathlib
 import argparse
 
-from neuralteleportation.utils.plot_hft5_training_curves import plot_training_curves, plot_single_training_curves
+from neuralteleportation.utils.plot_hft5_training_curves import plot_training_curves
 
 
 def argument_parser():
@@ -19,9 +19,12 @@ def argument_parser():
 
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+
     args = argument_parser()
     path = pathlib.Path(args.folder) if args.folder else pathlib.Path().absolute() / "results/"
 
     fig = plot_training_curves(path, args.show_err, args.std_err, args.show_grid, show=False)
 
-    fig.show()
+    plt.figure(fig.number)
+    plt.show()
