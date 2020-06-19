@@ -31,7 +31,7 @@ class NeuralTeleportationModel(nn.Module):
     def forward(self, x):
         return self.network(x)
 
-    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='usual', center=1):
+    def get_random_change_of_basis(self, basis_range=0.5, sampling_type='within_landscape', center=1):
         """
           Compute random change of basis for every layer in the network.
         """
@@ -80,7 +80,7 @@ class NeuralTeleportationModel(nn.Module):
 
             layer['cob'] = current_cob
 
-    def random_teleport(self, cob_range=0.5, sampling_type='usual', center=1):
+    def random_teleport(self, cob_range=0.5, sampling_type='within_landscape', center=1):
         """
           Applies random change of basis to each of the network layers.
 

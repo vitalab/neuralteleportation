@@ -13,7 +13,7 @@ reset = "\033[0m"
 
 
 def test_dot_product(network, input_shape=(100, 1, 28, 28), nb_teleport=200, network_descriptor='',
-                     sampling_types=['usual', 'symmetric', 'negative', 'zero']) -> None:
+                     sampling_types=["within_landscape", "change_landscape", "positive", "negative", "centered"]) -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
     vector and the gradient for nullity. It then displays the histograms of the calculated scalar products.
