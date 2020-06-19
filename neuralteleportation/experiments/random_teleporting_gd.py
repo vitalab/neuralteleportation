@@ -13,7 +13,6 @@ from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
 from neuralteleportation.utils.logger import VisdomLogger
 from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
-from neuralteleportation.training.experiment_run import run_model_training
 
 
 @dataclass
@@ -86,7 +85,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 if __name__ == '__main__':
     from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_run import run_single_output_training
+    from neuralteleportation.training.experiment_run import run_model_training
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
