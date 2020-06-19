@@ -27,3 +27,4 @@ dependencies:
     - networkx
     - tensorboard
     - visdom
+    - jsonpatch

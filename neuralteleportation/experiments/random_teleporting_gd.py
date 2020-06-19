@@ -13,6 +13,7 @@ from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
 from neuralteleportation.utils.logger import VisdomLogger
 from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
+from neuralteleportation.training.experiment_run import run_model_training
 
 
 @dataclass
@@ -31,21 +32,23 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         optimizer = optim.SGD(model.parameters(), lr=config.lr)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
-    model = NeuralTeleportationModel(
-        network=model, input_shape=(2,) + config.input_shape)
     if config.exp_logger is not None:
         config.exp_logger.add_text(
             "Config",
+            "Model: {}<br>"
             "epochs: {}<br>"
             "teleport_every_n_epochs: {}<br>"
             "cob_range: {}<br>"
             "cob_sampling_type: {}<br>".format(
+                model.__class__.__name__,
                 config.epochs,
                 config.teleport_every_n_epochs,
                 config.cob_range,
                 config.cob_sampling
             )
         )
+    model = NeuralTeleportationModel(network=model,
+                                     input_shape=(2,) + config.input_shape)
 
     for epoch in range(config.epochs):
         if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
@@ -95,17 +98,19 @@ if __name__ == '__main__':
     for sampling_type in cob_samplings:
         for cob_range in cob_ranges:
             for n in teleport_every_n_epochs:
-                env_name = "teleport_{}_{}_every_{}".format(
-                    sampling_type, cob_range, n)
-                print("Starting: ", env_name)
-                config = TeleportationTrainingConfig(
-                    input_shape=(3, 32, 32),
-                    device='cuda',
-                    cob_range=cob_range,
-                    cob_sampling=sampling_type,
-                    teleport_every_n_epochs=n,
-                    epochs=20,
-                    exp_logger=VisdomLogger(env=env_name)
-                )
-                run_single_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
-                                           cifar10_train, cifar10_test, val_set=cifar10_val)
+                for model in get_cifar10_models(device='cuda'):
+                    env_name = "{}_teleport_{}_{}_every_{}".format(model.__class__.__name__,
+                                                                   sampling_type, cob_range, n)
+                    print("Starting: ", env_name)
+                    config = TeleportationTrainingConfig(
+                        input_shape=(3, 32, 32),
+                        device='cuda',
+                        cob_range=cob_range,
+                        cob_sampling=sampling_type,
+                        teleport_every_n_epochs=n,
+                        epochs=20,
+                        exp_logger=VisdomLogger(env=env_name)
+                    )
+                    run_model_training(train, model,
+                                       config, metrics,
+                                       cifar10_train, cifar10_test, val_set=cifar10_val)
