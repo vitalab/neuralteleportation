@@ -25,9 +25,9 @@ if __name__ == '__main__':
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
     if args.optim == 'grad_norm':
-        comparison_metric=(weighted_grad_norm, operator.gt)
-    else:   # args.optim == 'lookadhead':
-        comparison_metric=(loss_lookahead_diff, operator.gt)
+        comparison_metric = (weighted_grad_norm, operator.gt)
+    else:  # args.optim == 'lookahead':
+        comparison_metric = (loss_lookahead_diff, operator.gt)
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
