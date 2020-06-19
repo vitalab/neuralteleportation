@@ -10,16 +10,16 @@ def get_random_cob(range_cob: int, size: int, sampling_type='within_landscape', 
 
         'within_landscape' - in interval [1 - range_cob, 1 + range_cob]
         'change_landscape' - equally in intervals [-1 - range_cob, -1 + range_cob] and [1 - range_cob, 1 + range_cob]
-        'positive' - in interval [0, range_cob]
-        'negative' - in interval [-range_cob, 0]
-        'centered' - in interval [center - range_cob, center + range_cob]
+        'positive'         - in interval [0, range_cob]
+        'negative'         - in interval [-range_cob, 0]
+        'centered'         - in interval [center - range_cob, center + range_cob]
 
     Args:
-        range_cob (int): range_cob for the change of basis. Recommended between 0 and 1, but can take any
-        positive range_cob.
-        size (int): size of the returned array.
-        sampling_type: label for type of sampling for change of basis
-        center: The center of the normal distribution with which to sample
+        range_cob (int):    range_cob for the change of basis.
+        size (int):         size of the returned array.
+        sampling_type:      label for type of sampling for change of basis
+        center:             The center of the uniform distribution with which to sample in case of
+                            sampling_type=centered
     Returns:
         ndarray of size size.
     """

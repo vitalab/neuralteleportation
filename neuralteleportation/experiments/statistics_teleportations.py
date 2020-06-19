@@ -190,6 +190,8 @@ if __name__ == '__main__':
     from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
     from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
     cnn_model = torch.nn.Sequential(
         nn.Conv2d(1, 32, 3, 1),
         nn.ReLU(),
@@ -201,22 +203,22 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-    cnn_model = swap_model_modules_for_COB_modules(cnn_model).to(device='cuda')
+    cnn_model = swap_model_modules_for_COB_modules(cnn_model).to(device=device)
 
     input_shape_mlp = (100, 1, 28, 28)
-    mlp_model = MLPCOB(num_classes=10, hidden_layers=(128, 128,)).to(device='cuda')
+    mlp_model = MLPCOB(num_classes=10, hidden_layers=(128, 128,)).to(device=device)
 
-    vgg16_model = vgg16COB(num_classes=10).to(device='cuda')
+    vgg16_model = vgg16COB(num_classes=10).to(device=device)
 
     plot_histogram_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP',
-                                        device='cuda')
-    plot_histogram_teleported_gradients(network=cnn_model, network_descriptor='CNN', device='cuda')
+                                        device=device)
+    plot_histogram_teleported_gradients(network=cnn_model, network_descriptor='CNN', device=device)
     plot_histogram_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16',
-                                        device='cuda')
+                                        device=device)
 
     plot_difference_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP',
-                                         device='cuda')
+                                         device=device)
     plot_difference_teleported_gradients(network=cnn_model, input_shape=(100, 1, 28, 28), network_descriptor='CNN',
-                                         device='cuda')
+                                         device=device)
     plot_difference_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16',
-                                         device='cuda')
+                                         device=device)
