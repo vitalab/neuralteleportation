@@ -29,7 +29,7 @@ class CompareTrainingConfig(TrainingConfig):
     targeted_teleportation: bool = False
     teleport_every_n_epochs: int = 4
     cob_range: float = 0.5
-    cob_sampling: str = "usual"
+    cob_sampling: str = "within_landscape"
 
 
 def argumentparser():

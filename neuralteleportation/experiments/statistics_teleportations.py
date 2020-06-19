@@ -6,7 +6,7 @@ import torch
 
 
 def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), nb_iterations=200, n_iter=20,
-                                        network_descriptor='') -> None:
+                                        network_descriptor='', device='cpu') -> None:
     """
     This method computes an histogram of angles between the gradient of a network with gradients of teleportations
     of it while the change of basis increases and is centered around 1. We assume that network is a ReLU network
@@ -31,7 +31,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
 
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 
-    w1 = model.get_weights().detach().numpy()
+    original_weights = model.get_weights()
 
     loss_func = torch.nn.MSELoss()
 
@@ -44,16 +44,16 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
         grad_grad_angle_results = []
 
         for _ in range(nb_iterations):
-            x = torch.rand(input_shape, dtype=torch.float)
-            y = torch.rand((input_shape[0], 10), dtype=torch.float)
+            x = torch.rand(input_shape, dtype=torch.float, device=device)
+            y = torch.rand((input_shape[0], 10), dtype=torch.float, device=device)
 
-            grad = model.get_grad(x, y, loss_func, zero_grad=False)
-            model.set_weights(w1)
+            grad = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+            model.set_weights(original_weights)
             model.random_teleport(cob_range=cob[i])
-            grad_tele = model.get_grad(x, y, loss_func, zero_grad=False)
+            grad_tele = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
 
-            random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
-            random_vector2 = torch.rand(grad.shape, dtype=torch.float)-0.5
+            random_vector = torch.rand(grad.shape, dtype=torch.float, device='cpu')-0.5
+            random_vector2 = torch.rand(grad.shape, dtype=torch.float, device='cpu')-0.5
 
             # Normalized scalar product
             grad_grad_prod = np.longfloat(np.dot(grad, grad_tele) /
@@ -113,7 +113,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
 
 
 def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb_teleportations=100,
-                                         network_descriptor=''):
+                                         network_descriptor='', device='cpu'):
     """
     This method plots the difference of the gradient of model and the gradient of a teleportation, by increasing the
     cob_range from 0.1 to 0.9 in n_iter iterations for within_landscape cob_sampling. Each gradient is normalized by the norm of
@@ -130,13 +130,17 @@ def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb
     """
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 
-    x = torch.rand(input_shape, dtype=torch.float)
-    y = torch.randint(low=0, high=9, size=(input_shape[0],))
+    x = torch.rand(input_shape, dtype=torch.float, device=device)
+    y = torch.randint(low=0, high=9, size=(input_shape[0],), device=device)
 
     loss_func = torch.nn.CrossEntropyLoss()
 
-    original_weights = model.get_weights().detach().numpy()
-    original_grad = model.get_grad(x, y, loss_func, zero_grad=False).numpy()
+    original_weights = model.get_weights().detach().cpu().numpy()
+
+    if device == 'cuda':
+        original_weights_cuda = model.get_weights()
+
+    original_grad = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
     original_grad = original_grad / np.linalg.norm(original_weights)
 
     differences = []
@@ -149,11 +153,15 @@ def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb
     for i in range(n_iter):
         to_compute_mean = []
         for _ in range(nb_teleportations):
-            model.set_weights(original_weights)
-            model.random_teleport(cob_range=x_axis[i], sampling_type='within_landscape')
+            if device == 'cuda':
+                model.set_weights(original_weights_cuda)
+            else:
+                model.set_weights(original_weights)
 
-            teleported_weights = model.get_weights().detach().numpy()
-            teleported_grad = model.get_grad(x, y, loss_func, zero_grad=False).numpy()
+            model.random_teleport(cob_range=x_axis[i])
+
+            teleported_weights = model.get_weights().detach().cpu().numpy()
+            teleported_grad = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
             teleported_grad = teleported_grad / np.linalg.norm(teleported_weights)
 
             diff = abs(np.linalg.norm(original_grad)-np.linalg.norm(teleported_grad))
@@ -193,16 +201,22 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-    mlp_model = MLPCOB(num_classes=10, hidden_layers=(128, 128,))
+    cnn_model = swap_model_modules_for_COB_modules(cnn_model).to(device='cuda')
+
     input_shape_mlp = (100, 1, 28, 28)
+    mlp_model = MLPCOB(num_classes=10, hidden_layers=(128, 128,)).to(device='cuda')
 
-    cnn_model = swap_model_modules_for_COB_modules(cnn_model)
-    vgg16_model = vgg16COB(num_classes=10)
+    vgg16_model = vgg16COB(num_classes=10).to(device='cuda')
 
-    plot_histogram_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP')
-    plot_histogram_teleported_gradients(network=cnn_model, network_descriptor='CNN')
-    plot_histogram_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16')
+    plot_histogram_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP',
+                                        device='cuda')
+    plot_histogram_teleported_gradients(network=cnn_model, network_descriptor='CNN', device='cuda')
+    plot_histogram_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16',
+                                        device='cuda')
 
-    plot_difference_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP')
-    plot_difference_teleported_gradients(network=cnn_model, input_shape=(100, 1, 28, 28), network_descriptor='CNN')
-    plot_difference_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16')
+    plot_difference_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP',
+                                         device='cuda')
+    plot_difference_teleported_gradients(network=cnn_model, input_shape=(100, 1, 28, 28), network_descriptor='CNN',
+                                         device='cuda')
+    plot_difference_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16',
+                                         device='cuda')
