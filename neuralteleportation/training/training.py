@@ -22,7 +22,8 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
     for epoch in range(1, config.epochs + 1):
-        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch, device=config.device)
+        train_epoch(model, metrics.criterion, optimizer,
+                    train_loader, epoch, device=config.device)
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
 
@@ -40,15 +41,19 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
         optimizer.step()
         if progress_bar:
             output = 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch,
-                                                                              batch_idx * len(data),
+                                                                              (batch_idx+1) *
+                                                                              train_loader.batch_size,
                                                                               len(train_loader.dataset),
-                                                                              100. * batch_idx / len(train_loader),
+                                                                              100. * batch_idx /
+                                                                              len(train_loader),
                                                                               loss.item())
             pbar.set_postfix_str(output)
         if batch_idx % 500 == 0 and config is not None:
             if config.exp_logger is not None:
-                step = len(train_loader.dataset) * (epoch - 1) + batch_idx * len(data)
+                step = len(train_loader.dataset) * \
+                    (epoch - 1) + batch_idx * len(data)
                 config.exp_logger.add_scalar("train_loss", loss.item(), step)
+    pbar.update()
     pbar.close()
 
 
@@ -64,7 +69,8 @@ def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: T
             results['loss'].append(metrics.criterion(output, target).item())
 
             if metrics is not None:
-                batch_results = compute_metrics(metrics.metrics, y=target, y_hat=output, to_tensor=False)
+                batch_results = compute_metrics(
+                    metrics.metrics, y=target, y_hat=output, to_tensor=False)
                 for k in batch_results.keys():
                     results[k].append(batch_results[k])
 
@@ -95,9 +101,12 @@ if __name__ == '__main__':
     from torch.nn.modules import Flatten
     import torch.nn as nn
 
-    mnist_train = MNIST('/tmp', train=True, download=True, transform=transforms.ToTensor())
-    mnist_val = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
-    mnist_test = MNIST('/tmp', train=False, download=True, transform=transforms.ToTensor())
+    mnist_train = MNIST('/tmp', train=True, download=True,
+                        transform=transforms.ToTensor())
+    mnist_val = MNIST('/tmp', train=False, download=True,
+                      transform=transforms.ToTensor())
+    mnist_test = MNIST('/tmp', train=False, download=True,
+                       transform=transforms.ToTensor())
 
     model = torch.nn.Sequential(
         Flatten(),
@@ -109,5 +118,6 @@ if __name__ == '__main__':
     config = TrainingConfig()
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
-    train(model, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_val)
+    train(model, train_dataset=mnist_train, metrics=metrics,
+          config=config, val_dataset=mnist_val)
     print(test(model, mnist_test, metrics, config))
