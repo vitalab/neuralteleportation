@@ -1,4 +1,3 @@
-from warnings import warn
 import numpy as np
 import visdom
 from torch.utils.tensorboard import SummaryWriter
