@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 
 
-def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), nb_iterations=200,
+def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), nb_iterations=200, n_iter=20,
                                         network_descriptor='') -> None:
     """
     This method computes an histogram of angles between the gradient of a network with gradients of teleportations
@@ -24,6 +24,8 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
         nb_iterations:          The number of times the network is teleported and the scalar product calculated. An
                                 average is then calculated.
 
+        n_iter:                 The number of partitions of the interval [0.001, 0.7] to sample the change of basis
+
         network_descriptor:     String describing the content of the network
     """
 
@@ -34,7 +36,6 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
     loss_func = torch.nn.MSELoss()
 
     # This measures the increase of the change of basis in each iteration
-    n_iter = 10
     cob = np.linspace(0.001, 0.7, n_iter)
 
     for i in range(n_iter):
@@ -48,7 +49,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
 
             grad = model.get_grad(x, y, loss_func, zero_grad=False)
             model.set_weights(w1)
-            model.random_teleport(cob_range=cob[i], sampling_type='within_landscape')
+            model.random_teleport(cob_range=cob[i])
             grad_tele = model.get_grad(x, y, loss_func, zero_grad=False)
 
             random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
@@ -179,6 +180,7 @@ if __name__ == '__main__':
     import torch.nn as nn
     from torch.nn.modules import Flatten
     from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
+    from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 
     cnn_model = torch.nn.Sequential(
         nn.Conv2d(1, 32, 3, 1),
@@ -191,23 +193,16 @@ if __name__ == '__main__':
         nn.Linear(128, 10)
     )
 
-    mlp_model = torch.nn.Sequential(
-        Flatten(),
-        nn.Linear(2, 5),
-        nn.ReLU(),
-        nn.Linear(5, 5),
-        nn.ReLU(),
-        nn.Linear(5, 10)
-    )
+    mlp_model = MLPCOB(num_classes=10, hidden_layers=(128, 128,))
+    input_shape_mlp = (100, 1, 28, 28)
 
     cnn_model = swap_model_modules_for_COB_modules(cnn_model)
-    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
-    vgg16_model = vgg16COB(pretrained=False, num_classes=10, input_channels=3)
+    vgg16_model = vgg16COB(num_classes=10)
 
-    plot_histogram_teleported_gradients(network=mlp_model, input_shape=(100, 1, 2, 1), network_descriptor='MLP')
+    plot_histogram_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP')
     plot_histogram_teleported_gradients(network=cnn_model, network_descriptor='CNN')
     plot_histogram_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16')
 
-    plot_difference_teleported_gradients(network=mlp_model, input_shape=(100, 1, 2, 1), network_descriptor='MLP')
+    plot_difference_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP')
     plot_difference_teleported_gradients(network=cnn_model, input_shape=(100, 1, 28, 28), network_descriptor='CNN')
     plot_difference_teleported_gradients(network=vgg16_model, input_shape=(32, 3, 32, 32), network_descriptor='VGG16')

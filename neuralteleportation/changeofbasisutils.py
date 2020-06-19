@@ -25,10 +25,11 @@ def get_random_cob(range_cob: int, size: int, sampling_type='within_landscape', 
     """
     # Change of basis in interval [1-range_cob, 1+range_cob]
     if sampling_type == 'within_landscape':
-        if range_cob > center or center <= 0:
-            print('Warning: The current center allows for negative changes of basis.')
+        assert not (range_cob > center or center <= 0), 'This range for change of basis sampling allows for negative ' \
+                                                        'changes of basis.'
         if center != 1:
-            print('Warning: The change of basis sampling is not centered at 1')
+            print('Warning: The change of basis sampling is not centered at 1. But no negative change of basis'
+                  ' will be produced.')
         return np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float) + 1
 
     # Change of basis equally in intervals [-1-range_cob, -1+range_cob] and [1-range_cob, 1+range_cob]
@@ -43,8 +44,8 @@ def get_random_cob(range_cob: int, size: int, sampling_type='within_landscape', 
 
     # Change of basis in interval [center- range_cob, center + range_cob]
     elif sampling_type == 'centered':
-        if range_cob > center or center <= 0:
-            print('Warning: The range for change of basis sampling allows for negative changes of basis.')
+        assert not (range_cob > center or center <= 0), 'This range for change of basis sampling allows for negative ' \
+                                                        'changes of basis.'
         return np.random.uniform(low=center - range_cob, high=center + range_cob, size=size).astype(np.float)
 
     # Change of basis in interval [0, range_cob]
@@ -56,5 +57,5 @@ def get_random_cob(range_cob: int, size: int, sampling_type='within_landscape', 
         return np.random.uniform(low=-range_cob, high=0, size=size).astype(np.float)
 
     else:
-        print('Invalid sampling type: sampling types allowed:')
-        print(available_sampling_types)
+        raise Exception("Invalid sampling type. Sampling types allowed: "
+                        "within_landscape, change_landscape, positive, negative, centered")
