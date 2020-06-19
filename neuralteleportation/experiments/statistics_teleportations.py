@@ -48,7 +48,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
 
             grad = model.get_grad(x, y, loss_func, zero_grad=False)
             model.set_weights(w1)
-            model.random_teleport(cob_range=cob[i], sampling_type='usual')
+            model.random_teleport(cob_range=cob[i], sampling_type='within_landscape')
             grad_tele = model.get_grad(x, y, loss_func, zero_grad=False)
 
             random_vector = torch.rand(grad.shape, dtype=torch.float)-0.5
@@ -76,8 +76,9 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
         grad_grad_angle = np.array(grad_grad_angle)
 
         # Limits manually fixed to appreciate difference between the angles
-        x_min = 0
-        x_max = 100
+        delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
+        x_min = 90 - delta
+        x_max = 90 + delta
 
         plt.subplot(3, 1, 1)
 
@@ -86,7 +87,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
         bin_height = bin_height / float(max(bin_height))
         plt.subplot(3, 1, 1)
         plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='r')
-        plt.title(f'{network_descriptor}: cob range: {cob[i]}, 'f'{nb_iterations:} iterations')
+        plt.title(f'{network_descriptor}: COB range: {cob[i]}, 'f'{nb_iterations:} iterations')
         plt.xlim(0, 100)
         plt.legend(['Gradient \n vs \n Teleported gradient'])
 
@@ -114,17 +115,17 @@ def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb
                                          network_descriptor=''):
     """
     This method plots the difference of the gradient of model and the gradient of a teleportation, by increasing the
-    cob_range from 0.1 to 0.9 in n_iter iterations for usual cob_sampling. Each gradient is normalized by the norm of
+    cob_range from 0.1 to 0.9 in n_iter iterations for within_landscape cob_sampling. Each gradient is normalized by the norm of
     the weights producing the corresponding gradient.
 
     Args:
-        network:            COB model to test.
+        network:                COB model to test.
 
-        input_shape:        The shape of the input.
+        input_shape:            The shape of the input.
 
-        nb_teleportations:  Number of teleportations computed for each cob_range.
+        nb_teleportations:      Number of teleportations computed for each cob_range.
 
-        network_descriptor: Name of the model for distinction
+        network_descriptor:     Name of the model for distinction
     """
     model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 
@@ -148,7 +149,7 @@ def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb
         to_compute_mean = []
         for _ in range(nb_teleportations):
             model.set_weights(original_weights)
-            model.random_teleport(cob_range=x_axis[i], sampling_type='usual')
+            model.random_teleport(cob_range=x_axis[i], sampling_type='within_landscape')
 
             teleported_weights = model.get_weights().detach().numpy()
             teleported_grad = model.get_grad(x, y, loss_func, zero_grad=False).numpy()
