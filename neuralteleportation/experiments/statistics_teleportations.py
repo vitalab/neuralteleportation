@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 
 
-def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), nb_iterations=200, n_iter=20,
+def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), nb_iterations=50, n_iter=5,
                                         network_descriptor='', device='cpu') -> None:
     """
     This method computes an histogram of angles between the gradient of a network with gradients of teleportations
@@ -112,7 +112,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
         plt.show()
 
 
-def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb_teleportations=100,
+def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb_teleportations=10,
                                          network_descriptor='', device='cpu'):
     """
     This method plots the difference of the gradient of model and the gradient of a teleportation, by increasing the
