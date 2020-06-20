@@ -2,6 +2,8 @@
 Closed form optimization on a network's change of basis to find the change of basis that teleports
 to a given set of weights.
 """
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
 
@@ -21,8 +23,9 @@ def argument_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--weights1", type=str, default=None, help='Weights for the first model')
     parser.add_argument("--weights2", type=str, default=None, help='Weights for the second model')
-    parser.add_argument("--epochs", type=int, default=0, help='Number of epochs to train the networks')
+    parser.add_argument("--epochs", type=int, default=10, help='Number of epochs to train the networks')
     parser.add_argument("--save_path", type=str, default='coboptim', help='Path to save weights without extension')
+    parser.add_argument("--same_init", action='store_true', help='Initialize both networks with the same weights.')
     return parser.parse_args()
 
 
@@ -38,19 +41,26 @@ if __name__ == '__main__':
     mnist_train, mnist_val, mnist_test = get_mnist_datasets()
 
     sample_input_shape = (1, 1, 28, 28)
+    hidden_layers = (128, 10)
 
-    model1 = MLPCOB(num_classes=10).to(device)
-    model1 = NeuralTeleportationModel(network=model1, input_shape=sample_input_shape)
+    net1 = MLPCOB(num_classes=10, hidden_layers=hidden_layers).to(device)
+    if args.same_init:
+        net2 = deepcopy(net1)
+    else:
+        net2 = MLPCOB(num_classes=10, hidden_layers=hidden_layers).to(device)
+
+    model1 = NeuralTeleportationModel(network=net1, input_shape=sample_input_shape)
     if args.weights1 is not None:
         model1.load_state_dict(torch.load(args.weights1))
+    config.batch_size = 8  # Change batch size to train to different minima
     train(model1, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
     torch.save(model1.state_dict(), pjoin(save_path, 'model1.pt'))
     print("Model 1 test results: ", test(model1, mnist_test, metrics, config))
 
-    model2 = MLPCOB(num_classes=10).to(device)
-    model2 = NeuralTeleportationModel(network=model2, input_shape=sample_input_shape)
+    model2 = NeuralTeleportationModel(network=net2, input_shape=sample_input_shape)
     if args.weights2 is not None:
         model2.load_state_dict(torch.load(args.weights2))
+    config.batch_size = 512  # Change batch size to train to different minima
     train(model2, train_dataset=mnist_train, metrics=metrics, config=config, val_dataset=mnist_test)
     torch.save(model2.state_dict(), pjoin(save_path, 'model2.pt'))
     print("Model 2 test results: ", test(model2, mnist_test, metrics, config))

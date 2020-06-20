@@ -2,6 +2,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
+import warnings
 import torch.nn as nn
 from tqdm import tqdm
 
@@ -217,12 +218,23 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
 
             grads = []
 
-            for _ in range(steps):
+            for step in range(steps):
                 grad = (2 * ti * (w0 / t0).dot(w0 / t0) -
                         2 * (w0 / t0).dot(w0_hat) -
                         2 * torch.pow(ti, -3) * (w1 * t2).dot(w1 * t2) +
                         2 * torch.pow(ti, -2) * (w1 * t2).dot(w1_hat))
                 ti = ti - eta * grad.item()
+
+                if torch.isnan(ti).any():
+                    warnings.warn("Calculating last cob failed. Calculated cob value is nan.")
+                    return None
+
+                """ Uncomment to debug"""
+                # loss = (ti * (w0 / t0) - w0_hat).dot(ti * (w0 / t0) - w0_hat) + \
+                #        (torch.pow(ti, -1) * (w1 * t2) - w1_hat).dot(torch.pow(ti, -1) * (w1 * t2) - w1_hat)
+                # if np.mod(st, 400) == -1:
+                #    print("step ", step, "loss : ", loss)
+
                 # grads.append(grad.detach().item())
 
             """ Uncomment to debug the gradient descent. """

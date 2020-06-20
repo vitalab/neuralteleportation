@@ -348,9 +348,14 @@ class NeuralTeleportationModel(nn.Module):
             t = layers[i].calculate_cob(initial_weights[i], target_weights[i], cob[-1])
             cob.append(t)
 
-        cob.append(layers[-2].calculate_last_cob(initial_weights[-2], target_weights[-2],
+        last_cob = layers[-2].calculate_last_cob(initial_weights[-2], target_weights[-2],
                                                  initial_weights[-1], target_weights[-1],
-                                                 cob[-1], eta, steps))
+                                                 cob[-1], eta, steps)
+
+        if last_cob is None:
+            last_cob = layers[-2].calculate_cob(initial_weights[-2], target_weights[-2], cob[-1])
+
+        cob.append(last_cob)
 
         cob.pop(0)  # Remove input layer cob.
 
