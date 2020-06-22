@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import torch
 
 
-def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), nb_iterations=50, n_iter=5,
-                                        network_descriptor='', device='cpu') -> None:
+def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), num_classes=10, nb_iterations=50,
+                                        n_part=5, network_descriptor='', device='cpu') -> None:
     """
     This method computes an histogram of angles between the gradient of a network with gradients of teleportations
     of it while the change of basis increases and is centered around 1. We assume that network is a ReLU network
@@ -14,43 +14,46 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
     by applying only positive changes of basis.
 
     Args:
-        network :               The COB model (use swap_model_modules_for_COB_modules to network before passing it
-                                to this method) that we want statistics from its landscape.
+        network :               NeuralTeleportationModel
 
         input_shape :           The shape of the input.  By default, simulate batched of 100 grayscale 28x28 images
-                                (it will be used by the networkgrapher of the model,
-                                the values is not important for the test at hand)
+                                (it will be used by the networkgrapher of the network,
+                                the values is not important for the test at hand).
+
+        num_classes :           Number of classes/output neurons of the network
 
         nb_iterations:          The number of times the network is teleported and the scalar product calculated. An
                                 average is then calculated.
 
-        n_iter:                 The number of partitions of the interval [0.001, 0.7] to sample the change of basis
+        n_part:                 The number of partitions of the interval [0.001, 0.7] to sample the change of basis
+                                range.
 
-        network_descriptor:     String describing the content of the network
+        network_descriptor:     String describing the content of the network.
+
+        device:                 Device for computations
     """
 
-    model = NeuralTeleportationModel(network=network, input_shape=input_shape)
-
-    original_weights = model.get_weights()
+    original_weights = network.get_weights()
 
     loss_func = torch.nn.MSELoss()
 
     # This measures the increase of the change of basis in each iteration
-    cob = np.linspace(0.001, 0.7, n_iter)
+    cob = np.linspace(0.001, 0.7, n_part)
 
-    for i in range(n_iter):
+    for i in range(n_part):
         rand_angle_results = []
         rand_rand_angle_results = []
         grad_grad_angle_results = []
 
         for _ in range(nb_iterations):
             x = torch.rand(input_shape, dtype=torch.float, device=device)
-            y = torch.rand((input_shape[0], 10), dtype=torch.float, device=device)
+            y = torch.rand((input_shape[0], num_classes), dtype=torch.float, device=device)
 
-            grad = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
-            model.set_weights(original_weights)
-            model.random_teleport(cob_range=cob[i])
-            grad_tele = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+            network.set_weights(original_weights)
+            grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+
+            network.random_teleport(cob_range=cob[i])
+            grad_tele = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
 
             random_vector = torch.rand(grad.shape, dtype=torch.float, device='cpu')-0.5
             random_vector2 = torch.rand(grad.shape, dtype=torch.float, device='cpu')-0.5
@@ -74,7 +77,7 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
 
         rand_angle_results = np.array(rand_angle_results)
         rand_rand_angle_results = np.array(rand_rand_angle_results)
-        grad_grad_angle = np.array(grad_grad_angle)
+        grad_grad_angle_results = np.array(grad_grad_angle_results)
 
         # Limits manually fixed to appreciate difference between the angles
         delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
@@ -112,56 +115,61 @@ def plot_histogram_teleported_gradients(network, input_shape=(100, 1, 28, 28), n
         plt.show()
 
 
-def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), nb_teleportations=10,
-                                         network_descriptor='', device='cpu'):
+def plot_difference_teleported_gradients(network, input_shape=(4, 3, 32, 32), num_classes=10, nb_teleportations=10,
+                                         n_part=10, network_descriptor='', device='cpu'):
     """
-    This method plots the difference of the gradient of model and the gradient of a teleportation, by increasing the
-    cob_range from 0.1 to 0.9 in n_iter iterations for within_landscape cob_sampling. Each gradient is normalized by the norm of
-    the weights producing the corresponding gradient.
+    This method plots the difference of the gradient of the network and the gradient of a teleportation, by
+    partitioning the cob_range from 0.1 to 0.9 in n_part parts for within_landscape cob_sampling. Each gradient
+    is normalized by the norm of the weights producing the corresponding gradient.
 
     Args:
-        network:                COB model to test.
+        network:                NeuralTeleportationModel
 
         input_shape:            The shape of the input.
 
+        num_classes :           Number of classes/output neurons of the network.
+
         nb_teleportations:      Number of teleportations computed for each cob_range.
 
-        network_descriptor:     Name of the model for distinction
+        n_part:                 The number of partitions of the interval [0.001, 0.7] to sample the change of basis
+                                range.
+
+        network_descriptor:     Name of the network for distinction.
+
+        device:                 Device for computations.
     """
-    model = NeuralTeleportationModel(network=network, input_shape=input_shape)
 
     x = torch.rand(input_shape, dtype=torch.float, device=device)
-    y = torch.randint(low=0, high=9, size=(input_shape[0],), device=device)
+    y = torch.randint(low=0, high=num_classes-1, size=(input_shape[0],), device=device)
 
     loss_func = torch.nn.CrossEntropyLoss()
 
-    original_weights = model.get_weights().detach().cpu().numpy()
-
     if device == 'cuda':
-        original_weights_cuda = model.get_weights()
+        original_weights_cuda = network.get_weights()
 
-    original_grad = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+    original_weights = network.get_weights().detach().cpu().numpy()
+
+    original_grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
     original_grad = original_grad / np.linalg.norm(original_weights)
 
     differences = []
     variance = []
 
-    # Grid to sample the change of basis
-    n_iter = 20
-    x_axis = np.linspace(0.1, 0.9, n_iter)
+    # Grid to sample the change of basis from
+    x_axis = np.linspace(0.1, 0.9, n_part)
 
-    for i in range(n_iter):
+    for i in range(n_part):
         to_compute_mean = []
         for _ in range(nb_teleportations):
             if device == 'cuda':
-                model.set_weights(original_weights_cuda)
+                network.set_weights(original_weights_cuda)
             else:
-                model.set_weights(original_weights)
+                network.set_weights(original_weights)
 
-            model.random_teleport(cob_range=x_axis[i])
+            network.random_teleport(cob_range=x_axis[i])
 
-            teleported_weights = model.get_weights().detach().cpu().numpy()
-            teleported_grad = model.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+            teleported_weights = network.get_weights().detach().cpu().numpy()
+            teleported_grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
             teleported_grad = teleported_grad / np.linalg.norm(teleported_weights)
 
             diff = abs(np.linalg.norm(original_grad)-np.linalg.norm(teleported_grad))
@@ -204,11 +212,14 @@ if __name__ == '__main__':
     )
 
     cnn_model = swap_model_modules_for_COB_modules(cnn_model).to(device=device)
+    cnn_model = NeuralTeleportationModel(network=cnn_model, input_shape=(100, 1, 28, 28))
 
     input_shape_mlp = (100, 1, 28, 28)
     mlp_model = MLPCOB(num_classes=10, hidden_layers=(128, 128,)).to(device=device)
+    mlp_model = NeuralTeleportationModel(network=mlp_model, input_shape=input_shape_mlp)
 
     vgg16_model = vgg16COB(num_classes=10).to(device=device)
+    vgg16_model = NeuralTeleportationModel(network=vgg16_model, input_shape=(32, 3, 32, 32))
 
     plot_histogram_teleported_gradients(network=mlp_model, input_shape=input_shape_mlp, network_descriptor='MLP',
                                         device=device)
