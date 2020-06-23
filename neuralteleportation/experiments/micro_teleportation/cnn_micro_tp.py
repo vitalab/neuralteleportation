@@ -1,10 +1,9 @@
-import pandas as pd
 import torch.optim as optim
 
 from torch.nn.modules import Flatten
 from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 from collections import defaultdict
-from micro_teleportation.micro_tp_utils import *
+from utils.micro_tp_utils import *
 
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
@@ -72,7 +71,7 @@ def compute_metrics(metrics, y_hat, y, prefix='', to_tensor=True):
 
 
 if __name__ == '__main__':
-    from torchvision.datasets import MNIST, CIFAR10, CIFAR100
+    from torchvision.datasets import MNIST
     import torchvision.transforms as transforms
     from neuralteleportation.metrics import accuracy
     import torch.nn as nn

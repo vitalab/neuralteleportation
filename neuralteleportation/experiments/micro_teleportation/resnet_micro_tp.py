@@ -2,7 +2,7 @@ import torch.optim as optim
 
 from collections import defaultdict
 from models.model_zoo import resnetcob
-from micro_teleportation.micro_tp_utils import *
+from utils.micro_tp_utils import *
 
 # ANSI escape code for colored console text
 red = "\033[31m"

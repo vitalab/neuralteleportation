@@ -1,10 +1,8 @@
-import pandas as pd
 import torch.optim as optim
-import torch
 
 from collections import defaultdict
 from models.model_zoo import vggcob
-from micro_teleportation.micro_tp_utils import *
+from utils.micro_tp_utils import *
 
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,

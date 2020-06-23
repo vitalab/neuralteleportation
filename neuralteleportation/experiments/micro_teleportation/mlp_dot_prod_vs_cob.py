@@ -1,6 +1,3 @@
-
-import torch
-import pandas as pd
 import torch.optim as optim
 
 import sys
@@ -10,7 +7,7 @@ sys.path.append('/content/drive/My Drive/Colab Notebooks/neuralteleportation/neu
 from torch.nn.modules import Flatten
 from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 from collections import defaultdict
-from micro_teleportation.micro_tp_utils import *
+from utils.micro_tp_utils import *
 
 
 def train(model, criterion, train_dataset, val_dataset=None, optimizer=None, metrics=None, epochs=10, batch_size=32,
