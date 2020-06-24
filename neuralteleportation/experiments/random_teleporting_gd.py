@@ -1,6 +1,7 @@
 import random
 from dataclasses import dataclass
 from typing import Tuple
+import numpy as np
 
 import torch.optim as optim
 from torch import nn
@@ -10,6 +11,8 @@ from torch.utils.data import DataLoader, Dataset
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
+from neuralteleportation.utils.logger import VisdomLogger
+from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
 
 
 @dataclass
@@ -17,6 +20,8 @@ class TeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
     teleport_every_n_epochs: int = 2
     teleport_prob: float = 1.  # Always teleport by default when reaching `teleport_every_n_epochs`
+    cob_range: float = 0.5
+    cob_sampling: str = "usual"
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
@@ -26,24 +31,53 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         optimizer = optim.SGD(model.parameters(), lr=config.lr)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
-    model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
+    if config.exp_logger is not None:
+        config.exp_logger.add_text(
+            "Config",
+            "Model: {}<br>"
+            "epochs: {}<br>"
+            "teleport_every_n_epochs: {}<br>"
+            "cob_range: {}<br>"
+            "cob_sampling_type: {}<br>".format(
+                model.__class__.__name__,
+                config.epochs,
+                config.teleport_every_n_epochs,
+                config.cob_range,
+                config.cob_sampling
+            )
+        )
+    model = NeuralTeleportationModel(network=model,
+                                     input_shape=(2,) + config.input_shape)
 
     for epoch in range(config.epochs):
         if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
             if random.random() < config.teleport_prob:
                 print("Applying random COB to model in training")
-                model.random_teleport()
+                model.random_teleport(
+                    cob_range=config.cob_range, sampling_type=config.cob_sampling)
 
                 # Initialze a new optimizer using the model's new parameters
                 optimizer = optim.SGD(model.parameters(), lr=config.lr)
             else:
                 print("Skipping COB")
 
-        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch + 1, device=config.device)
+        train_epoch(model, metrics.criterion, optimizer,
+                    train_loader, epoch + 1, device=config.device, config=config)
 
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))
+            if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
+                print("Stopping: Loss NaN!")
+                if config.exp_logger:
+                    config.exp_logger.add_text(
+                        "Info", "Stopped due to Loss NaN.")
+                break
+            if config.exp_logger is not None:
+                config.exp_logger.add_scalar(
+                    "val_loss", val_res["loss"], epoch)
+                config.exp_logger.add_scalar(
+                    "val_accuracy", val_res["accuracy"], epoch)
 
     return model
 
@@ -51,12 +85,31 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 if __name__ == '__main__':
     from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_run import run_single_output_training
+    from neuralteleportation.training.experiment_run import run_model_training
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
-    config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
-    run_single_output_training(train, get_cifar10_models(device='cuda'), config, metrics,
-                               cifar10_train, cifar10_test, val_set=cifar10_val)
+    cob_ranges = [0.7, 1.2]
+    cob_samplings = get_available_cob_sampling_types()
+    teleport_every_n_epochs = [1, 2, 5, 10]
+    for sampling_type in cob_samplings:
+        for cob_range in cob_ranges:
+            for n in teleport_every_n_epochs:
+                for model in get_cifar10_models(device='cuda'):
+                    env_name = "{}_teleport_{}_{}_every_{}".format(model.__class__.__name__,
+                                                                   sampling_type, cob_range, n)
+                    print("Starting: ", env_name)
+                    config = TeleportationTrainingConfig(
+                        input_shape=(3, 32, 32),
+                        device='cuda',
+                        cob_range=cob_range,
+                        cob_sampling=sampling_type,
+                        teleport_every_n_epochs=n,
+                        epochs=20,
+                        exp_logger=VisdomLogger(env=env_name)
+                    )
+                    run_model_training(train, model,
+                                       config, metrics,
+                                       cifar10_train, cifar10_test, val_set=cifar10_val)

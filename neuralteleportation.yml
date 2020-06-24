@@ -25,3 +25,6 @@ dependencies:
     - pytorch-lightning
     - torchsummary
     - networkx
+    - tensorboard
+    - visdom
+    - jsonpatch
