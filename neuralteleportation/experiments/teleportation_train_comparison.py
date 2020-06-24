@@ -178,7 +178,7 @@ if __name__ == '__main__':
     mean_teleport = res_teleport.mean(axis=0)
     std_teleport = res_teleport.std(axis=0) if args.run > 1 else np.zeros(args.epochs+1)
 
-    title = "SGD %s epochs training at %e.1, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
+    title = "SGD %s epochs training at %.1e, %s, %s" % (args.epochs, args.lr, args.model, args.dataset)
     if args.plot:
         x = np.arange(args.epochs + 1)
         plt.figure()
