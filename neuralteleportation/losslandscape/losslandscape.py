@@ -9,14 +9,15 @@ from torch.utils.data.dataset import Dataset
 from sklearn.decomposition import PCA
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.training import test, train, train_epoch
+from neuralteleportation.training.training import test, train_epoch
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 
 
 @dataclass
 class LandscapeConfig(TrainingConfig):
-    training_split: Tuple[int, int] = (3, 2),
-    cob_range: float = 0.5
+    training_split: float = 0.5,
+    cob_range: float = 0.5,
+    cob_sampling: str = 'positive'
 
 
 def generate_random_2d_vector(weights: torch.Tensor, normalize: bool = True, seed: int = 12345) -> torch.Tensor:
@@ -50,8 +51,10 @@ def compute_angle(vec1: torch.Tensor, vec2: torch.Tensor) -> torch.Tensor:
     return torch.acos(torch.dot(vec1, vec2) / (vec1.norm() * vec2.norm()))
 
 
-def train_and_teleport_model(model: NeuralTeleportationModel, trainset: Dataset,
-                             metric: TrainingMetrics, config: LandscapeConfig) -> Tuple[List[torch.Tensor], torch.Tensor]:
+def generate_teleportation_training(model: NeuralTeleportationModel,
+                                    trainset: Dataset,
+                                    metric: TrainingMetrics,
+                                    config: LandscapeConfig) -> Tuple[List[torch.Tensor], torch.Tensor]:
     """
         Training function wrapper to get all the weights after a full training epochs.
 
@@ -60,28 +63,19 @@ def train_and_teleport_model(model: NeuralTeleportationModel, trainset: Dataset,
             list of values of the loss at each epochs,
             the last set of weights.
     """
-    training_split = config.training_split
     w = [model.get_weights().clone().detach().cpu()]
-    trainloader = DataLoader(trainset, batch_size=config.batch_size)
+    trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
     optim = torch.optim.Adam(model.parameters(), lr=config.lr)
 
-    for e in range(training_split[0]):
+    for e in range(config.epochs):
         train_epoch(model, metric.criterion, train_loader=trainloader, optimizer=optim, epoch=e, device=config.device)
         w.append(model.get_weights().clone().detach().cpu())
 
-    if training_split[1] < 1:
-        final = w[-1::][0]
-        return w, final
-
-    print("Teleporting model...")
-    model.random_teleport(cob_range=config.cob_range)
-    optim = torch.optim.Adam(model.parameters(), lr=config.lr)
-    w.append(model.get_weights().clone().detach().cpu())
-    print("restarting training")
-
-    for e in range(training_split[0], training_split[0] + training_split[1]):
-        train_epoch(model, metric.criterion, train_loader=trainloader, optimizer=optim, epoch=e, device=config.device)
-        w.append(model.get_weights().clone().detach().cpu())
+        if e == int(config.epochs * config.training_split):
+            print("Teleporting Model...")
+            model.random_teleport(config.cob_range, config.cob_sampling)
+            w.append(model.get_weights().clone().detach().cpu())
+            optim = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     final = w[-1::][0]
     return w, final
@@ -125,10 +119,10 @@ def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[to
         returns:
             Tuple containing the x and y directions vectors. (only use x if doing a 1D plotting)
     """
-    matrix = [m.numpy() for m in M]
+    M = [m.numpy() for m in M]
     print("Appliying PCA on matrix...")
     pca = PCA(n_components=2)
-    pca.fit(matrix)
+    pca.fit(M)
     pc1 = torch.tensor(pca.components_[0], dtype=original_w.dtype)
     pc2 = torch.tensor(pca.components_[1], dtype=original_w.dtype)
 
@@ -158,11 +152,32 @@ def generate_weight_trajectory(checkpoints: List[torch.Tensor],
     return x, y
 
 
+def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
+                  weight_traj: Tuple[torch.Tensor, torch.Tensor] = None, teleport_idx: int = 0, levels: int = 25, ):
+    # plt.figure()
+    plt.contourf(x, y, loss, cmap='coolwarm', origin='lower', levels=levels)
+    plt.colorbar()
+    plt.contour(x, y, loss, colors='black', origin='lower', levels=levels)
+
+    if weight_traj:
+        # Plot all the weight points and highlight the teleported one.
+        plt.plot(weight_traj[0], weight_traj[1], '-o', c='black')
+        plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], '-o', c='yellow')
+
+        for wx, wy in zip(weight_traj[0], weight_traj[1]):
+            idx = (wx - x).abs().argmin()
+            idy = (wy - y).abs().argmin()
+            loss_xy = loss[idx][idy]
+            label = "{:.5f}".format(loss_xy)
+            plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
+
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from torch.utils.data.dataloader import DataLoader
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_cifar10_models
+    from torch.utils.data.dataloader import DataLoader
+    from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
+    from neuralteleportation.training.experiment_setup import get_cifar10_datasets
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -174,54 +189,34 @@ if __name__ == '__main__':
         lr=5e-4,
         epochs=10,
         batch_size=32,
-        cob_range=1e-2,
-        training_split=(5, 5),
+        cob_range=1e-5,
+        training_split=0.5,
         device=device
     )
-    models = get_cifar10_models()
+    model = resnet18COB(num_classes=10)
     trainset, valset, testset = get_cifar10_datasets()
-    trainset.data = trainset.data[:config.batch_size * 100]  # For the example, don't use all the data.
-    trainloader = DataLoader(trainset, batch_size=config.batch_size)
+    trainset.data = trainset.data[:1000]  # For the example, don't use all the data.
+    trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
 
-    for m in models:
-        model = NeuralTeleportationModel(m, input_shape=(config.batch_size, 3, 32, 32)).to(device)
-        original_w = model.get_weights()
-        w_checkpoint, final_w = train_and_teleport_model(model, trainset, metric=metric, config=config)
-        delta, eta = generate_random_2d_vector(final_w), generate_random_2d_vector(final_w)
+    x = torch.linspace(-1, 1, 5)
+    y = torch.linspace(-1, 1, 5)
+    surface = torch.stack((x, y))
 
-        # Calculate angle between the two direction vectors.
-        angle = compute_angle(delta, eta)
-        print("angle between direction is {} rad".format(angle))
+    model = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
 
-        x = torch.linspace(-1, 1, 25)
-        y = torch.linspace(-1, 1, 25)
-        shape = x.shape if y is None else (len(x), len(y))
-        surface = torch.stack((x, y))
+    w_checkpoints, final_w = generate_teleportation_training(model, trainset, metric=metric, config=config)
+    delta, eta = generate_random_2d_vector(final_w), generate_random_2d_vector(final_w)
+    loss, _ = generate_contour_loss_values(model, (delta, eta), surface, trainset, metric, config)
+    original_w = w_checkpoints[0]
 
-        loss, _ = generate_contour_loss_values(model, (delta, eta), surface, trainset, metric, config)
-        loss = np.array(loss)
-        loss = np.resize(loss, shape)
+    loss = np.array(loss)
+    loss = np.resize(loss, (len(x), len(y)))
 
-        w_diff = [w - final_w for w in w_checkpoint]
-        w_x_dirrection, w_y_dirrection = generate_weights_direction(original_w, w_diff)
-        weight_traj = generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
+    teleport_idx = config.training_split[0] + 1 if config.training_split[1] != 0 else 0
+    w_diff = [(w - final_w) for w in w_checkpoints]
+    w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
+    weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))
 
-        plt.figure()
-        plt.contourf(x, y, loss, cmap='coolwarm', origin='lower', levels=25, vmin=loss.min(), vmax=loss.max())
-        plt.colorbar()
-        plt.contour(x, y, loss, colors='black', origin='lower', levels=25)
-
-        plt.plot(weight_traj[0], weight_traj[1], '-o', c='black')
-
-        teleport_idx = config.training_split[0]
-        teleport_idx += 1
-        plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], '-o', c='yellow')
-
-        for wx, wy in zip(weight_traj[0], weight_traj[1]):
-            idx = (wx-x).abs().argmin()
-            idy = (wy-y).abs().argmin()
-            loss_xy = loss[idx][idy]
-            label = "{:.5f}".format(loss_xy)
-            plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
-
+    plt.figure()
+    plot_contours(x, y, loss, weight_traj, teleport_idx=teleport_idx)
     plt.show()
