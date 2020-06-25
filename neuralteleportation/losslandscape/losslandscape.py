@@ -43,8 +43,10 @@ def normalize_direction(direction: torch.Tensor, weights: torch.Tensor):
 
 
 def compute_angle(vec1: torch.Tensor, vec2: torch.Tensor) -> torch.Tensor:
-    """ Calculate the angle in degree between two torch tensors.
     """
+        Calculate the angle in degree between two torch tensors.
+    """
+    # For some reasons torch.rad2deg and torch.deg2rad function are not there anymore...
     return torch.acos(torch.dot(vec1, vec2) / (vec1.norm() * vec2.norm()))
 
 
@@ -59,13 +61,13 @@ def train_and_teleport_model(model: NeuralTeleportationModel, trainset: Dataset,
             the last set of weights.
     """
     training_split = config.training_split
-    w = [model.get_weights().detach().cpu()]
+    w = [model.get_weights().clone().detach().cpu()]
     trainloader = DataLoader(trainset, batch_size=config.batch_size)
     optim = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     for e in range(training_split[0]):
         train_epoch(model, metric.criterion, train_loader=trainloader, optimizer=optim, epoch=e, device=config.device)
-        w.append(model.get_weights().detach().cpu())
+        w.append(model.get_weights().clone().detach().cpu())
 
     if training_split[1] < 1:
         final = w[-1::][0]
@@ -73,12 +75,13 @@ def train_and_teleport_model(model: NeuralTeleportationModel, trainset: Dataset,
 
     print("Teleporting model...")
     model.random_teleport(cob_range=config.cob_range)
-    w.append(model.get_weights().detach().cpu())
+    optim = torch.optim.Adam(model.parameters(), lr=config.lr)
+    w.append(model.get_weights().clone().detach().cpu())
     print("restarting training")
 
     for e in range(training_split[0], training_split[0] + training_split[1]):
         train_epoch(model, metric.criterion, train_loader=trainloader, optimizer=optim, epoch=e, device=config.device)
-        w.append(model.get_weights().detach().cpu())
+        w.append(model.get_weights().clone().detach().cpu())
 
     final = w[-1::][0]
     return w, final
@@ -168,16 +171,16 @@ if __name__ == '__main__':
         metrics=[accuracy]
     )
     config = LandscapeConfig(
-        lr=1e-3,
+        lr=5e-4,
         epochs=10,
         batch_size=32,
-        cob_range=5e-3,
-        training_split=(2, 3),
+        cob_range=1e-2,
+        training_split=(5, 5),
         device=device
     )
     models = get_cifar10_models()
     trainset, valset, testset = get_cifar10_datasets()
-    trainset.data = trainset.data[:config.batch_size * 10]  # For the example, don't use all the data.
+    trainset.data = trainset.data[:config.batch_size * 100]  # For the example, don't use all the data.
     trainloader = DataLoader(trainset, batch_size=config.batch_size)
 
     for m in models:
@@ -204,7 +207,7 @@ if __name__ == '__main__':
         weight_traj = generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
 
         plt.figure()
-        plt.contourf(x, y, loss, cmap='coolwarm', origin='lower', levels=25)
+        plt.contourf(x, y, loss, cmap='coolwarm', origin='lower', levels=25, vmin=loss.min(), vmax=loss.max())
         plt.colorbar()
         plt.contour(x, y, loss, colors='black', origin='lower', levels=25)
 
@@ -215,7 +218,10 @@ if __name__ == '__main__':
         plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], '-o', c='yellow')
 
         for wx, wy in zip(weight_traj[0], weight_traj[1]):
-            label = "{:.2f}, {:.2f}".format(wx, wy)
-            plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(0, 10), ha='center')
+            idx = (wx-x).abs().argmin()
+            idy = (wy-y).abs().argmin()
+            loss_xy = loss[idx][idy]
+            label = "{:.5f}".format(loss_xy)
+            plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
 
     plt.show()
