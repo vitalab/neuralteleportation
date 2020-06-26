@@ -1,27 +1,26 @@
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, Tuple, Union
+import sys
 
 import torch.optim as optim
 from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
-from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
+from utils.micro_tp_utils import *
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
 
 
 @dataclass
-class TeleportationTrainingConfig(TrainingConfig):
+class MicroTeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
     starting_epoch: int = 1
-    teleport_every_n_epochs: int = 2
     num_teleportations: int = 1
 
 
 def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset, metrics: TrainingMetrics,
-          config: TeleportationTrainingConfig, val_dataset: Dataset = None, optimizer: Optimizer = None) \
+          config: MicroTeleportationTrainingConfig, val_dataset: Dataset = None, optimizer: Optimizer = None) \
         -> Dict[str, nn.Module]:
     # If the model is not named (at the first iteration), initialize its name based on its class
     if type(model) is tuple:
@@ -36,9 +35,10 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
     # Always move model to GPU before training
-    model.cuda()
+    if torch.cuda.is_available():
+        model.cuda()
 
-    stopping_epoch = min(config.starting_epoch + config.teleport_every_n_epochs, config.epochs + 1)
+    stopping_epoch = max(config.starting_epoch, config.epochs + 1)
     for epoch in range(config.starting_epoch, stopping_epoch):
         print(f'Training epoch {epoch} for {model_name} ...')
         train_epoch(model, metrics.criterion, optimizer, train_loader, epoch, device=config.device)
@@ -49,48 +49,14 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
     # Always move model off-GPU after training
     model.cpu()
 
-    # Update new starting epoch for the next iteration of model training
-    config.starting_epoch += config.teleport_every_n_epochs
-
-    # Determine if training has reached its end
-    # TODO Add test for convergence
-    is_train_end = config.starting_epoch >= config.epochs + 1
-
-    if is_train_end:
-        trained_models = {f'{model_name}_0': model}
-    else:
-        # Teleport the model and train each teleportation recursively
-        trained_models = teleport_and_train((model_name, model), train_dataset, metrics, config, optimizer,
-                                            val_dataset=val_dataset)
-
-    return trained_models
-
-
-def teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, metrics: TrainingMetrics,
-                       config: TeleportationTrainingConfig, optimizer: Optimizer, val_dataset: Dataset = None) \
-        -> Dict[str, nn.Module]:
-    model_name, model = model
-
-    # Teleport the model to obtain N different models corresponding to the same function
-    # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
-    teleportation_model = NeuralTeleportationModel(network=deepcopy(model), input_shape=(1,) + config.input_shape)
-    teleported_models = [deepcopy(teleportation_model.random_teleport()) for _ in range(config.num_teleportations)]
-
-    # Call recursively the training algorithm on teleported models, with less epochs left to perform
-    # The non-teleported model uses the previous training iterations' optimizer,
-    # and the teleported models initialize new optimizers (with the new models' parameters)
-    trained_models = train((f'{model_name}_0', model), train_dataset, metrics, deepcopy(config),
-                           val_dataset=val_dataset, optimizer=optimizer)
-    for idx, teleported_model in enumerate(teleported_models, 1):
-        trained_teleportations = train((f'{model_name}_{idx}', teleported_model), train_dataset, metrics,
-                                       deepcopy(config), val_dataset=val_dataset)
-        trained_models.update(trained_teleportations)
+    trained_models = {f'{model_name}_0': model}
 
     return trained_models
 
 
 if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
+    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar100_models,\
+        get_cifar10_datasets, get_cifar100_datasets
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.experiment_run import run_multi_output_training
 
@@ -98,6 +64,35 @@ if __name__ == '__main__':
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
-    config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
-    run_multi_output_training(train, get_cifar10_models(), config, metrics,
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    config = MicroTeleportationTrainingConfig(input_shape=(3, 32, 32), device=device, batch_size=10,
+                                              num_teleportations=1, epochs=5)
+    models = get_cifar10_models()
+    run_multi_output_training(train, models, config, metrics,
                               cifar10_train, cifar10_test, val_set=cifar10_val)
+    for model in models:
+        micro_teleportation_dot_product(network=model, dataset=cifar10_test,
+                                        network_descriptor=f'{model.__class__.__name__} on CIFAR10',
+                                        device=device)
+
+        dot_product_between_telportation(network=model, dataset=cifar10_test,
+                                         network_descriptor=f'{model.__class__.__name__} on CIFAR10',
+                                         reset_weights=False, device=device)
+    models = get_cifar100_models()
+
+    # Run on CIFAR100
+    cifar100_train, cifar100_val, cifar100_test = get_cifar100_datasets()
+
+    run_multi_output_training(train, models, config, metrics,
+                              cifar100_train, cifar100_test, val_set=cifar100_val)
+
+    for model in models:
+        micro_teleportation_dot_product(network=model, dataset=cifar10_test,
+                                        network_descriptor=f'{model.__class__.__name__} on CIFAR100',
+                                        device=device)
+
+        dot_product_between_telportation(network=model, dataset=cifar100_test,
+                                         network_descriptor=f'{model.__class__.__name__} on CIFAR100',
+                                         reset_weights=False, device=device)

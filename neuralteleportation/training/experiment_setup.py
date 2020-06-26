@@ -4,7 +4,7 @@ from itertools import chain
 
 import torchvision.transforms as transforms
 from torch import nn
-from torchvision.datasets import VisionDataset, MNIST, CIFAR10
+from torchvision.datasets import VisionDataset, MNIST, CIFAR10, CIFAR100
 
 from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
 from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
@@ -34,6 +34,13 @@ def get_cifar10_datasets() -> Tuple[VisionDataset, VisionDataset, VisionDataset]
     return train_set, val_set, test_set
 
 
+def get_cifar100_datasets() -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
+    train_set = CIFAR100('/tmp', train=True, download=True, transform=transforms.ToTensor())
+    val_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.ToTensor())
+    test_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.ToTensor())
+    return train_set, val_set, test_set
+
+
 def to_device(func: Callable[[], List[nn.Module]]):
     @functools.wraps(func)
     def wrapper_to_device(device: str = 'cpu'):
@@ -58,6 +65,15 @@ def get_cifar10_models() -> List[nn.Module]:
         vgg16COB(num_classes=10, input_channels=3),
         resnet18COB(num_classes=10, input_channels=3),
         densenet121COB(num_classes=10, input_channels=3),
+    ]
+
+
+@to_device
+def get_cifar100_models() -> List[nn.Module]:
+    return [
+        vgg16COB(num_classes=100, input_channels=3),
+        resnet18COB(num_classes=100, input_channels=3),
+        densenet121COB(num_classes=100, input_channels=3),
     ]
 
 

@@ -15,10 +15,24 @@ reset = "\033[0m"
 
 
 def tensor_norm(t: Tensor) -> Tensor:
+    """
+    This method return the Euclidian norm (L2) of a tensor
+
+    Args:
+        t :                     the tensor for which we want the euclidian norm
+    """
     return torch.sqrt(torch.sum(torch.pow(t, 2)))
 
 
 def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
+    """
+    This method returns the normalized scalar products between two tensors. In order to make the methode
+    device-agnostic, if the inputs are numpy arrays, they're converted to pytorch tensors
+
+    Args:
+        t1 :                     the tensor for which we want the euclidian norm
+        t2 :                     the tensor for which we want the euclidian norm
+    """
     if type(t2) is np.ndarray:
         t2 = torch.tensor(t2)
     if type(t1) is np.ndarray:
@@ -26,30 +40,36 @@ def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
     return torch.matmul(t1, t2) / (tensor_norm(t1) * tensor_norm(t2))
 
 
-def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
-                sampling_types=['usual', 'symmetric', 'negative', 'zero'],
-                batch_sizes=[8, 16, 32, 64],
-                criterion=None,
-                device='cpu') -> None:
+def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_descriptor='',
+                                    sampling_types=['usual'],
+                                    batch_sizes=[8, 16, 32, 64],
+                                    criterion=None,
+                                    device='cpu',
+                                    verbose=False) -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
-    vector and the gradient for nullity. It then displays the histograms of the calculated scalar products.
+    vector and the gradient for nullity. It then displays the histograms of the calculated scalar products. The
+    method also aggregates all relevant micro teleportation data in a dataframe.
 
     Args:
-        network :               the model to which we wish to assign weights
+        network :               the model which we wish to use to compute the micro-teleporations
 
-        input_shape :           the shape of the input.  By default, simulate batched of 100 grayscale 28x28 images
-                                (it will be used by the networkgrapher of the model,
-                                the values is not important for the test at hand)
+        dataset                 the dataset that will be used to calculate the gradient and get dimensions for the
+                                neural teleportation model
 
         nb_teleport:            The number of time the network is teleported and the scalar product calculated. An
                                 average is then calculated.
 
         network_descriptor:     String describing the content of the network
 
-        sampling_types :        Teleportation sampling types
+        sampling_types :        Teleportation sampling types, governs how the change of basis is computed
 
-        device:                 Device used to compute the netork operations (Typically 'cpu' or 'cuda')
+        criterion:              the loss function used to compute the gradient
+
+        device:                 Device used to compute the netork operations ('cpu' or 'cuda')
+
+        verbose:                If true, the method will output extensive details about the calculated vectors and
+                                aggregated data (mainly for debugging purposes)
     """
 
     # Arbitrary precision threshold for nullity comparison
@@ -63,14 +83,17 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
         print(f'{green}Using CUDA{reset}')
         network = network.cuda()
 
-    if criterion is None:
+    if (criterion is None):
         loss_func = torch.nn.CrossEntropyLoss()
     else:
         loss_func = criterion
 
-    aggregator = pd.DataFrame(columns=['sampling type',
+    # Initialize the dataframe for data aggregation
+    aggregator = pd.DataFrame(columns=['model name',
+                                       'sampling type',
                                        'batch size',
                                        'COB range',
+                                       'weights vector length',
                                        'Micro-teleportation vs Gradient',
                                        'Micro-teleportation vs Gradient std',
                                        'Gradient vs Random Vector',
@@ -162,9 +185,11 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                 rand_micro_angle_results = np.array(rand_micro_angle_results)
 
                 # Append resuslts to dataframe for further ploting
-                aggregator = aggregator.append({'sampling type': sampling_type,
+                aggregator = aggregator.append({'model name' : network_descriptor,
+                                                'sampling type': sampling_type,
                                                 'batch size': batch_size,
                                                 'COB range': cob,
+                                                'weights vector length': len(w1),
                                                 'Micro-teleportation vs Gradient': angle_results.mean(),
                                                 'Micro-teleportation vs Gradient std': angle_results.std(),
                                                 'Gradient vs Random Vector': rand_angle_results.mean(),
@@ -189,49 +214,77 @@ def dot_product(network, dataset, nb_teleport=200, network_descriptor='',
                       f', the delta in angle is {rand_angle - target_angle}°\n',
                       sep='')
 
-                delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
-                x_min = 90 - delta
-                x_max = 90 + delta
-                figsize = (10.0, 10.0)
+                if verbose:
+                    print(aggregator.iloc[aggregator.last_valid_index()])
+                    if torch.cuda.is_available():
+                        print(f'w1: {w1}', f'nans: {torch.sum(torch.isnan(w1))}',
+                              f'max: {torch.max(w1)}',
+                              f'min: {torch.min(w1)}',
+                              sep='\n')
+                        print(f'w2: {w2}',
+                              f' nans: {torch.sum(torch.isnan(w2))}',
+                              f'max: {torch.max(w2)}',
+                              f'min: {torch.min(w2)}',
+                              sep='\n')
+                    else:
+                        print(f'w1: {w1}', f'nans: {np.sum(np.isnan(w1))}',
+                        f'max: {np.max(w1)}',
+                        f'min: {np.min(w1)}',
+                        sep='\n')
+                        print(f'w2: {w2}',
+                        f' nans: {np.sum(np.isnan(w2))}',
+                        f'max: {np.max(w2)}',
+                        f'min: {np.min(w2)}',
+                        sep='\n')
 
-                fig, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, figsize=figsize)
-                fig.suptitle(f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}\n'
-                             f'{iterations:} iter, batch size: {batch_size}')
+                if not np.isnan(aggregator.loc[aggregator.last_valid_index(), 'Micro-teleportation vs Gradient']):
+                    delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
+                    x_min = 90 - delta
+                    x_max = 90 + delta
+                    figsize = (10.0, 10.0)
 
-                bin_height, bin_boundary = np.histogram(np.array(angle_results))
-                width = bin_boundary[1] - bin_boundary[0]
-                bin_height = bin_height / float(max(bin_height))
-                ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
-                ax0.legend(['Micro-teleportation\n vs \n Gradient'])
-                ax0.set_xlim(x_min, x_max)
+                    fig, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, figsize=figsize)
+                    fig.suptitle(f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}\n'
+                                 f'{iterations:} iter, batch size: {batch_size}')
 
-                bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
-                width = bin_boundary[1] - bin_boundary[0]
-                bin_height = bin_height / float(max(bin_height))
-                ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
-                ax1.set_xlim(x_min, x_max)
-                ax1.legend(['Micro-teleportation\n vs \n Random Vector'])
+                    bin_height, bin_boundary = np.histogram(np.array(angle_results))
+                    width = bin_boundary[1] - bin_boundary[0]
+                    bin_height = bin_height / float(max(bin_height))
+                    ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
+                    ax0.legend(['Micro-teleportation\n vs \n Gradient'])
+                    ax0.set_xlim(x_min, x_max)
 
-                bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
-                width = bin_boundary[1] - bin_boundary[0]
-                bin_height = bin_height / float(max(bin_height))
-                ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
-                ax2.set_xlim(x_min, x_max)
-                ax2.legend(['Gradient\n vs \n Random Vector'])
+                    bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
+                    width = bin_boundary[1] - bin_boundary[0]
+                    bin_height = bin_height / float(max(bin_height))
+                    ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+                    ax1.set_xlim(x_min, x_max)
+                    ax1.legend(['Micro-teleportation\n vs \n Random Vector'])
 
-                bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
-                width = bin_boundary[1] - bin_boundary[0]
-                bin_height = bin_height / float(max(bin_height))
-                ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
-                ax3.set_xlim(x_min, x_max)
-                ax3.legend(['Random Vector\n vs \n Random Vector'])
+                    bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
+                    width = bin_boundary[1] - bin_boundary[0]
+                    bin_height = bin_height / float(max(bin_height))
+                    ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+                    ax2.set_xlim(x_min, x_max)
+                    ax2.legend(['Gradient\n vs \n Random Vector'])
 
-                plt.xlabel('Angle in degrees')
+                    bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
+                    width = bin_boundary[1] - bin_boundary[0]
+                    bin_height = bin_height / float(max(bin_height))
+                    ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+                    ax3.set_xlim(x_min, x_max)
+                    ax3.legend(['Random Vector\n vs \n Random Vector'])
 
-                Path(hist_dir).mkdir(parents=True, exist_ok=True)
-                plt.savefig(f'{hist_dir}/{network_descriptor}_Samp_type_{sampling_type}'
-                            f'_cob_{cob}_iter_{iterations}_batch_size_{batch_size}.png')
-                plt.show()
+                    plt.xlabel('Angle in degrees')
+
+                    Path(hist_dir).mkdir(parents=True, exist_ok=True)
+                    plt.savefig(f'{hist_dir}/{network_descriptor}_Samp_type_{sampling_type}'
+                                f'_cob_{cob}_iter_{iterations}_batch_size_{batch_size}.png')
+                    plt.show()
+                else:
+                    print(red)
+                    print(aggregator.iloc[aggregator.last_valid_index()])
+                    print(reset)
 
     for sampling_type in sampling_types:
         for cob in cobs:
@@ -267,7 +320,22 @@ def dot_product_between_telportation(network, dataset,
                                      network_descriptor=None,
                                      reset_weights=False,
                                      device='cpu') -> None:
+    """
+    This method tests the scalar product between the initial and teleported set of weights and plots the results with
+    respect to the order of magnitude of the change of basis of the teleportation
 
+    Args:
+        network :               the model which we want to use to compute the teleportations
+
+        dataset :               the model which we want to use to size the teleportation model
+
+        network_descriptor:     String describing the content of the network
+
+        reset_weights:          indicates if the weights of the model will be reset to their original value before
+                                each teleportation, or if the teleportation are done back-to-back
+
+        device:                 Device used to compute the netork operations ('cpu' or 'cuda')
+    """
     series_dir = f'images/series_dot_prod_vs_cob/{network_descriptor}'
 
     if torch.cuda.is_available():
@@ -278,7 +346,7 @@ def dot_product_between_telportation(network, dataset,
         network_descriptor = network.__name__
 
     # Prepare the range of COB to test
-    cobs = np.linspace(1, 9, 10)
+    cobs = np.linspace(1, 9, 9)
     # We don't want a COB of 1 since it produces no teleportation
     cobs[0] += 0.1
 
@@ -297,7 +365,7 @@ def dot_product_between_telportation(network, dataset,
     unit_dot_product_results = []
     angles = []
     for cob in cobs:
-        # reset the weights for next teleportation
+        # reset the weights for next teleportation if told so
         if reset_weights:
             model.set_weights(w1)
         else:
@@ -316,7 +384,6 @@ def dot_product_between_telportation(network, dataset,
 
     dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
 
-    # plt.scatter(cobs, dot_product_results, c='red', marker='o')
     plt.plot(cobs, dot_product_results.cpu())
     plt.title(f'Sacalar product between original and \nteleported weights with '
               f'respect to COB\'s order of magnitude\n{network_descriptor}, '
