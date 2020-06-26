@@ -21,7 +21,7 @@ def argument_parser():
                         help="for how many epochs should the model train")
     parser.add_argument("--batch_size", type=int, default=32,
                         help="used batch size.")
-    parser.add_argument("--cob_range", type=float, default=0.05,
+    parser.add_argument("--cob_range", type=float, default=0.5,
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
     parser.add_argument("--cob_sampling", type=str, default="usual",
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
