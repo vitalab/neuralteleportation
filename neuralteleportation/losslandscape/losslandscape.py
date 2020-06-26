@@ -1,16 +1,16 @@
+from dataclasses import dataclass
+from typing import Tuple, List, Union
+
+import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import numpy as np
-
-from typing import Tuple, List, Union
-from dataclasses import dataclass
-
-from torch.utils.data.dataset import Dataset
 from sklearn.decomposition import PCA
+from torch.utils.data.dataset import Dataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.training import test, train_epoch
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
+from neuralteleportation.training.training import test, train_epoch
 
 
 @dataclass
@@ -20,11 +20,11 @@ class LandscapeConfig(TrainingConfig):
     cob_sampling: str = 'usual'
 
 
-def generate_random_2d_vector(weights: torch.Tensor, normalize: bool = True, seed: int = 12345) -> torch.Tensor:
+def generate_random_2d_vector(weights: torch.Tensor, normalize: bool = True, seed: int = 1) -> torch.Tensor:
     """
         Generates a random vector of size equals to the weights of the model.
     """
-    # torch.manual_seed(seed)
+    torch.manual_seed(seed)
     direction = torch.randn(weights.size())
     if normalize:
         normalize_direction(direction, weights)
@@ -56,15 +56,11 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
                                             metric: TrainingMetrics,
                                             config: LandscapeConfig) -> Tuple[List[torch.Tensor], torch.Tensor]:
     """
-        Training function wrapper to  all the weights after a full training epochs.
-
-        Return:
-            list of torch.Tensor of the model's weights for each epochs,
-            list of values of the loss at each epochs,
-            the last set of weights.
+        This will generate a list of weights at a given epoch while training the passed model.
+        If teleport_every is different than 0, the model will teleport every time.
     """
     w = [model.get_weights().clone().detach().cpu()]
-    trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
     optim = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     for e in range(config.epochs):
@@ -123,8 +119,8 @@ def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[to
     print("Appliying PCA on matrix...")
     pca = PCA(n_components=2)
     pca.fit(M)
-    pc1 = torch.tensor(pca.components_[0], dtype=original_w.dtype)
-    pc2 = torch.tensor(pca.components_[1], dtype=original_w.dtype)
+    pc1 = torch.tensor(pca.components_[0], dtype=origin_weight.dtype)
+    pc2 = torch.tensor(pca.components_[1], dtype=origin_weight.dtype)
 
     angle = compute_angle(pc1, pc2)
 
@@ -153,8 +149,9 @@ def generate_weight_trajectory(checkpoints: List[torch.Tensor],
 
 
 def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
-                  weight_traj: Tuple[torch.Tensor, torch.Tensor] = None, teleport_idx: Union[int, np.ndarray] = None, levels: int = 25, ):
-    # plt.figure()
+                  weight_traj: Tuple[torch.Tensor, torch.Tensor] = None,
+                  teleport_idx: Union[int, np.ndarray] = None, levels: int = 25):
+    plt.figure()
     plt.contourf(x, y, loss, cmap='hsv', origin='lower', levels=levels, vmin=0)
     plt.colorbar()
     plt.contour(x, y, loss, colors='black', origin='lower', levels=levels, vmin=0)
@@ -172,9 +169,10 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
             label = "{:.5f}".format(loss_xy)
             plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
 
+    plt.show()
+
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
     from neuralteleportation.metrics import accuracy
     from torch.utils.data.dataloader import DataLoader
     from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
@@ -199,8 +197,8 @@ if __name__ == '__main__':
     trainset.data = trainset.data[:5000]  # For the example, don't use all the data.
     trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
 
-    x = torch.linspace(-1, 1, 50)
-    y = torch.linspace(-1, 1, 50)
+    x = torch.linspace(-1, 1, 5)
+    y = torch.linspace(-1, 1, 5)
     surface = torch.stack((x, y))
 
     model = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
@@ -218,6 +216,4 @@ if __name__ == '__main__':
     w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
     weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))
 
-    plt.figure()
     plot_contours(x, y, loss, weight_traj, teleport_idx=teleport_idx)
-    plt.show()
