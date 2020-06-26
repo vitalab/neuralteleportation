@@ -12,7 +12,7 @@ from neuralteleportation.metrics import accuracy
 from neuralteleportation.layerhook import LayerHook
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
-__models__ = experiment_setup.get_model_list()
+__models__ = experiment_setup.get_model_names()
 
 
 def argument_parser():
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         plt.title("Original Image")
 
     # Change the model to a teleportable model.
-    net = experiment_setup.get_model_from_string(args.model, num_classes=10, input_channels=dims).to(device=device)
+    net = experiment_setup.get_model_from_name(args.model, num_classes=10, input_channels=dims).to(device=device)
     net = NeuralTeleportationModel(network=net, input_shape=(batch_size, dims, w, h))
 
     metric = TrainingMetrics(torch.nn.CrossEntropyLoss(), [accuracy])
