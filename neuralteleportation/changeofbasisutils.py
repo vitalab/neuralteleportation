@@ -1,8 +1,14 @@
 import numpy as np
-import torch
+from torch import Tensor, tensor
+
+available_sampling_types = ["usual", "symmetric", "negative", "zero"]
 
 
-def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', requires_grad: bool=False) -> torch.Tensor:
+def get_available_cob_sampling_types():
+    return available_sampling_types
+
+
+def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', requires_grad: bool=False) -> Tensor:
     """
         Return random change of basis between -range_cob+1 and range_cob+1.
         'usual' - in interval [1-range_cob,1+range_cob]
@@ -28,9 +34,10 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', re
     elif sampling_type == 'symmetric':
         samples = np.random.randint(0, 2, size=size)
         cob = np.zeros_like(samples, dtype=np.float)
-        cob[samples == 1] = np.random.uniform(low=-1 - range_cob, high=-1 + range_cob, size=samples.sum())
-        cob[samples == 0] = np.random.uniform(low=1 - range_cob, high=1 + range_cob,
-                                              size=(len(samples) - samples.sum()))
+        cob[samples == 1] = np.random.uniform(
+            low=-1-range_cob, high=-1+range_cob, size=samples.sum())
+        cob[samples == 0] = np.random.uniform(
+            low=1-range_cob, high=1+range_cob, size=(len(samples) - samples.sum()))
 
     # Change of basis in interval [-1-range_cob,-1+range_cob]
     elif sampling_type == 'negative':
@@ -44,7 +51,7 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'usual', re
     else:
         raise ValueError("Sampling type is invalid")
 
-    return torch.tensor(cob, requires_grad=requires_grad)
+    return tensor(cob, requires_grad=requires_grad)
 
 
 if __name__ == '__main__':
