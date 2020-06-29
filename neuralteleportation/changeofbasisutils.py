@@ -5,7 +5,6 @@ available_sampling_types = ["within_landscape", "change_landscape", "positive", 
 
 
 def get_available_cob_sampling_types():
-
     return available_sampling_types
 
 
