@@ -4,6 +4,11 @@ import numpy as np
 available_sampling_types = ["within_landscape", "change_landscape", "positive", "negative", "centered"]
 
 
+def get_available_cob_sampling_types():
+
+    return available_sampling_types
+
+
 def get_random_cob(range_cob: int, size: int, sampling_type='within_landscape', center=1) -> np.ndarray:
     """
         Return random change of basis:
