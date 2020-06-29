@@ -17,20 +17,26 @@ def argument_parser():
 
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="Learning rate for the training")
-    parser.add_argument("--epochs", type=int, default=10,
+    parser.add_argument("--epochs", "-e", type=int, default=10,
                         help="for how many epochs should the model train")
-    parser.add_argument("--batch_size", type=int, default=32,
+    parser.add_argument("--batch_size", "-b", type=int, default=32,
                         help="used batch size.")
     parser.add_argument("--cob_range", type=float, default=0.5,
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
     parser.add_argument("--cob_sampling", type=str, default="usual",
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
-    parser.add_argument("--teleport_every", "-te", type=int, default=5,
-                        help="Make the model teleport after the given amount of epochs")
+    parser.add_argument("--teleport_at", "-t", type=int, default=5,
+                        help="Make the model teleport after at the given epoch number")
     parser.add_argument("--x", type=int, default="20",
-                        help="Define the precision of the x-axis")
+                        help="Defines the precision of the x-axis")
     parser.add_argument("--y", type=int, default="20",
-                        help="Define the precision of the y-axis")
+                        help="Defines the precision of the y-axis")
+    parser.add_argument("--scope", type=float, default=1.0,
+                        help="Apply the factor to the direction vector in order to get specific scopes.")
+    parser.add_argument("--model", type=str, default="resnet18COB",
+                        help="Defines what model to plot the surface of.")
+    parser.add_argument("--use_teleport_direction", action="store_true", default=False,
+                        help="If the direction vector from the teleportation should be used as X-axis direction vector")
 
     return parser.parse_args()
 
@@ -50,13 +56,13 @@ if __name__ == '__main__':
         batch_size=args.batch_size,
         cob_range=args.cob_range,
         cob_sampling=args.cob_sampling,
-        teleport_every=args.teleport_every,
+        teleport_at=args.teleport_at,
         device=device
     )
 
     model = resnet18COB(num_classes=10)
     trainset, valset, testset = get_cifar10_datasets()
-    trainset.data = trainset.data[:100]  # For the example, don't use all the data.
+    # trainset.data = trainset.data[:5000]
 
     x = torch.linspace(-1, 1, args.x)
     y = torch.linspace(-1, 1, args.y)
@@ -67,8 +73,10 @@ if __name__ == '__main__':
     original_w = model.get_weights()
     w_checkpoints, final_w = losslandscape.generate_teleportation_training_weights(model, trainset,
                                                                                    metric=metric, config=config)
-    delta = losslandscape.generate_random_2d_vector(final_w, seed=1)
-    eta = losslandscape.generate_random_2d_vector(final_w, seed=2)
+    delta = losslandscape.generate_random_2d_vector(final_w, seed=1) * args.scope
+    if args.use_teleport_direction:
+        delta = losslandscape.generate_direction_vector(w_checkpoints, args.teleport_at)
+    eta = losslandscape.generate_random_2d_vector(final_w, seed=2) * args.scope
 
     # Calculate angle between the two direction vectors.
     print("angle between direction is {} rad".format(losslandscape.compute_angle(delta, eta)))

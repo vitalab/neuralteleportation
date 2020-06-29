@@ -15,20 +15,37 @@ from neuralteleportation.training.training import test, train_epoch
 
 @dataclass
 class LandscapeConfig(TrainingConfig):
-    teleport_every: int = 0,
+    teleport_at: int = 0,
     cob_range: float = 0.5,
     cob_sampling: str = 'usual'
 
 
-def generate_random_2d_vector(weights: torch.Tensor, normalize: bool = True, seed: int = 1) -> torch.Tensor:
+def generate_random_2d_vector(weights: torch.Tensor, normalize: bool = True, seed: int = None) -> torch.Tensor:
     """
         Generates a random vector of size equals to the weights of the model.
     """
-    torch.manual_seed(seed)
+    if seed:
+        torch.manual_seed(seed)
     direction = torch.randn(weights.size())
     if normalize:
         normalize_direction(direction, weights)
     return direction
+
+
+def generate_direction_vector(checkpoints: List[torch.Tensor], teleport_at: List[int]) -> List[torch.Tensor]:
+    """
+        Generate the directions vector from model teleportations.
+
+        returns:
+            a list containing every teleportation direction.
+    """
+    res = []
+    for i in teleport_at:
+        w_o = checkpoints[i]
+        w_t = checkpoints[i + 1]
+        res.append(torch.abs(w_o - w_t))
+
+    return res
 
 
 def normalize_direction(direction: torch.Tensor, weights: torch.Tensor):
@@ -64,7 +81,7 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
     optim = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     for e in range(config.epochs):
-        if e % config.teleport_every == 0 and e != 0:
+        if e in config.teleport_at:
             print("Teleporting Model...")
             model.random_teleport(cob_range=config.cob_range, sampling_type=config.cob_sampling)
             w.append(model.get_weights().clone().detach().cpu())
@@ -189,7 +206,7 @@ if __name__ == '__main__':
         epochs=10,
         batch_size=32,
         cob_range=1e-5,
-        teleport_every=5,
+        teleport_at=5,
         device=device
     )
     model = resnet18COB(num_classes=10)
@@ -211,7 +228,7 @@ if __name__ == '__main__':
     loss = np.array(loss)
     loss = np.resize(loss, (len(x), len(y)))
 
-    teleport_idx = np.arange(config.teleport_every+1, len(w_checkpoints), config.teleport_every+1, dtype=np.int)
+    teleport_idx = config.teleport_at
     w_diff = [(w - final_w) for w in w_checkpoints]
     w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
     weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))
