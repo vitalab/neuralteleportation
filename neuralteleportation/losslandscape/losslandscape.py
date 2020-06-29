@@ -167,11 +167,12 @@ def generate_weight_trajectory(checkpoints: List[torch.Tensor],
 
 def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
                   weight_traj: Tuple[torch.Tensor, torch.Tensor] = None,
-                  teleport_idx: Union[int, np.ndarray] = None, levels: int = 25):
+                  teleport_idx: Union[int, List[int]] = None, levels: int = 25):
     plt.figure()
-    plt.contourf(x, y, loss, cmap='hsv', origin='lower', levels=levels, vmin=0)
+    plt.contourf(x, y, loss, cmap='hsv', origin='lower', levels=levels)
     plt.colorbar()
-    plt.contour(x, y, loss, colors='black', origin='lower', levels=levels, vmin=0)
+    cs = plt.contour(x, y, loss, colors='black', origin='lower', levels=levels)
+    plt.clabel(cs, cs.levels)
 
     if weight_traj:
         # Plot all the weight points and highlight the teleported one.
@@ -179,12 +180,12 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
 
-        for wx, wy in zip(weight_traj[0], weight_traj[1]):
-            idx = (wx - x).abs().argmin()
-            idy = (wy - y).abs().argmin()
-            loss_xy = loss[idx][idy]
-            label = "{:.5f}".format(loss_xy)
-            plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
+        # for wx, wy in zip(weight_traj[0], weight_traj[1]):
+        #     idx = (wx - x).abs().argmin()
+        #     idy = (wy - y).abs().argmin()
+        #     loss_xy = loss[idx][idy]
+        #     label = "{:.5f}".format(loss_xy)
+        #     plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
 
     plt.show()
 
@@ -206,7 +207,7 @@ if __name__ == '__main__':
         epochs=10,
         batch_size=32,
         cob_range=1e-5,
-        teleport_at=5,
+        teleport_at=[5],
         device=device
     )
     model = resnet18COB(num_classes=10)
@@ -228,7 +229,7 @@ if __name__ == '__main__':
     loss = np.array(loss)
     loss = np.resize(loss, (len(x), len(y)))
 
-    teleport_idx = config.teleport_at
+    teleport_idx = [i+1 for i in config.teleport_at]
     w_diff = [(w - final_w) for w in w_checkpoints]
     w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
     weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))

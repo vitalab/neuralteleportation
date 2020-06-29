@@ -25,7 +25,7 @@ def argument_parser():
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
     parser.add_argument("--cob_sampling", type=str, default="usual",
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
-    parser.add_argument("--teleport_at", "-t", type=int, default=5,
+    parser.add_argument("--teleport_at", "-t", type=list, default=[5],
                         help="Make the model teleport after at the given epoch number")
     parser.add_argument("--x", type=int, default="20",
                         help="Defines the precision of the x-axis")
@@ -62,7 +62,6 @@ if __name__ == '__main__':
 
     model = resnet18COB(num_classes=10)
     trainset, valset, testset = get_cifar10_datasets()
-    # trainset.data = trainset.data[:5000]
 
     x = torch.linspace(-1, 1, args.x)
     y = torch.linspace(-1, 1, args.y)
@@ -87,7 +86,9 @@ if __name__ == '__main__':
 
     w_diff = [(w - final_w) for w in w_checkpoints]
     w_x_dirrection, w_y_dirrection = losslandscape.generate_weights_direction(original_w, w_diff)
+    w_x_dirrection *= args.scope
+    w_y_dirrection *= args.scope
     weight_traj = losslandscape.generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
 
-    teleport_idx = np.arange(config.teleport_every + 1, len(w_checkpoints), config.teleport_every + 1, dtype=np.int)
+    teleport_idx = [i+1 for i in args.teleport_at]
     losslandscape.plot_contours(x, y, loss, weight_traj, teleport_idx)
