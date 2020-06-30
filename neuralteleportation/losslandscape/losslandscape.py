@@ -15,7 +15,7 @@ from neuralteleportation.training.training import test, train_epoch
 
 @dataclass
 class LandscapeConfig(TrainingConfig):
-    teleport_at: int = 0,
+    teleport_at: List[int] = 0,
     cob_range: float = 0.5,
     cob_sampling: str = 'usual'
 
@@ -40,9 +40,9 @@ def generate_direction_vector(checkpoints: List[torch.Tensor], teleport_at: List
             a list containing every teleportation direction.
     """
     res = []
-    for i in teleport_at:
-        w_o = checkpoints[i]
-        w_t = checkpoints[i + 1]
+    for n, i in enumerate(teleport_at):
+        w_o = checkpoints[i+n]
+        w_t = checkpoints[i+(n+1)]
         res.append(torch.abs(w_o - w_t))
 
     return res
@@ -169,7 +169,7 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
                   weight_traj: Tuple[torch.Tensor, torch.Tensor] = None,
                   teleport_idx: Union[int, List[int]] = None, levels: int = 25):
     plt.figure()
-    plt.contourf(x, y, loss, cmap='hsv', origin='lower', levels=levels)
+    plt.contourf(x, y, loss, cmap='coolwarm', origin='lower', levels=levels)
     plt.colorbar()
     cs = plt.contour(x, y, loss, colors='black', origin='lower', levels=levels)
     plt.clabel(cs, cs.levels)
@@ -179,13 +179,6 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
         plt.plot(weight_traj[0], weight_traj[1], '-o', c='black')
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
-
-        # for wx, wy in zip(weight_traj[0], weight_traj[1]):
-        #     idx = (wx - x).abs().argmin()
-        #     idy = (wy - y).abs().argmin()
-        #     loss_xy = loss[idx][idy]
-        #     label = "{:.5f}".format(loss_xy)
-        #     plt.annotate(label, (wx, wy), textcoords="offset points", xytext=(10, 10), ha='center')
 
     plt.show()
 
