@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.nn.modules import Flatten
 
-from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.activation import ReLUCOB, TanhCOB, SigmoidCOB
 from neuralteleportation.layers.neuralteleportation import FlattenCOB
 from neuralteleportation.layers.neuron import LinearCOB, Conv2dCOB, ConvTranspose2dCOB, BatchNorm1dCOB, \
     BatchNorm2dCOB
@@ -15,6 +15,8 @@ from neuralteleportation.layers.pooling import MaxPool2dCOB, AvgPool2dCOB
 COB_LAYER_DICT = {nn.Linear: LinearCOB,
                   nn.Conv2d: Conv2dCOB,
                   nn.ReLU: ReLUCOB,
+                  nn.Tanh: TanhCOB,
+                  nn.Sigmoid: SigmoidCOB,
                   nn.ConvTranspose2d: ConvTranspose2dCOB,
                   nn.AvgPool2d: AvgPool2dCOB,
                   nn.MaxPool2d: MaxPool2dCOB,

@@ -12,8 +12,7 @@ class TestTorchVisionModels:
 
     def test_models_teleportation(self):
         for model_fn in self.models_functions:
-            model = model_fn()
-            model.eval()  # model must be set to eval because of dropout
+            model = model_fn(num_classes=10)
             test_teleport(model, input_shape=self.default_input_shape, model_name=model_fn.__name__)
 
             assert True
@@ -25,7 +24,7 @@ class TestTorchVisionModels:
         """
 
         for model_fn in self.models_functions:
-            model = model_fn(pretrained=True)  # Test if the model can load weights correctly
+            model = model_fn(pretrained=True, num_classes=1000)  # Test if the model can load weights correctly
 
         assert True
 

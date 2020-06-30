@@ -14,8 +14,8 @@ class MaxPool2dCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.MaxPool2d)
     cob_field = 'cob'
     reshape_cob = True
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        self.cob = torch.tensor(prev_cob)
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        self.cob = prev_cob
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)
@@ -27,7 +27,7 @@ class AdaptiveAvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AdaptiveAvgPool2d):
     Average pooling is scale invariant, nothing needs to be done to the layer.
     """
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
 
@@ -37,7 +37,7 @@ class AvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AvgPool2d):
     Average pooling is scale invariant, nothing needs to be done to the layer.
     """
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
 
@@ -50,8 +50,8 @@ class UpsampleCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.Upsample):
     cob_field = 'cob'
     reshape_cob = True
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        self.cob = torch.tensor(prev_cob)
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        self.cob = prev_cob
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)

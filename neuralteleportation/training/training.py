@@ -19,7 +19,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=config.lr)
 
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches)
 
     for epoch in range(1, config.epochs + 1):
         train_epoch(model, metrics.criterion, optimizer,
