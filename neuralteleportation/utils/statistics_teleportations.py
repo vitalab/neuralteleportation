@@ -30,7 +30,7 @@ def plot_histogram_teleported_gradients(network, pbar, n_part=5, nb_batches=20, 
     loss_func = torch.nn.CrossEntropyLoss()
 
     # This measures the increase of the change of basis in each iteration
-    cob = np.linspace(0.001, 0.4, n_part)
+    cob = np.linspace(0.001, 0.99, n_part)
 
     for i in range(n_part):
         rand_angle_results = []
@@ -84,14 +84,12 @@ def plot_histogram_teleported_gradients(network, pbar, n_part=5, nb_batches=20, 
         x_ming = meang - deltag
         x_maxg = meang + deltag
 
-        plt.subplot(3, 1, 1)
-
         bin_height, bin_boundary = np.histogram(np.array(grad_grad_angle_results))
         width = bin_boundary[1] - bin_boundary[0]
         bin_height = bin_height / float(max(bin_height))
         plt.subplot(3, 1, 1)
         plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='r')
-        plt.title(f'{network_descriptor}: COB range: {cob[i]}')
+        plt.title(f'{network_descriptor}: within_landscape COB; range: {cob[i]}')
         plt.xlim(x_ming, x_maxg)
         plt.legend(['Gradient \n vs \n Teleported gradient'])
 
@@ -154,7 +152,7 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
     variance = []
 
     # Grid to sample the change of basis from
-    x_axis = np.linspace(0.1, 0.9, n_part)
+    x_axis = np.linspace(0.0, 0.999, n_part)
 
     for i in range(n_part):
         to_compute_mean = []
@@ -183,8 +181,8 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
     plt.errorbar(x_axis, differences, yerr=variance)
     plt.plot(x_axis, differences)
 
-    plt.title('Difference of normalized magnitude between teleportations of the gradient')
-    plt.title(f'{network_descriptor}, 'f'{nb_teleportations:} iterations')
+    plt.title(f'{network_descriptor}, 'f'{nb_teleportations:} iterations. '
+              f'Difference of normalized magnitude between teleportations of the gradient')
     plt.ylabel('| ||Grad||/||W|| - ||Tel.Grad||/||Tel.W|| |')
     plt.xlabel('cob_range')
     plt.show()
