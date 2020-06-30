@@ -12,6 +12,8 @@ class TrainingConfig:
     batch_size: int = 32
     device: str = 'cpu'
     exp_logger: BaseLogger = None
+    shuffle_batches: bool = False
+    weight_decay: float = 0
 
 
 @dataclass
