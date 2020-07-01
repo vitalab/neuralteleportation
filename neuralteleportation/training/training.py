@@ -57,9 +57,10 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
     pbar.close()
 
 
-def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig):
+def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig, eval_mode: bool = True):
     test_loader = DataLoader(dataset, batch_size=config.batch_size)
-    model.eval()
+    if eval_mode:
+        model.eval()
     results = defaultdict(list)
     pbar = tqdm(enumerate(test_loader))
     with torch.no_grad():

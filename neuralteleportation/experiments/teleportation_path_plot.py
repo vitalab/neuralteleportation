@@ -35,8 +35,10 @@ def argument_parser():
                         help="Apply the factor to the direction vector in order to get specific scopes.")
     parser.add_argument("--model", type=str, default="resnet18COB",
                         help="Defines what model to plot the surface of.")
-    parser.add_argument("--use_teleport_direction", action="store_true", default=True,
+    parser.add_argument("--use_teleport_direction", action="store_true", default=False,
                         help="If the direction vector from the teleportation should be used as X-axis direction vector")
+    parser.add_argument("--show_weight_traj", action="store_true", default=False,
+                        help="Enable the plotting of the weights trajectory while training.")
 
     return parser.parse_args()
 
@@ -62,13 +64,14 @@ if __name__ == '__main__':
 
     model = resnet18COB(num_classes=10)
     trainset, valset, testset = get_cifar10_datasets()
-    trainset.data = trainset.data[:1000]
+    trainset.data = trainset.data[:100]
 
     x = torch.linspace(-1, 1, args.x)
     y = torch.linspace(-1, 1, args.y)
     shape = x.shape if y is None else (len(x), len(y))
     surface = torch.stack((x, y))
 
+    model.to(device)
     model = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
     original_w = model.get_weights()
     w_checkpoints, final_w = losslandscape.generate_teleportation_training_weights(model, trainset,
@@ -76,7 +79,7 @@ if __name__ == '__main__':
     delta = losslandscape.generate_random_2d_vector(final_w, seed=1) * args.scope
     eta = losslandscape.generate_random_2d_vector(final_w, seed=2) * args.scope
     if args.use_teleport_direction:
-        # get the distance between the original wieght and the teleported one.
+        # Get the distance between the original wieght W and the teleported one T(W).
         # Then normalize it with the cob_range.
         # After that use the generate direction vector for both axis of the translation.
         delta = losslandscape.generate_direction_vector(w_checkpoints, args.teleport_at)[0] / args.cob_range
@@ -90,10 +93,12 @@ if __name__ == '__main__':
     loss = np.resize(loss, shape)
 
     w_diff = [(w - final_w) for w in w_checkpoints]
-    w_x_dirrection, w_y_dirrection = losslandscape.generate_weights_direction(original_w, w_diff)
-    w_x_dirrection *= args.scope
-    w_y_dirrection *= args.scope
-    weight_traj = losslandscape.generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
+    weight_traj = None
+    if args.show_weight_traj:
+        w_x_dirrection, w_y_dirrection = losslandscape.generate_weights_direction(original_w, w_diff)
+        w_x_dirrection *= args.scope
+        w_y_dirrection *= args.scope
+        weight_traj = losslandscape.generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
 
     teleport_idx = [i+(n+1) for n, i in enumerate(args.teleport_at)]
     losslandscape.plot_contours(x, y, loss, weight_traj, teleport_idx)

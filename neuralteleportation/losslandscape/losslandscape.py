@@ -107,11 +107,12 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
     for _, x in enumerate(surface[0]):
         for _, y in enumerate(surface[1]):
             print("Evaluating [{:.3f}, {:.3f}]".format(x.item(), y.item()))
-            x, y = x.to(config.device), y.to(config.device)
+            x, y = x.to(config.device, ), y.to(config.device, )
 
             # L (w + alpha*delta + beta*eta)
             model.set_weights(w + (delta * x + eta * y).to(config.device))
-            results = test(model, trainset, metric, config)
+            # Model should not be in eval mode since we are going to change the weights and nothing else.
+            results = test(model, trainset, metric, config, eval_mode=False)
 
             loss.append(results['loss'])
             acc.append(results['accuracy'])
@@ -141,7 +142,7 @@ def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[to
 
     angle = compute_angle(pc1, pc2)
 
-    print("Angle between pc1 and pc2 is {:3f}".format(angle))
+    print("Angle between pc1 and pc2 is {:.3f}".format(angle))
     assert torch.isclose(angle, torch.tensor(1.0, dtype=torch.float), atol=1), "The PCA component " \
                                                                                "are not indenpendent "
     return torch.mul(pc1, origin_weight.cpu()), torch.mul(pc2, origin_weight.cpu())
