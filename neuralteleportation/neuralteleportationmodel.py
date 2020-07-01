@@ -89,7 +89,7 @@ class NeuralTeleportationModel(nn.Module):
             nn.Module of the network after teleportation
         """
         return self.teleport(self.generate_random_cob(cob_range, sampling_type),
-                             reset_teleportation=reset_teleportation, center=center)
+                             reset_teleportation=reset_teleportation)
 
     def teleport(self, cob: torch.Tensor, reset_teleportation: bool = True):
         """

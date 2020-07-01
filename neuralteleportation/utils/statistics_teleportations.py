@@ -181,8 +181,7 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
     plt.errorbar(x_axis, differences, yerr=variance)
     plt.plot(x_axis, differences)
 
-    plt.title(f'{network_descriptor}, 'f'{nb_teleportations:} iterations. '
-              f'Difference of normalized magnitude between teleportations of the gradient')
+    plt.title(f'{network_descriptor}, 'f'{nb_teleportations:} iterations. ')
     plt.ylabel('| ||Grad||/||W|| - ||Tel.Grad||/||Tel.W|| |')
     plt.xlabel('cob_range')
     plt.show()

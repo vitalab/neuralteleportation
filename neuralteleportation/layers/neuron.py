@@ -80,7 +80,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
 
         # Check if the weights were updated during training on loading weights.
-        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))):
+        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))) or (self.weight.device != self.w.device):
             self._set_proxy_weights()
 
         if self.bias is not None and bias:
