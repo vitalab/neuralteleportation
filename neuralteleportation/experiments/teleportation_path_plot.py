@@ -27,16 +27,12 @@ def argument_parser():
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
     parser.add_argument("--teleport_at", "-t", nargs='+', type=int, default=[5],
                         help="Make the model teleport after at the given epoch number")
-    parser.add_argument("--x", type=int, default="20",
+    parser.add_argument("--x", type=int, default=50,
                         help="Defines the precision of the x-axis")
-    parser.add_argument("--y", type=int, default="20",
+    parser.add_argument("--y", type=int, default=50,
                         help="Defines the precision of the y-axis")
-    parser.add_argument("--scope", type=float, default=1.0,
-                        help="Apply the factor to the direction vector in order to get specific scopes.")
     parser.add_argument("--model", type=str, default="resnet18COB",
                         help="Defines what model to plot the surface of.")
-    parser.add_argument("--use_teleport_direction", action="store_true", default=False,
-                        help="If the direction vector from the teleportation should be used as X-axis direction vector")
     parser.add_argument("--show_weight_traj", action="store_true", default=False,
                         help="Enable the plotting of the weights trajectory while training.")
 
@@ -64,7 +60,6 @@ if __name__ == '__main__':
 
     model = resnet18COB(num_classes=10)
     trainset, valset, testset = get_cifar10_datasets()
-    trainset.data = trainset.data[:100]
 
     x = torch.linspace(-1, 1, args.x)
     y = torch.linspace(-1, 1, args.y)
@@ -76,14 +71,8 @@ if __name__ == '__main__':
     original_w = model.get_weights()
     w_checkpoints, final_w = losslandscape.generate_teleportation_training_weights(model, trainset,
                                                                                    metric=metric, config=config)
-    delta = losslandscape.generate_random_2d_vector(final_w, seed=1) * args.scope
-    eta = losslandscape.generate_random_2d_vector(final_w, seed=2) * args.scope
-    if args.use_teleport_direction:
-        # Get the distance between the original wieght W and the teleported one T(W).
-        # Then normalize it with the cob_range.
-        # After that use the generate direction vector for both axis of the translation.
-        delta = losslandscape.generate_direction_vector(w_checkpoints, args.teleport_at)[0] / args.cob_range
-        eta = delta
+    delta = losslandscape.generate_random_2d_vector(final_w, seed=1)
+    eta = losslandscape.generate_random_2d_vector(final_w, seed=2)
 
     # Calculate angle between the two direction vectors.
     print("angle between direction is {} rad".format(losslandscape.compute_angle(delta, eta)))
@@ -96,8 +85,6 @@ if __name__ == '__main__':
     weight_traj = None
     if args.show_weight_traj:
         w_x_dirrection, w_y_dirrection = losslandscape.generate_weights_direction(original_w, w_diff)
-        w_x_dirrection *= args.scope
-        w_y_dirrection *= args.scope
         weight_traj = losslandscape.generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
 
     teleport_idx = [i+(n+1) for n, i in enumerate(args.teleport_at)]

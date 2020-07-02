@@ -81,7 +81,7 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
     optim = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     for e in range(config.epochs):
-        if e in config.teleport_at:
+        if e in config.teleport_at and config.teleport_at != 0:
             print("Teleporting Model...")
             model.random_teleport(cob_range=config.cob_range, sampling_type=config.cob_sampling)
             w.append(model.get_weights().clone().detach().cpu())
@@ -92,6 +92,17 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
 
     final = w[-1::][0]
     return w, final
+
+
+def generate_1D_linear_interp(model: NeuralTeleportationModel, w_o: torch.Tensor, w_f: torch.Tensor, a: torch.Tensor,
+                  trainset: Dataset, metric: TrainingMetrics,config: TrainingConfig):
+    loss = []
+    for coord in a:
+        w = (1 - coord) * w_o + a * w_f
+        model.set_weights(w)
+        loss.append(test(model, trainset, metric, config, eval_mode=False)['loss'])
+
+    return loss
 
 
 def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tuple[torch.Tensor, torch.Tensor],
@@ -178,6 +189,7 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
     if weight_traj:
         # Plot all the weight points and highlight the teleported one.
         plt.plot(weight_traj[0], weight_traj[1], '-o', c='black')
+
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
 
