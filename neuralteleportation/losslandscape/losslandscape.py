@@ -41,8 +41,8 @@ def generate_direction_vector(checkpoints: List[torch.Tensor], teleport_at: List
     """
     res = []
     for n, i in enumerate(teleport_at):
-        w_o = checkpoints[i+n]
-        w_t = checkpoints[i+(n+1)]
+        w_o = checkpoints[i + n]
+        w_t = checkpoints[i + (n + 1)]
         res.append(torch.abs(w_o - w_t))
 
     return res
@@ -52,6 +52,11 @@ def normalize_direction(direction: torch.Tensor, weights: torch.Tensor):
     """
         Apply a filter normalization to the direction vector.
         d <- d/||d|| * ||w||
+
+         This was use by:
+            Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
+            Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
+            Source Code: https://github.com/tomgoldstein/loss-landscape
 
         This process is a inplace operation.
     """
@@ -95,14 +100,22 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
 
 
 def generate_1D_linear_interp(model: NeuralTeleportationModel, w_o: torch.Tensor, w_f: torch.Tensor, a: torch.Tensor,
-                  trainset: Dataset, metric: TrainingMetrics,config: TrainingConfig):
+                              trainset: Dataset, metric: TrainingMetrics, config: TrainingConfig):
+    """
+        This is 1-Dimensional Linear Interpolaiton from
+        θ(α) = (1−α)θ + αθ′
+    """
     loss = []
+    acc = []
     for coord in a:
-        w = (1 - coord) * w_o + a * w_f
+        # tetha(a) = (1-alpha)*tetha + alpha*tetha'
+        w = (1 - coord) * w_o + coord * w_f
         model.set_weights(w)
-        loss.append(test(model, trainset, metric, config, eval_mode=False)['loss'])
+        res = test(model, trainset, metric, config, eval_mode=False)
+        loss.append(res['loss'])
+        acc.append(res['accuracy'])
 
-    return loss
+    return loss, acc
 
 
 def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tuple[torch.Tensor, torch.Tensor],
@@ -136,10 +149,7 @@ def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[to
         Generate a tensor of the 2 most explanatory directions from the matrix
         M = [W0 - Wn, ... ,Wn-1 - Wn]
 
-        This technic was use by:
-            Authors: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer and Tom Goldstein.
-            Title: Visualizing the Loss Landscape of Neural Nets. NIPS, 2018.
-            Source Code: https://github.com/tomgoldstein/loss-landscape
+
 
         returns:
             Tuple containing the x and y directions vectors. (only use x if doing a 1D plotting)
@@ -196,6 +206,25 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
     plt.show()
 
 
+def plot_interp(loss: List[torch.Tensor], acc: List[torch.Tensor], a: torch.Tensor):
+    # Find the nearest value of a=0 and a=1
+    idx_o = torch.abs(a - 0).argmin().item()
+    idx_t = torch.abs(a - 1).argmin().item()
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    ax1.set_title("Linear Interpolation between W and T(W)")
+    ax1.set_ylabel("Loss", color='b')
+    ax1.plot(a, loss, 'bo', markersize=2)
+    ax1.plot(a[idx_o], loss[idx_o], 'ko', markersize=3, label='W')
+    ax1.plot(a[idx_t], loss[idx_t], 'yo', markersize=3, label="T(W)")
+    ax2.set_ylabel('Accuracy', color='r')
+    ax2.plot(a, acc, 'ro', markersize=2)
+    ax2.plot(a[idx_o], acc[idx_o], 'kx', markersize=3, label='W')
+    ax2.plot(a[idx_t], acc[idx_t], 'yx', markersize=3, label="T(W)")
+    plt.show()
+
+
 if __name__ == '__main__':
     from neuralteleportation.metrics import accuracy
     from torch.utils.data.dataloader import DataLoader
@@ -235,7 +264,7 @@ if __name__ == '__main__':
     loss = np.array(loss)
     loss = np.resize(loss, (len(x), len(y)))
 
-    teleport_idx = [i+1 for i in config.teleport_at]
+    teleport_idx = [i + 1 for i in config.teleport_at]
     w_diff = [(w - final_w) for w in w_checkpoints]
     w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
     weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))
