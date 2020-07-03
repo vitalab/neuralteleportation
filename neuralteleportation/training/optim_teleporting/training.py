@@ -7,7 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics
-from neuralteleportation.training.optim_score.config import TeleportationTrainingConfig
+from neuralteleportation.training.optim_teleporting.config import TeleportationTrainingConfig
 from neuralteleportation.training.training import train_epoch, test
 
 

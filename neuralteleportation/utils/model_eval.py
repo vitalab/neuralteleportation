@@ -7,7 +7,7 @@ from torch import Tensor, optim
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics
-from neuralteleportation.training.optim_score.config import TeleportationTrainingConfig
+from neuralteleportation.training.optim_teleporting.config import TeleportationTrainingConfig
 
 
 def weighted_grad_norm(model: NeuralTeleportationModel, data: Tensor, target: Tensor,

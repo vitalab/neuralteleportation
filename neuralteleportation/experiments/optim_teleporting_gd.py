@@ -8,8 +8,8 @@ if __name__ == '__main__':
 
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.config import TrainingMetrics
-    from neuralteleportation.training.optim_score.training import train
-    from neuralteleportation.training.optim_score.config import TeleportationTrainingConfig
+    from neuralteleportation.training.optim_teleporting.training import train
+    from neuralteleportation.training.optim_teleporting.config import TeleportationTrainingConfig
     from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
     from neuralteleportation.training.experiment_run import run_model_training
     from neuralteleportation.utils.model_eval import weighted_grad_norm, loss_lookahead_diff
