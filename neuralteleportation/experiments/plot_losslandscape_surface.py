@@ -34,7 +34,7 @@ def argument_parser():
     parser.add_argument("--cob_range", type=float, default=0.5, help='set the CoB range for the teleportation.')
     parser.add_argument("--teleport_mode", type=str, default="positive", choices=["positive", "negative"],
                         help="set the teleportation mode between positive and negative CoB")
-    parser.add_argument("--sampling", type=str, default="usual", help="Sampling type for CoB.")
+    parser.add_argument("--sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["mnist", "cifar10"],
                         help="what dataset should the model be trained on.")
     parser.add_argument("--x", type=str, default="-1:1:5", help='x axis size and precision')

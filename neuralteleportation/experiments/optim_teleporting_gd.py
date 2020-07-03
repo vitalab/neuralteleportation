@@ -1,3 +1,5 @@
+from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
+
 if __name__ == '__main__':
     import argparse
     import operator
@@ -15,7 +17,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Network optimization experiment where gradient descent jumps between "
                                                  "teleportations, based on a criterion evaluating the gradient of "
                                                  "multiple teleportations")
-    parser.add_argument("--cob_sampling", type=str, choices=['usual', 'symmetric', 'negative', 'zero'], default='usual',
+    parser.add_argument("--cob_sampling", type=str, choices=get_available_cob_sampling_types(),
+                        default='within_landscape',
                         help="Sampling algorithm to use when generating a change of basis")
     parser.add_argument("--cob_range", type=float, default=0.5)
     parser.add_argument("--optim", type=str, choices=['grad_norm', 'lookahead'], default='grad_norm',
