@@ -99,19 +99,19 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
     return w, final
 
 
-def generate_1D_linear_interp(model: NeuralTeleportationModel, w_o: torch.Tensor, w_f: torch.Tensor, a: torch.Tensor,
+def generate_1D_linear_interp(model: NeuralTeleportationModel, w_o: torch.Tensor, w_t: torch.Tensor, a: torch.Tensor,
                               trainset: Dataset, metric: TrainingMetrics, config: TrainingConfig):
     """
-        This is 1-Dimensional Linear Interpolaiton from
+        This is 1-Dimensional Linear Interpolaiton
         θ(α) = (1−α)θ + αθ′
     """
     loss = []
     acc = []
+
     for coord in a:
-        # tetha(a) = (1-alpha)*tetha + alpha*tetha'
-        w = (1 - coord) * w_o + coord * w_f
+        w = (1 - coord) * w_o + coord * w_t
         model.set_weights(w)
-        res = test(model, trainset, metric, config, eval_mode=False)
+        res = test(model, trainset, metric, config)
         loss.append(res['loss'])
         acc.append(res['accuracy'])
 
@@ -148,8 +148,6 @@ def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[to
     """
         Generate a tensor of the 2 most explanatory directions from the matrix
         M = [W0 - Wn, ... ,Wn-1 - Wn]
-
-
 
         returns:
             Tuple containing the x and y directions vectors. (only use x if doing a 1D plotting)

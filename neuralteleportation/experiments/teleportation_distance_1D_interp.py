@@ -21,7 +21,8 @@ def argument_parser():
                         help="Defines how big the batch size is")
     parser.add_argument("--cob_range", type=float, default=0.5,
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
-    parser.add_argument("--cob_sampling", type=str, default="usual",
+    parser.add_argument("--cob_sampling", type=str, default="within_landscape",
+                        choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
     parser.add_argument("--x", nargs=3, type=int, default=[0, 1, 50],
                         help="Defines the precision of the alpha")
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         batch_size=args.batch_size,
         cob_range=args.cob_range,
         cob_sampling=args.cob_sampling,
-        teleport_at=[5],
+        teleport_at=[args.epochs],
         device=device
     )
     if args.train_model:
