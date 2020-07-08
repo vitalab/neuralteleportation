@@ -288,6 +288,9 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.base_layer().forward(self, input / self.prev_cob)
 
+    def train(self, mode=True):
+        super().train(mode)
+        self.track_running_stats = mode
 
 class BatchNorm2dCOB(BatchNormMixin, nn.BatchNorm2d):
     reshape_cob = True
