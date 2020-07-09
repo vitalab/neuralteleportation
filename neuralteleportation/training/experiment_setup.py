@@ -10,6 +10,8 @@ from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
 from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 from neuralteleportation.models.model_zoo.vggcob import vgg16COB
+from torch.nn.modules import Flatten
+from neuralteleportation.layers.layer_utils import swap_model_modules_for_COB_modules
 
 
 def _default_vision_transform(func: Callable[[Callable], Any]):
@@ -72,7 +74,7 @@ def get_cifar10_models() -> List[nn.Module]:
     ]
 
 
-@to_device
+@_to_device
 def get_cifar100_models() -> List[nn.Module]:
     return [
         vgg16COB(num_classes=100, input_channels=3),
@@ -80,6 +82,25 @@ def get_cifar100_models() -> List[nn.Module]:
         densenet121COB(num_classes=100, input_channels=3),
     ]
 
+
+def get_cifar10_MLP() -> nn.Module:
+    mlp_model = nn.Sequential(
+        Flatten(),
+        nn.Linear(3072, 1536),
+        nn.ReLU(),
+        nn.Linear(1536, 512),
+        nn.ReLU(),
+        nn.Linear(512, 256),
+        nn.ReLU(),
+        nn.Linear(256, 128),
+        nn.ReLU(),
+        nn.Linear(128, 64),
+        nn.ReLU(),
+        nn.Linear(64, 10)
+    )
+
+    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
+    return mlp_model
 
 def _get_model_factories() -> Dict[str, Union[Callable[..., nn.Module], nn.Module]]:
     model_modules = [resnetcob, densenetcob, vggcob]

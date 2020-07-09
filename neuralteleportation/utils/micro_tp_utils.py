@@ -41,7 +41,7 @@ def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
 
 
 def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_descriptor='',
-                                    sampling_types=['usual'],
+                                    sampling_types=['within_landscape'],
                                     batch_sizes=[8, 16, 32, 64],
                                     criterion=None,
                                     device='cpu',
@@ -140,7 +140,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
                     model.set_weights(w1)
 
                     # teleport and get the new weights
-                    model.random_teleport(cob_range=cob, sampling_type=sampling_type)
+                    model = model.random_teleport(cob_range=cob, sampling_type=sampling_type)
 
                     if torch.cuda.is_available():
                         w2 = model.get_weights().detach()
@@ -372,7 +372,7 @@ def dot_product_between_telportation(network, dataset,
             w1 = model.get_weights().detach().to(device)
 
         # teleport and get the new weights
-        model.random_teleport(cob_range=cob, sampling_type='usual')
+        model.random_teleport(cob_range=cob, sampling_type='within_landscape')
         w2 = model.get_weights().detach().to(device)
 
         unit_dot_product_results.append(torch.matmul(torch.tensor(w1).to(device)/tensor_norm(w1),
@@ -393,7 +393,7 @@ def dot_product_between_telportation(network, dataset,
     plt.xlabel('log10(COB)')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_usual_'
+    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_within_landscape_'
                 f'reset_weights_{reset_weights}.png')
     plt.show()
 
@@ -407,6 +407,6 @@ def dot_product_between_telportation(network, dataset,
     plt.xlabel('log10(COB)')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_usual_'
+    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_within_landscape_'
                 f'reset_weights_{reset_weights}.png')
     plt.show()
