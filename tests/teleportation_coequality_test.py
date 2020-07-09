@@ -8,6 +8,8 @@ from neuralteleportation.layers.neuron import Conv2dCOB, BatchNorm2dCOB, LinearC
 from neuralteleportation.layers.activation import ReLUCOB
 from neuralteleportation.layers.neuralteleportation import FlattenCOB
 
+from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
+
 from neuralteleportation.training.training import test, train
 from neuralteleportation.training.experiment_setup import get_mnist_datasets
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
@@ -54,8 +56,11 @@ if __name__ == '__main__':
         epochs=1,
         device=device
     )
-    model = NeuralTeleportationModel(Net4(), input_shape=(config.batch_size, 1, 28, 28)).to(device)
-    # train(model, trainset, metrics=metric, config=config)
+
+    m = Net4()
+    # m = resnet18COB(num_classes=10, input_channels=1)
+    model = NeuralTeleportationModel(m, input_shape=(config.batch_size, 1, 28, 28)).to(device)
+    train(model, trainset, metrics=metric, config=config)
     loss_avg = []
     acc_avg = []
 
@@ -82,7 +87,7 @@ if __name__ == '__main__':
         print("==========================================")
 
     print("==========================================")
-    print("Loss and accuracy diff without set/get was")
+    print("Loss and accuracy avg diff without set/get was")
     print("Loss diff was: {:.6e}".format(np.mean(loss_avg)))
     print("Acc diff was: {:.6e}".format(np.mean(acc_avg)))
     print("==========================================")
@@ -96,16 +101,16 @@ if __name__ == '__main__':
     loss_avg = []
     acc_avg = []
     for _ in range(args.t):
-        model = NeuralTeleportationModel(Net4(), input_shape=(config.batch_size, 1, 28, 28)).to(device)
-        w_o = model.get_weights()
+        model = NeuralTeleportationModel(m, input_shape=(config.batch_size, 1, 28, 28)).to(device)
+        w_o, cob_o = model.get_params()
         model.random_teleport()
-        w_t = model.get_weights()
+        w_t , cob_t = model.get_params()
 
-        model.set_weights(w_o)
+        model.set_params(weights=w_o, cob=cob_o)
         res = test(model, testset, metric, config)
         loss1, acc1 = res['loss'], res['accuracy']
 
-        model.set_weights(w_t)
+        model.set_params(weights=w_t, cob=cob_t)
         res = test(model, testset, metric, config)
         loss2, acc2 = res['loss'], res['accuracy']
 
@@ -119,7 +124,7 @@ if __name__ == '__main__':
         print("==========================================")
 
     print("==========================================")
-    print("Loss and accuracy diff without set/get was")
+    print("Loss and accuracy avg diff with set/get was")
     print("Loss diff was: {:.6e}".format(np.mean(loss_avg)))
     print("Acc diff was: {:.6e}".format(np.mean(acc_avg)))
     print("==========================================")

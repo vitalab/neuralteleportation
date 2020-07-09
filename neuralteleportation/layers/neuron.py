@@ -9,8 +9,6 @@ from tqdm import tqdm
 from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.layers.neuralteleportation import NeuralTeleportationLayerMixin, COBForwardMixin
 
-from matplotlib import pyplot as plt
-
 
 class NeuronLayerMixin(NeuralTeleportationLayerMixin):
     in_features: int
@@ -85,14 +83,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         if self.bias is not None and bias:
             if flatten:
-                return self.w.flatten(), self.b.flatten()
+                return self.weight.detach().flatten(), self.bias.detach().flatten()
             else:
-                return self.w, self.b
+                return self.weight.detach(), self.bias.detach()
         else:
             if flatten:
-                return self.w.flatten(),
+                return self.weight.detach().flatten(),
             else:
-                return self.w,
+                return self.weight.detach(),
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
@@ -279,8 +277,8 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
         self.in_features = self.out_features = self.num_features
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
-        self.prev_cob = prev_cob
         super().apply_cob(prev_cob, next_cob)
+        self.prev_cob = prev_cob
 
     def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
         return next_cob
@@ -288,9 +286,6 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.base_layer().forward(self, input / self.prev_cob)
 
-    def train(self, mode=True):
-        super().train(mode)
-        self.track_running_stats = mode
 
 class BatchNorm2dCOB(BatchNormMixin, nn.BatchNorm2d):
     reshape_cob = True

@@ -365,6 +365,13 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return cob
 
+    def get_params(self):
+        return self.get_weights(), self.get_cob()
+
+    def set_params(self, weights, cob):
+        self.teleport(cob)
+        self.set_weights(weights)
+
 
 if __name__ == '__main__':
     from tests.cobmodels_test import *
