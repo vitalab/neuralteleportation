@@ -11,6 +11,9 @@ class NeuralTeleportationLayerMixin(object):
     def base_layer(cls):
         return cls.__bases__[-1]
 
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        raise NotImplemented
+
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         raise NotImplemented
 
@@ -37,6 +40,9 @@ class COBForwardMixin(object):
 class FlattenCOB(NeuralTeleportationLayerMixin, Flatten):
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
 

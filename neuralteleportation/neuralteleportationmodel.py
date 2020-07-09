@@ -122,8 +122,7 @@ class NeuralTeleportationModel(nn.Module):
         self.set_change_of_basis(cob)
 
         for k, layer in enumerate(self.graph):
-            if isinstance(layer['module'], NeuronLayerMixin):
-                layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+            layer['module'].teleport(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def teleport_activations(self, cob: torch.Tensor):
         """
@@ -132,8 +131,7 @@ class NeuralTeleportationModel(nn.Module):
         self.set_change_of_basis(cob)
 
         for k, layer in enumerate(self.graph):
-            if not isinstance(layer['module'], NeuronLayerMixin):
-                layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+            layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def set_change_of_basis(self, cob: torch.Tensor, contains_ones: bool = False):
         """
@@ -369,7 +367,7 @@ class NeuralTeleportationModel(nn.Module):
         return self.get_weights(), self.get_cob()
 
     def set_params(self, weights, cob):
-        self.teleport(cob)
+        self.teleport_activations(cob)
         self.set_weights(weights)
 
 

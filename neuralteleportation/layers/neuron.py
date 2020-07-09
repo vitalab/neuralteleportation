@@ -111,12 +111,15 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             self.b = weights[counter:counter + b_nb_params].reshape(b_shape)
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
-    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
         self.weight = nn.Parameter(self.w, requires_grad=True)
         if self.bias is not None:
             self.b = self.bias * next_cob.type_as(self.bias)
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
+
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         """Computes the factor to apply to the weights of the current layer to perform a change of basis.
@@ -176,7 +179,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
 class LinearCOB(NeuronLayerMixin, nn.Linear):
 
-    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         if len(prev_cob) != self.in_features:  # if previous layer is Conv2D, duplicate cob for each feature map.
             feature_map_size = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
@@ -184,7 +187,7 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
                 cob.append(c.repeat(feature_map_size))
             prev_cob = torch.cat(cob, dim=0)
 
-        super().apply_cob(prev_cob, next_cob)
+        super().teleport(prev_cob, next_cob)
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return next_cob[..., None] / prev_cob[None, ...]
@@ -279,6 +282,9 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         super().apply_cob(prev_cob, next_cob)
         self.prev_cob = prev_cob
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        super().teleport(prev_cob, next_cob)
 
     def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
         return next_cob
