@@ -24,7 +24,7 @@ class Concat(NeuralTeleportationLayerMixin, nn.Module):
                 x3 = self.Concat(x1, x2) # x1 comes before x2.
     """
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
     def forward(self, *args, dim: Union[int, None] = 1):
@@ -47,9 +47,9 @@ class Add(NeuralTeleportationLayerMixin, nn.Module):
                 x3 = Add(x1, x2) # x1 comes before x2.
     """
 
-    def apply_cob(self, prev_cob: np.ndarray, next_cob: np.ndarray):
-        self.prev_cob = torch.tensor(prev_cob)
-        self.next_cob = torch.tensor(next_cob)
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        self.prev_cob = prev_cob
+        self.next_cob = next_cob
 
     def forward(self, input1, input2):
         if self.prev_cob is None:
