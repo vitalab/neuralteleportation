@@ -75,8 +75,8 @@ if __name__ == '__main__':
     config = MicroTeleportationTrainingConfig(input_shape=(3, 32, 32), device=device, batch_size=10,
                                               num_teleportations=1, epochs=5)
     models = get_cifar10_models()
-    # run_multi_output_training(train, models, config, metrics,
-    #                           cifar10_train, cifar10_test, val_set=cifar10_val)
+    run_multi_output_training(train, models, config, metrics,
+                              cifar10_train, cifar10_test, val_set=cifar10_val)
     for model in models:
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
                                         network_descriptor=f'{model.__class__.__name__} on CIFAR10',
