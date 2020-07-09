@@ -29,17 +29,20 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         if self.bias is not None:
             self.b = self.bias.clone().detach().requires_grad_(True).type_as(self.bias)
 
-    def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'usual') -> torch.Tensor:
+    def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'within_landscape',
+                center: float = 1) -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
 
         Args:
             basis_range (float): range for the change of basis.
             sampling_type(str): label for type of sampling for change of basis
+            center(float): center for the sampling of the change of basis
 
         Returns:
             change of basis.
         """
-        return get_random_cob(range_cob=basis_range, size=self.out_features, sampling_type=sampling_type)
+        return get_random_cob(range_cob=basis_range, size=self.out_features, sampling_type=sampling_type,
+                              center=center)
 
     def get_output_cob(self) -> torch.Tensor:
         """Get change of basis for the layer if it is an output layer.
@@ -77,7 +80,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
 
         # Check if the weights were updated during training on loading weights.
-        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))):
+        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))) or (self.weight.device != self.w.device):
             self._set_proxy_weights()
 
         if self.bias is not None and bias:

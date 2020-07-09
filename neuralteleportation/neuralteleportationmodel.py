@@ -55,8 +55,8 @@ class NeuralTeleportationModel(nn.Module):
         """ Set the cob to ones. """
         self.teleport_activations(torch.ones(self.get_cob_size()))
 
-    def generate_random_cob(self, cob_range: float = 10, sampling_type: str = 'usual',
-                            requires_grad: bool = False) -> torch.Tensor:
+    def generate_random_cob(self, cob_range: float = 0.5, sampling_type: str = 'within_landscape',
+                            requires_grad: bool = False, center: float = 1) -> torch.Tensor:
         """
             Generate random cob with the correct size for the network.
         Args:
@@ -64,12 +64,12 @@ class NeuralTeleportationModel(nn.Module):
                                 positive range_cob.
             sampling_type (str): label for type of sampling for change of basis
             requires_grad (bool): whether the cob tensor should require gradients
-
+            center(float): the center for the change of basis sampling
         Returns:
             (Tensor) cob
         """
         return get_random_cob(range_cob=cob_range, size=self.get_cob_size(), requires_grad=requires_grad,
-                              sampling_type=sampling_type)
+                              sampling_type=sampling_type, center=center)
 
     def undo_teleportation(self):
         """
@@ -80,7 +80,8 @@ class NeuralTeleportationModel(nn.Module):
         # Set cob for activations to 1.
         self.initialize_cob()
 
-    def random_teleport(self, cob_range: float = 0.5, sampling_type: str = 'usual', reset_teleportation: bool = True):
+    def random_teleport(self, cob_range: float = 0.5, sampling_type: str = 'within_landscape',
+                        reset_teleportation: bool = True, center: float = 1):
         """
           Applies random change of basis to each of the network layers.
 
