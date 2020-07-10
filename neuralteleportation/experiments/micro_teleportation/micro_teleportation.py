@@ -3,10 +3,10 @@ from typing import Dict, Tuple, Union
 
 ##TODO take off
 import sys
-sys.path.append('/content/drive/My Drive/Colab Notebooks/neuralteleportation/')
-sys.path.append('/content/drive/My Drive/Colab Notebooks/neuralteleportation/neuralteleportation/')
-sys.path.append('/content/drive/My Drive/Colab Notebooks/neuralteleportation/training')
-sys.path.append('/content/drive/My Drive/Colab Notebooks/neuralteleportation/neuralteleportation/experiments')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/training')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/experiments')
 
 import torch.optim as optim
 from torch import nn
