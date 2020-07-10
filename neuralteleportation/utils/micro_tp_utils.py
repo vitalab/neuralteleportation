@@ -73,7 +73,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
     """
 
     ##TODO take off
-    nb_teleport = 10
+    nb_teleport = 1
 
     # Arbitrary precision threshold for nullity comparison
     torch.set_printoptions(precision=10, sci_mode=True)
@@ -375,7 +375,7 @@ def dot_product_between_telportation(network, dataset,
             w1 = model.get_weights().detach().to(device)
 
         # teleport and get the new weights
-        model.random_teleport(cob_range=cob, sampling_type='within_landscape')
+        model.random_teleport(cob_range=cob, sampling_type='within_landscape', center=max(cobs))
         w2 = model.get_weights().detach().to(device)
 
         unit_dot_product_results.append(torch.matmul(torch.tensor(w1).to(device)/tensor_norm(w1),
