@@ -72,13 +72,10 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
                                 aggregated data (mainly for debugging purposes)
     """
 
-    ##TODO take off
-    nb_teleport = 1
-
     # Arbitrary precision threshold for nullity comparison
     torch.set_printoptions(precision=10, sci_mode=True)
     tol = 1e-2
-    cobs = [0.001, 0.01]
+    cobs = [0.001, 0.01, 0.1]
     hist_dir = f'images/histograms/{network_descriptor}'
     series_dir = f'images/series/{network_descriptor}'
 
