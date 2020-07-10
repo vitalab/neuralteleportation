@@ -82,7 +82,7 @@ if __name__ == '__main__':
     for model in models:
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
                                         network_descriptor=f'{model.__class__.__name__} on CIFAR10',
-                                        device=device)
+                                        device=device, verbose=True)
 
         dot_product_between_telportation(network=model, dataset=cifar10_test,
                                          network_descriptor=f'{model.__class__.__name__} on CIFAR10',
