@@ -83,14 +83,14 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         if self.bias is not None and bias:
             if flatten:
-                return self.weight.detach().flatten(), self.bias.detach().flatten()
+                return self.w.detach().flatten(), self.b.detach().flatten()
             else:
-                return self.weight.detach(), self.bias.detach()
+                return self.w.detach(), self.b.detach()
         else:
             if flatten:
-                return self.weight.detach().flatten(),
+                return self.w.detach().flatten(),
             else:
-                return self.weight.detach(),
+                return self.w.detach(),
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
