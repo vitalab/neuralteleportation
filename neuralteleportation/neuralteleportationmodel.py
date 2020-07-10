@@ -218,7 +218,7 @@ class NeuralTeleportationModel(nn.Module):
         """
         return [l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)]
 
-    def get_weights(self, concat: bool = True, flatten=True, bias=True) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def get_weights(self, concat: bool = True, flatten=True, bias=True, get_proxy_weight=False) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
             Return model weights
 
@@ -227,6 +227,7 @@ class NeuralTeleportationModel(nn.Module):
                             else in the form of a list of Tensors
             flatten (bool): if true weights are flattened
             bias (bool): if true bias is included
+            get_proxy_weight (bool): if true, will only get the proxy weights without updating.
 
         Returns:
             torch.Tensor or list containing model weights
@@ -235,7 +236,7 @@ class NeuralTeleportationModel(nn.Module):
         w = []
 
         for k, layer in enumerate(self.get_neuron_layers()):
-            w.extend(layer.get_weights(flatten=flatten, bias=bias))
+            w.extend(layer.get_weights(flatten=flatten, bias=bias, get_proxy=get_proxy_weight))
 
         if concat:
             return torch.cat(w)

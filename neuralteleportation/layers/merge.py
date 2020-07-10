@@ -50,11 +50,11 @@ class Add(NeuralTeleportationLayerMixin, nn.Module):
                 x3 = Add(x1, x2) # x1 comes before x2.
     """
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
-        pass
-
-    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.prev_cob = prev_cob
         self.next_cob = next_cob
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
 
     def forward(self, input1, input2):
         if self.prev_cob is None:

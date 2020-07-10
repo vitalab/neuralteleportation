@@ -23,19 +23,9 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
             Create new tensor for weights and bias to allow gradient to be computed with respect to cob.
         """
-        self.w = self.weight.clone().detach().requires_grad_(True).type_as(self.weight)
+        self.w = self.weight.clone().detach().requires_grad_()
         if self.bias is not None:
-            self.b = self.bias.clone().detach().requires_grad_(True).type_as(self.bias)
-
-    def _get_proxy_weights(self):
-        """
-            Return the proxy weights to allows the gradient to be computed with respect to cob.
-        """
-        if self.bias is not None:
-            return self.weight.detach().requires_grad_().type_as(self.weight),\
-                   self.bias.detach().requires_grad_().type_as(self.bias)
-        else:
-            return self.weight.detach().requires_grad_().type_as(self.weight)
+            self.b = self.bias.clone().detach().requires_grad_()
 
     def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'within_landscape',
                 center: float = 1) -> torch.Tensor:
@@ -80,30 +70,27 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         return int(nb_params)
 
-    def get_weights(self, flatten=True, bias=True, get_proxy_weights: bool = False) -> Tuple[torch.Tensor, ...]:
+    def get_weights(self, flatten=True, bias=True, get_proxy: bool = True) -> Tuple[torch.Tensor, ...]:
         """Get the weights from the layer.
 
         Returns:
             tuple of weight tensors.
         """
 
-        if get_proxy_weights:
-            return self._get_proxy_weights()
-
         # Check if the weights were updated during training on loading weights.
-        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))) or (self.weight.device != self.w.device):
+        if get_proxy:
             self._set_proxy_weights()
 
         if self.bias is not None and bias:
             if flatten:
-                return self.w.detach().flatten(), self.b.detach().flatten()
+                return self.w.flatten(), self.b.flatten()
             else:
-                return self.w.detach(), self.b.detach()
+                return self.w, self.b
         else:
             if flatten:
-                return self.w.detach().flatten(),
+                return self.w.flatten(),
             else:
-                return self.w.detach(),
+                return self.w,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
