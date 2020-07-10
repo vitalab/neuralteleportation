@@ -27,6 +27,16 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         if self.bias is not None:
             self.b = self.bias.clone().detach().requires_grad_(True).type_as(self.bias)
 
+    def _get_proxy_weights(self):
+        """
+            Return the proxy weights to allows the gradient to be computed with respect to cob.
+        """
+        if self.bias is not None:
+            return self.weight.detach().requires_grad_().type_as(self.weight),\
+                   self.bias.detach().requires_grad_().type_as(self.bias)
+        else:
+            return self.weight.detach().requires_grad_().type_as(self.weight)
+
     def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'within_landscape',
                 center: float = 1) -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
@@ -70,12 +80,15 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         return int(nb_params)
 
-    def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
+    def get_weights(self, flatten=True, bias=True, get_proxy_weights: bool = False) -> Tuple[torch.Tensor, ...]:
         """Get the weights from the layer.
 
         Returns:
             tuple of weight tensors.
         """
+
+        if get_proxy_weights:
+            return self._get_proxy_weights()
 
         # Check if the weights were updated during training on loading weights.
         if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))) or (self.weight.device != self.w.device):
