@@ -39,11 +39,12 @@ def get_cifar10_datasets(transform=None) -> Tuple[VisionDataset, VisionDataset, 
     test_set = CIFAR10('/tmp', train=False, download=True, transform=transform)
     return train_set, val_set, test_set
 
+
 @_default_vision_transform
-def get_cifar100_datasets() -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
-    train_set = CIFAR100('/tmp', train=True, download=True, transform=transforms.ToTensor())
-    val_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.ToTensor())
-    test_set = CIFAR100('/tmp', train=False, download=True, transform=transforms.ToTensor())
+def get_cifar100_datasets(transform=None) -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
+    train_set = CIFAR100('/tmp', train=True, download=True, transform=transform)
+    val_set = CIFAR100('/tmp', train=False, download=True, transform=transform)
+    test_set = CIFAR100('/tmp', train=False, download=True, transform=transform)
     return train_set, val_set, test_set
 
 
