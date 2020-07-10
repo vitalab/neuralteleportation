@@ -78,7 +78,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
     # Arbitrary precision threshold for nullity comparison
     torch.set_printoptions(precision=10, sci_mode=True)
     tol = 1e-2
-    cobs = [0.001, 0.01, 0.1, 10]
+    cobs = [0.001, 0.01]
     hist_dir = f'images/histograms/{network_descriptor}'
     series_dir = f'images/series/{network_descriptor}'
 
@@ -140,7 +140,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
                     grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
                     # reset the weights for next teleportation
-                    model.set_weights(w1)
+                    model.set_weights(torch.tensor(w1))
 
                     # teleport and get the new weights
                     model = model.random_teleport(cob_range=cob, sampling_type=sampling_type)
