@@ -1,18 +1,23 @@
 import random
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple
-import numpy as np
 
+# Necessary to import Comet first to use Comet's auto logging facility and
+# to avoid "Please import comet before importing these modules" error.
+# (see ref: https://www.comet.ml/docs/python-sdk/warnings-errors/)
+import comet_ml  # noqa
+import numpy as np
 import torch.optim as optim
 from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
+from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
-from neuralteleportation.utils.logger import VisdomLogger
-from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
+from neuralteleportation.utils.logger import init_comet_experiment
 
 
 @dataclass
@@ -65,7 +70,8 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                     train_loader, epoch + 1, device=config.device, config=config)
 
         if val_dataset:
-            val_res = test(model, val_dataset, metrics, config)
+            with config.comet_logger.validate():
+                val_res = test(model, val_dataset, metrics, config, epoch=epoch)
             print("Validation: {}".format(val_res))
             if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
                 print("Stopping: Loss NaN!")
@@ -108,7 +114,7 @@ if __name__ == '__main__':
                         cob_sampling=sampling_type,
                         teleport_every_n_epochs=n,
                         epochs=20,
-                        exp_logger=VisdomLogger(env=env_name)
+                        comet_logger=init_comet_experiment(Path(".comet.config")),
                     )
                     run_model_training(train, model,
                                        config, metrics,

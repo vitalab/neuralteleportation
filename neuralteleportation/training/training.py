@@ -21,11 +21,11 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches)
 
-    for epoch in range(1, config.epochs + 1):
+    for epoch in range(config.epochs):
         train_epoch(model, metrics.criterion, optimizer,
                     train_loader, epoch, device=config.device)
         if val_dataset:
-            val_res = test(model, val_dataset, metrics, config)
+            val_res = test(model, val_dataset, metrics, config, epoch=epoch)
 
 
 def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
@@ -41,23 +41,24 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
         optimizer.step()
         if progress_bar:
             output = 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch,
-                                                                              (batch_idx+1) *
+                                                                              (batch_idx + 1) *
                                                                               train_loader.batch_size,
                                                                               len(train_loader.dataset),
                                                                               100. * batch_idx /
                                                                               len(train_loader),
                                                                               loss.item())
             pbar.set_postfix_str(output)
+        step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
+        if config.comet_logger:
+            config.comet_logger.log_metric("loss", loss.item(), step=step, epoch=epoch)
         if batch_idx % 500 == 0 and config is not None:
             if config.exp_logger is not None:
-                step = len(train_loader.dataset) * \
-                    (epoch - 1) + batch_idx * len(data)
                 config.exp_logger.add_scalar("train_loss", loss.item(), step)
     pbar.update()
     pbar.close()
 
 
-def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig):
+def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig, epoch=None):
     test_loader = DataLoader(dataset, batch_size=config.batch_size)
     model.eval()
     results = defaultdict(list)
@@ -79,8 +80,10 @@ def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: T
                              accuracy=pd.DataFrame(results['accuracy']).mean().values)
 
     pbar.close()
-    results = pd.DataFrame(results)
-    return dict(results.mean())
+    reduced_results = dict(pd.DataFrame(results).mean())
+    if config.comet_logger:
+        config.comet_logger.log_metrics(reduced_results, epoch=epoch)
+    return reduced_results
 
 
 def compute_metrics(metrics: Sequence[Callable[[Tensor, Tensor], Tensor]], y_hat: Tensor, y: Tensor,
