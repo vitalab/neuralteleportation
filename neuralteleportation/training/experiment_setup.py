@@ -84,6 +84,46 @@ def get_cifar100_models() -> List[nn.Module]:
     ]
 
 
+def get_cifar10_MLP() -> nn.Module:
+    mlp_model = nn.Sequential(
+        Flatten(),
+        nn.Linear(3072, 1536),
+        nn.ReLU(),
+        nn.Linear(1536, 512),
+        nn.ReLU(),
+        nn.Linear(512, 256),
+        nn.ReLU(),
+        nn.Linear(256, 128),
+        nn.ReLU(),
+        nn.Linear(128, 64),
+        nn.ReLU(),
+        nn.Linear(64, 10)
+    )
+
+    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
+    return mlp_model
+
+
+def get_cifar100_MLP() -> nn.Module:
+    mlp_model = nn.Sequential(
+        Flatten(),
+        nn.Linear(3072, 1536),
+        nn.ReLU(),
+        nn.Linear(1536, 512),
+        nn.ReLU(),
+        nn.Linear(512, 256),
+        nn.ReLU(),
+        nn.Linear(256, 128),
+        nn.ReLU(),
+        nn.Linear(128, 64),
+        nn.ReLU(),
+        nn.Linear(64, 100)
+    )
+
+    mlp_model = swap_model_modules_for_COB_modules(mlp_model)
+    return mlp_model
+
+
 def _get_model_factories() -> Dict[str, Union[Callable[..., nn.Module], nn.Module]]:
     model_modules = [resnetcob, densenetcob, vggcob]
     return {model_name: getattr(model_module, model_name)
