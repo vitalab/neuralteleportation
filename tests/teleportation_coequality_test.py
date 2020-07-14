@@ -7,10 +7,6 @@ import numpy as np
 from torch.utils.data import Dataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.layers.activation import ReLUCOB
-from neuralteleportation.layers.neuralteleportation import FlattenCOB
-from neuralteleportation.layers.neuron import Conv2dCOB, BatchNorm2dCOB, LinearCOB
-from neuralteleportation.layers.pooling import MaxPool2dCOB, UpsampleCOB
 
 from neuralteleportation.training.training import test, train
 from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_cifar10_models
@@ -25,11 +21,11 @@ def argument_parser():
     return parser.parse_args()
 
 
-def test_model_with(model: nn.Module, testset: Dataset,
-                    metric: TrainingMetrics, config: TrainingConfig,
-                    rept: int = 1) -> Tuple[np.ndarray, np.ndarray]:
-    loss_avg = []
-    acc_avg = []
+def test_model_with_set_get_weights(model: nn.Module, testset: Dataset,
+                                    metric: TrainingMetrics, config: TrainingConfig,
+                                    rept: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+    loss_diff_avg = []
+    acc_diff_avg = []
     for _ in range(rept):
         m = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
         w_o, cob_o = m.get_params()
@@ -44,8 +40,8 @@ def test_model_with(model: nn.Module, testset: Dataset,
         res = test(m, testset, metric, config)
         loss2, acc2 = res['loss'], res['accuracy']
 
-        loss_avg.append(np.abs(loss1 - loss2))
-        acc_avg.append(np.abs(acc1 - acc2))
+        loss_diff_avg.append(np.abs(loss1 - loss2))
+        acc_diff_avg.append(np.abs(acc1 - acc2))
 
         print("==========================================")
         print("Loss and accuracy diff with set/get was")
@@ -53,14 +49,17 @@ def test_model_with(model: nn.Module, testset: Dataset,
         print("Acc diff was: {:.6e}".format(np.abs(acc1 - acc2)))
         print("==========================================")
 
-    return np.mean(loss_avg), np.mean(acc_avg)
+    return np.mean(loss_diff_avg), np.mean(acc_diff_avg)
 
 
-def test_model_without(model: nn.Module, testset: Dataset,
-                       metric: TrainingMetrics, config: TrainingConfig,
-                       rept: int = 1) -> Tuple[np.ndarray, np.ndarray]:
-    loss_avg = []
-    acc_avg = []
+def test_model_without_set_get_weights(model: nn.Module, testset: Dataset,
+                                       metric: TrainingMetrics, config: TrainingConfig,
+                                       rept: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+    """
+        Test if the model is coequal before and after using model.teleport
+    """
+    loss_diff_avg = []
+    acc_diff_avg = []
     for _ in range(rept):
         m = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
 
@@ -72,8 +71,8 @@ def test_model_without(model: nn.Module, testset: Dataset,
         res = test(m, testset, metric, config)
         loss2, acc2 = res['loss'], res['accuracy']
 
-        loss_avg.append(np.abs(loss1 - loss2))
-        acc_avg.append(np.abs(acc1 - acc2))
+        loss_diff_avg.append(np.abs(loss1 - loss2))
+        acc_diff_avg.append(np.abs(acc1 - acc2))
 
         print("==========================================")
         print("Loss and accuracy diff without set/get was")
@@ -81,7 +80,7 @@ def test_model_without(model: nn.Module, testset: Dataset,
         print("Acc diff was: {:.6e}".format(np.abs(acc1 - acc2)))
         print("==========================================")
 
-    return np.mean(loss_avg), np.mean(acc_avg)
+    return np.mean(loss_diff_avg), np.mean(acc_diff_avg)
 
 
 if __name__ == '__main__':
@@ -110,12 +109,19 @@ if __name__ == '__main__':
     print()
     print("==========================================")
 
-    loss, acc = test_model_without(model, testset, metric, config, args.t)
-
+    loss, acc = test_model_without_set_get_weights(model, testset, metric, config, args.t)
+    loss_mean = np.mean(loss)
+    acc_mean = np.mean(acc)
+    success = np.isclose(loss_mean, 0, atol=1e-7) and np.isclose(acc_mean, 0, atol=1e-7)
     print("==========================================")
     print("Loss and accuracy avg diff without set/get was")
-    print("Loss diff was: {:.6e}".format(np.mean(loss)))
-    print("Acc diff was: {:.6e}".format(np.mean(acc)))
+    print("Loss diff was: {:.6e}".format(loss_mean))
+    print("Acc diff was: {:.6e}".format(acc_mean))
+    if success:
+        print("TEST SUCCESSFUL")
+    else:
+        print("TEST FAILED!")
+    print()
     print("==========================================")
 
     print()
@@ -125,10 +131,16 @@ if __name__ == '__main__':
     print()
     print("==========================================")
 
-    loss, acc = test_model_with(model, testset, metric, config, args.t)
-
+    loss, acc = test_model_with_set_get_weights(model, testset, metric, config, args.t)
+    loss_mean = np.mean(loss)
+    acc_mean = np.mean(acc)
+    success = np.isclose(loss_mean, 0, atol=1e-7) and np.isclose(acc_mean, 0, atol=1e-7)
     print("==========================================")
     print("Loss and accuracy avg diff with set/get was")
-    print("Loss diff was: {:.6e}".format(np.mean(loss)))
-    print("Acc diff was: {:.6e}".format(np.mean(acc)))
+    print("Loss diff was: {:.6e}".format(loss_mean))
+    print("Acc diff was: {:.6e}".format(acc_mean))
+    if success:
+        print("TEST SUCCESSFUL")
+    else:
+        print("TEST FAILED!")
     print("==========================================")
