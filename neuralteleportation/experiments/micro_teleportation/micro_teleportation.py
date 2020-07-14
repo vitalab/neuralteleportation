@@ -61,8 +61,7 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
 
 if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar100_models,\
-        get_cifar10_datasets, get_cifar100_datasets, get_cifar10_MLP, get_cifar100_MLP()
+    from neuralteleportation.training.experiment_setup import *
     from neuralteleportation.metrics import accuracy
     from neuralteleportation.training.experiment_run import run_single_output_training
 
