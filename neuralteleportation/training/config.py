@@ -1,6 +1,6 @@
 import copy
 from dataclasses import dataclass, fields
-from typing import Sequence, Callable, Dict, Any
+from typing import Sequence, Callable, Dict, Any, Tuple
 
 from comet_ml import Experiment
 from torch import Tensor
@@ -13,16 +13,22 @@ _SERIALIZATION_EXCLUDED_FIELDS = ['comet_logger', 'exp_logger']
 
 @dataclass
 class TrainingConfig:
+    input_shape: Tuple[int, int, int] = (1, 28, 28)
     lr: float = 1e-3
     epochs: int = 10
     batch_size: int = 32
     device: str = 'cpu'
-    cob_range: float = 0.5
-    cob_sampling: str = 'within_landscape'
     comet_logger: Experiment = None
     exp_logger: BaseLogger = None
     shuffle_batches: bool = False
     weight_decay: float = 0
+
+
+@dataclass
+class TeleportationTrainingConfig(TrainingConfig):
+    cob_range: float = 0.5
+    cob_sampling: str = 'within_landscape'
+    teleport_every_n_epochs: int = 1
 
 
 @dataclass

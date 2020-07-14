@@ -8,20 +8,18 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
+from neuralteleportation.training.config import TrainingMetrics, TeleportationTrainingConfig
 from neuralteleportation.training.training import test, train_epoch
 
 
 @dataclass
-class TeleportationTrainingConfig(TrainingConfig):
-    input_shape: Tuple[int, int, int] = (1, 28, 28)
+class BreadthTeleportationTrainingConfig(TeleportationTrainingConfig):
     starting_epoch: int = 1
-    teleport_every_n_epochs: int = 2
     num_teleportations: int = 1
 
 
 def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset, metrics: TrainingMetrics,
-          config: TeleportationTrainingConfig, val_dataset: Dataset = None, optimizer: Optimizer = None) \
+          config: BreadthTeleportationTrainingConfig, val_dataset: Dataset = None, optimizer: Optimizer = None) \
         -> Dict[str, nn.Module]:
     # If the model is not named (at the first iteration), initialize its name based on its class
     if type(model) is tuple:
@@ -67,7 +65,7 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
 
 def _teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, metrics: TrainingMetrics,
-                        config: TeleportationTrainingConfig, optimizer: Optimizer, val_dataset: Dataset = None) \
+                        config: BreadthTeleportationTrainingConfig, optimizer: Optimizer, val_dataset: Dataset = None) \
         -> Dict[str, nn.Module]:
     model_name, model = model
 
@@ -75,7 +73,7 @@ def _teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, me
     # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
     teleportation_model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
     teleported_models = [deepcopy(teleportation_model).random_teleport(cob_range=config.cob_range,
-                                                                      sampling_type=config.cob_sampling).network
+                                                                       sampling_type=config.cob_sampling).network
                          for _ in range(config.num_teleportations)]
 
     # Call recursively the training algorithm on teleported models, with less epochs left to perform
@@ -100,6 +98,6 @@ if __name__ == '__main__':
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
-    config = TeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda')
+    config = BreadthTeleportationTrainingConfig(input_shape=(3, 32, 32), device='cuda', teleport_every_n_epochs=2)
     run_multi_output_training(train, get_cifar10_models(), config, metrics,
                               cifar10_train, cifar10_test, val_set=cifar10_val)

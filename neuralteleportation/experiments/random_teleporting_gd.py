@@ -1,95 +1,42 @@
 import random
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Tuple
 
 # Necessary to import Comet first to use Comet's auto logging facility and
 # to avoid "Please import comet before importing these modules" error.
 # (see ref: https://www.comet.ml/docs/python-sdk/warnings-errors/)
 import comet_ml  # noqa
-import numpy as np
-import torch.optim as optim
 from torch import nn
-from torch.optim.optimizer import Optimizer
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
-from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
-from neuralteleportation.training.training import test, train_epoch
-from neuralteleportation.utils.logger import init_comet_experiment
+from neuralteleportation.training.config import TrainingMetrics, TeleportationTrainingConfig
 
 
 @dataclass
-class TeleportationTrainingConfig(TrainingConfig):
-    input_shape: Tuple[int, int, int] = (1, 28, 28)
-    teleport_every_n_epochs: int = 2
+class RandomTeleportationTrainingConfig(TeleportationTrainingConfig):
     teleport_prob: float = 1.  # Always teleport by default when reaching `teleport_every_n_epochs`
 
 
-def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
-          val_dataset: Dataset = None, optimizer: Optimizer = None) -> nn.Module:
-    # Initialize an optimizer if there isn't already one
-    if optimizer is None:
-        optimizer = optim.SGD(model.parameters(), lr=config.lr)
-
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
-    if config.exp_logger is not None:
-        config.exp_logger.add_text(
-            "Config",
-            "Model: {}<br>"
-            "epochs: {}<br>"
-            "teleport_every_n_epochs: {}<br>"
-            "cob_range: {}<br>"
-            "cob_sampling_type: {}<br>".format(
-                model.__class__.__name__,
-                config.epochs,
-                config.teleport_every_n_epochs,
-                config.cob_range,
-                config.cob_sampling
-            )
-        )
-    model = NeuralTeleportationModel(network=model,
-                                     input_shape=(2,) + config.input_shape)
-
-    for epoch in range(config.epochs):
-        if (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
-            if random.random() < config.teleport_prob:
-                print("Applying random COB to model in training")
-                model.random_teleport(
-                    cob_range=config.cob_range, sampling_type=config.cob_sampling)
-
-                # Initialze a new optimizer using the model's new parameters
-                optimizer = optim.SGD(model.parameters(), lr=config.lr)
-            else:
-                print("Skipping COB")
-
-        train_epoch(model, metrics.criterion, optimizer,
-                    train_loader, epoch + 1, device=config.device, config=config)
-
-        if val_dataset:
-            with config.comet_logger.validate():
-                val_res = test(model, val_dataset, metrics, config, epoch=epoch)
-            print("Validation: {}".format(val_res))
-            if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
-                print("Stopping: Loss NaN!")
-                if config.exp_logger:
-                    config.exp_logger.add_text(
-                        "Info", "Stopped due to Loss NaN.")
-                break
-            if config.exp_logger is not None:
-                config.exp_logger.add_scalar(
-                    "val_loss", val_res["loss"], epoch)
-                config.exp_logger.add_scalar(
-                    "val_accuracy", val_res["accuracy"], epoch)
+def teleport_model_randomly(model: NeuralTeleportationModel, train_dataset: Dataset,
+                            metrics: TrainingMetrics, config: RandomTeleportationTrainingConfig) -> nn.Module:
+    if random.random() < config.teleport_prob:
+        print("Applying random COB to model in training")
+        model.random_teleport(
+            cob_range=config.cob_range, sampling_type=config.cob_sampling)
+    else:
+        print("Skipping COB")
 
     return model
 
 
-if __name__ == '__main__':
-    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
+def main():
+    from pathlib import Path
+
+    from neuralteleportation.changeofbasisutils import get_available_cob_sampling_types
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_run import run_model_training
+    from neuralteleportation.training.experiment_run import run_model
+    from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar10_datasets
+    from neuralteleportation.utils.logger import init_comet_experiment
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
@@ -105,7 +52,7 @@ if __name__ == '__main__':
                     env_name = "{}_teleport_{}_{}_every_{}".format(model.__class__.__name__,
                                                                    sampling_type, cob_range, n)
                     print("Starting: ", env_name)
-                    config = TeleportationTrainingConfig(
+                    config = RandomTeleportationTrainingConfig(
                         input_shape=(3, 32, 32),
                         device='cuda',
                         cob_range=cob_range,
@@ -114,6 +61,11 @@ if __name__ == '__main__':
                         epochs=20,
                         comet_logger=init_comet_experiment(Path(".comet.config")),
                     )
-                    run_model_training(train, model,
-                                       config, metrics,
-                                       cifar10_train, cifar10_test, val_set=cifar10_val)
+                    model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
+                    run_model(teleport_model_randomly, model,
+                              config, metrics,
+                              cifar10_train, cifar10_test, val_set=cifar10_val)
+
+
+if __name__ == '__main__':
+    main()

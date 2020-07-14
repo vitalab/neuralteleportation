@@ -5,21 +5,21 @@ from torch import nn
 from torchvision.datasets import VisionDataset
 
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, config_to_dict
-from neuralteleportation.training.training import test
+from neuralteleportation.training.training import test, train
 
 
-def run_model_training(train_fct: Callable, model: nn.Module,
-                       config: TrainingConfig, metrics: TrainingMetrics,
-                       train_set: VisionDataset, test_set: VisionDataset,
-                       val_set: VisionDataset = None):
+def run_model(teleport_fn: Callable, model: nn.Module,
+              config: TrainingConfig, metrics: TrainingMetrics,
+              train_set: VisionDataset, test_set: VisionDataset,
+              val_set: VisionDataset = None) -> None:
     print(f"Training {model.__class__.__name__}")
 
     # Always log parameters (to enable useful filtering options in the web interface)
     config.comet_logger.log_parameters(config_to_dict(config))
 
     with config.comet_logger.train():
-        trained_model = train_fct(model, train_dataset=train_set,
-                                  metrics=metrics, config=config, val_dataset=val_set)
+        trained_model = train(model, train_dataset=train_set, metrics=metrics, config=config,
+                              val_dataset=val_set, teleport_fn=teleport_fn)
 
     # Ensure the model is on the correct device before testing
     # This avoids problem in case models are shuffled between CPU and GPU during training
@@ -34,7 +34,7 @@ def run_model_training(train_fct: Callable, model: nn.Module,
 def run_multi_output_training(train_fct: Callable, models: Sequence[nn.Module],
                               config: TrainingConfig, metrics: TrainingMetrics,
                               train_set: VisionDataset, test_set: VisionDataset,
-                              val_set: VisionDataset = None):
+                              val_set: VisionDataset = None) -> None:
     for model in models:
         print(f"Training {model.__class__.__name__}")
         trained_models = train_fct(model, train_dataset=train_set, metrics=metrics, config=deepcopy(config),

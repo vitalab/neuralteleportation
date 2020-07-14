@@ -1,6 +1,7 @@
 from collections import defaultdict
-from typing import Sequence, Callable
+from typing import Sequence, Callable, Any, Dict
 
+import numpy as np
 import pandas as pd
 import torch
 import torch.optim as optim
@@ -15,21 +16,49 @@ from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig,
-          val_dataset: Dataset = None, optimizer: Optimizer = None):
+          val_dataset: Dataset = None, optimizer: Optimizer = None, teleport_fn: Callable = None) -> nn.Module:
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=config.lr)
+        if teleport_fn is None:
+            optimizer = optim.Adam(model.parameters(), lr=config.lr)
+        else:
+            optimizer = optim.SGD(model.parameters(), lr=config.lr)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches)
 
     for epoch in range(config.epochs):
-        train_epoch(model, metrics.criterion, optimizer,
-                    train_loader, epoch, device=config.device)
+        if teleport_fn is not None and (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
+            model = teleport_fn(model, train_dataset, metrics, config)
+            # Force a new optimizer in case the model was swapped as a result of the teleportations
+            optimizer = optim.SGD(model.parameters(), lr=config.lr)
+
+        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch,
+                    device=config.device, config=config)
+
         if val_dataset:
-            val_res = test(model, val_dataset, metrics, config, epoch=epoch)
+            if config.comet_logger:
+                with config.comet_logger.validate():
+                    val_res = test(model, val_dataset, metrics, config)
+            else:
+                val_res = test(model, val_dataset, metrics, config)
+
+            print("Validation: {}".format(val_res))
+            if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
+                print("Stopping: Loss NaN!")
+                if config.exp_logger:
+                    config.exp_logger.add_text(
+                        "Info", "Stopped due to Loss NaN.")
+                break
+            if config.exp_logger is not None:
+                config.exp_logger.add_scalar(
+                    "val_loss", val_res["loss"], epoch)
+                config.exp_logger.add_scalar(
+                    "val_accuracy", val_res["accuracy"], epoch)
+
+    return model
 
 
 def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
-                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None):
+                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None) -> None:
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
@@ -49,16 +78,16 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
                                                                               loss.item())
             pbar.set_postfix_str(output)
         step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
-        if config.comet_logger:
-            config.comet_logger.log_metric("loss", loss.item(), step=step, epoch=epoch)
-        if batch_idx % 500 == 0 and config is not None:
-            if config.exp_logger is not None:
+        if config.comet_logger:  # TODO Add ``batch_idx % 500 == 0`` in case we make too many calls to the Comet API
+            config.comet_logger.log_metric("loss", loss.item())
+        if batch_idx % 500 == 0 and config.exp_logger:
+            if config.exp_logger:
                 config.exp_logger.add_scalar("train_loss", loss.item(), step)
     pbar.update()
     pbar.close()
 
 
-def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig, epoch=None):
+def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig) -> Dict[str, Any]:
     test_loader = DataLoader(dataset, batch_size=config.batch_size)
     model.eval()
     results = defaultdict(list)
@@ -82,12 +111,12 @@ def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: T
     pbar.close()
     reduced_results = dict(pd.DataFrame(results).mean())
     if config.comet_logger:
-        config.comet_logger.log_metrics(reduced_results, epoch=epoch)
+        config.comet_logger.log_metrics(reduced_results)
     return reduced_results
 
 
 def compute_metrics(metrics: Sequence[Callable[[Tensor, Tensor], Tensor]], y_hat: Tensor, y: Tensor,
-                    prefix: str = '', to_tensor: bool = True):
+                    prefix: str = '', to_tensor: bool = True) -> Dict[str, Any]:
     results = {}
     for metric in metrics:
         m = metric(y_hat, y)
