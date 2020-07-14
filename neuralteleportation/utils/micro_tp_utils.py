@@ -72,9 +72,6 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
                                 aggregated data (mainly for debugging purposes)
     """
 
-    # TODO take off
-    nb_teleport = 3
-
     # Arbitrary precision threshold for nullity comparison
     torch.set_printoptions(precision=10, sci_mode=True)
     tol = 1e-2
@@ -351,9 +348,6 @@ def dot_product_between_teleportation(network, dataset,
 
     # Prepare the range of COB to test
     cobs = np.linspace(0.00001, 0.999, 40)
-
-    #TODO take off
-    iterations = 5
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=16)
     data, target = next(iter(dataloader))
