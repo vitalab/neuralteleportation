@@ -394,11 +394,11 @@ def dot_product_between_teleportation(network, dataset,
     dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
 
     plt.plot(cobs, dot_product_results.cpu())
-    plt.title(f'Sacalar product between original and \nteleported weights with '
+    plt.title(f'Scalar product between original and \nteleported weights with '
               f'respect to COB\'s order of magnitude\n{network_descriptor}, '
               f'reset weights: {reset_weights}')
 
-    plt.ylabel('log10(|Sacalar product|)')
+    plt.ylabel('log10(|Scalar product|)')
     plt.xlabel('log10(COB)')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
