@@ -25,8 +25,6 @@ class TeleportationTrainingConfig(TrainingConfig):
     input_shape: Tuple[int, int, int] = (1, 28, 28)
     teleport_every_n_epochs: int = 2
     teleport_prob: float = 1.  # Always teleport by default when reaching `teleport_every_n_epochs`
-    cob_range: float = 0.5
-    cob_sampling: str = "within_landscape"
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TeleportationTrainingConfig,
