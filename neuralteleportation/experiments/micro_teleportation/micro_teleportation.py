@@ -63,7 +63,7 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 if __name__ == '__main__':
     from neuralteleportation.training.experiment_setup import *
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_run import run_single_output_training
+    from neuralteleportation.training.experiment_run import run_model_training
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
@@ -86,9 +86,8 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10'))
         else:
             print(f'training model: models/{model.__class__.__name__}_cifar10')
-            run_single_output_training(train, model, config, metrics,
-                                      cifar10_train, cifar10_test, val_set=cifar10_val)
             torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar10')
+            run_model_training(train, model, config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
         print(f"Testing {model.__class__.__name__}_cifar10: {test(model, cifar10_test, metrics, config)} \n")
 
     for model in models:
@@ -114,8 +113,7 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifa100'))
         else:
             print(f'training model: models/{model.__class__.__name__}_cifar100')
-            run_single_output_training(train, model, config, metrics,
-                                      cifar100_train, cifar100_test, val_set=cifar100_val)
+            run_model_training(train, model, config, metrics, cifar100_train, cifar100_test, val_set=cifar100_val)
             torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar100')
         print(f"Testing {model.__class__.__name__}_cifar100: {test(model, cifar100_test, metrics, config)} \n")
 
