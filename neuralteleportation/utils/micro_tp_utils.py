@@ -26,7 +26,7 @@ def tensor_norm(t: Tensor) -> Tensor:
 
 def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
     """
-    This method returns the normalized scalar products between two tensors. In order to make the methode
+    This function returns the normalized scalar products between two tensors. In order to make the methode
     device-agnostic, if the inputs are numpy arrays, they're converted to pytorch tensors
 
     Args:
@@ -71,6 +71,9 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
         verbose:                If true, the method will output extensive details about the calculated vectors and
                                 aggregated data (mainly for debugging purposes)
     """
+
+    # TODO take off
+    nb_teleport = 3
 
     # Arbitrary precision threshold for nullity comparison
     torch.set_printoptions(precision=10, sci_mode=True)
@@ -250,7 +253,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
                     bin_height, bin_boundary = np.histogram(np.array(angle_results))
                     width = bin_boundary[1] - bin_boundary[0]
                     bin_height = bin_height / float(max(bin_height))
-                    ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.05))
+                    ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01))
                     ax0.legend(['Micro-teleportation\n vs \n Gradient'])
                     ax0.set_xlim(x_min, x_max)
 
@@ -316,10 +319,11 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
 
 
 
-def dot_product_between_telportation(network, dataset,
-                                     network_descriptor=None,
-                                     reset_weights=False,
-                                     device='cpu') -> None:
+def dot_product_between_teleportation(network, dataset,
+                                      network_descriptor=None,
+                                      reset_weights=False,
+                                      iterations=200,
+                                      device='cpu') -> None:
     """
     This method tests the scalar product between the initial and teleported set of weights and plots the results with
     respect to the order of magnitude of the change of basis of the teleportation
@@ -346,9 +350,10 @@ def dot_product_between_telportation(network, dataset,
         network_descriptor = network.__name__
 
     # Prepare the range of COB to test
-    cobs = np.linspace(1, 9, 9)
-    # We don't want a COB of 1 since it produces no teleportation
-    cobs[0] += 0.1
+    cobs = np.linspace(0.00001, 0.999, 40)
+
+    #TODO take off
+    iterations = 5
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=16)
     data, target = next(iter(dataloader))
@@ -361,26 +366,36 @@ def dot_product_between_telportation(network, dataset,
 
     w1 = model.get_weights().detach().to(device)
 
-    dot_product_results = []
-    unit_dot_product_results = []
-    angles = []
+
     for cob in cobs:
-        # reset the weights for next teleportation if told so
-        if reset_weights:
+
+        dot_product_results = []
+        unit_dot_product_results = []
+        angles = []
+
+        dot_product_result = 0
+        unit_dot_product_result = 0
+        angle = 0
+
+        for _ in range(0, iterations):
+            # reset the weights
             model.set_weights(w1)
-        else:
-            w1 = model.get_weights().detach().to(device)
 
-        # teleport and get the new weights
-        model.random_teleport(cob_range=cob, sampling_type='within_landscape', center=max(cobs))
-        w2 = model.get_weights().detach().to(device)
+            # teleport and get the new weights
+            model.random_teleport(cob_range=cob, sampling_type='within_landscape', center=max(cobs))
+            w2 = model.get_weights().detach().to(device)
 
-        unit_dot_product_results.append(torch.matmul(torch.tensor(w1).to(device)/tensor_norm(w1),
-                                                     torch.tensor(w2).to(device)/tensor_norm(w2)).item())
+            dot_product_result +=  torch.matmul(torch.tensor(w1).to(device)/tensor_norm(w1), torch.tensor(w2).to(device)/tensor_norm(w2)).item()
+            unit_dot_product_result += torch.matmul(torch.tensor(w1).to(device), torch.tensor(w2).to(device)).item()
+            angle += np.degrees(torch.atan(normalized_dot_product(w1, w2).item()).cpu())
 
-        dot_product_results.append(torch.matmul(torch.tensor(w1).to(device), torch.tensor(w2).to(device)).item())
+        dot_product_result /= iterations
+        unit_dot_product_result /= iterations
+        angle /= iterations
 
-        angles.append(normalized_dot_product(w1, w2).item())
+        unit_dot_product_results.append(dot_product_result)
+        dot_product_results.append(unit_dot_product_result)
+        angles.append(angle)
 
     dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
 

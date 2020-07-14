@@ -62,9 +62,9 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
 if __name__ == '__main__':
     from neuralteleportation.training.experiment_setup import get_cifar10_models, get_cifar100_models,\
-        get_cifar10_datasets, get_cifar100_datasets
+        get_cifar10_datasets, get_cifar100_datasets, get_cifar10_MLP, get_cifar100_MLP()
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.training.experiment_run import run_multi_output_training
+    from neuralteleportation.training.experiment_run import run_single_output_training
 
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
@@ -75,31 +75,56 @@ if __name__ == '__main__':
 
     config = MicroTeleportationTrainingConfig(input_shape=(3, 32, 32), device=device, batch_size=10,
                                               num_teleportations=1, epochs=5)
-    models = get_cifar10_models()
 
-    run_multi_output_training(train, models, config, metrics,
-                              cifar10_train, cifar10_test, val_set=cifar10_val)
+    models = get_cifar10_models()
+    models.append(get_cifar10_MLP())
+
+    Path('models').mkdir(parents=True, exist_ok=True)
+
     for model in models:
+        if Path(f'models/{model.__class__.__name__}_cifar10').exists():
+            print(f'fetchning existing model: models/{model.__class__.__name__}_cifar10')
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10'))
+        else:
+            print(f'training model: models/{model.__class__.__name__}_cifar10')
+            run_single_output_training(train, model, config, metrics,
+                                      cifar10_train, cifar10_test, val_set=cifar10_val)
+            torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar10')
+        print(f"Testing {model.__class__.__name__}_cifar10: {test(model, cifar10_test, metrics, config)} \n")
+
+    for model in models:
+
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
                                         network_descriptor=f'{model.__class__.__name__} on CIFAR10',
                                         device=device)
 
-        dot_product_between_telportation(network=model, dataset=cifar10_test,
-                                         network_descriptor=f'{model.__class__.__name__} on CIFAR10',
-                                         reset_weights=False, device=device)
-    models = get_cifar100_models()
+        dot_product_between_teleportation(network=model, dataset=cifar10_test,
+                                          network_descriptor=f'{model.__class__.__name__} on CIFAR10',
+                                          reset_weights=False, device=device)
+
 
     # Run on CIFAR100
     cifar100_train, cifar100_val, cifar100_test = get_cifar100_datasets()
 
-    run_multi_output_training(train, models, config, metrics,
-                              cifar100_train, cifar100_test, val_set=cifar100_val)
+    models = get_cifar100_models()
+    models.append(get_cifar100_MLP())
 
     for model in models:
-        micro_teleportation_dot_product(network=model, dataset=cifar10_test,
+        if Path(f'models/{model.__class__.__name__}_cifa100').exists():
+            print(f'fetchning existing model: models/{model.__class__.__name__}_cifa100')
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifa100'))
+        else:
+            print(f'training model: models/{model.__class__.__name__}_cifar100')
+            run_single_output_training(train, model, config, metrics,
+                                      cifar100_train, cifar100_test, val_set=cifar100_val)
+            torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar100')
+        print(f"Testing {model.__class__.__name__}_cifar100: {test(model, cifar100_test, metrics, config)} \n")
+
+    for model in models:
+        micro_teleportation_dot_product(network=model, dataset=cifar100_test,
                                         network_descriptor=f'{model.__class__.__name__} on CIFAR100',
                                         device=device)
 
-        dot_product_between_telportation(network=model, dataset=cifar100_test,
+        dot_product_between_teleportation(network=model, dataset=cifar100_test,
                                          network_descriptor=f'{model.__class__.__name__} on CIFAR100',
                                          reset_weights=False, device=device)
