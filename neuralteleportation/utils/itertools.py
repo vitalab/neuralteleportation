@@ -28,3 +28,20 @@ def dict_values_product(mapping_matrix: Mapping[K, List[V]]) -> List[Dict[K, V]]
 
     return [dict(zip(mapping_matrix.keys(), matrix_elem_values))
             for matrix_elem_values in itertools.product(*mapping_matrix.values())]
+
+
+def listify_dict(elem_mapping: Mapping[K, V]) -> Dict[K, List[V]]:
+    """Encapsulates the values from a mapping within lists.
+
+    Args:
+        elem_mapping: mapping between keys and single values.
+
+    Returns:
+        mapping between keys and values wrapped inside lists.
+
+    Example:
+        >>> elem_mapping = {'a': 1, 'b': 2}
+        >>> listify_dict(elem_mapping)
+        {'a': [1], 'b': [2]}
+    """
+    return {k: [v] for k, v in elem_mapping.items()}
