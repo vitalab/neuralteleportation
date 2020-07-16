@@ -4,7 +4,6 @@ from typing import Sequence, Callable, Any, Dict
 import numpy as np
 import pandas as pd
 import torch
-import torch.optim as optim
 from torch import Tensor
 from torch import nn
 from torch.nn.modules.loss import _Loss
@@ -12,24 +11,24 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
+from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, TeleportationTrainingConfig
+from neuralteleportation.training.experiment_setup import get_optimizer_from_model_and_config
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig,
-          val_dataset: Dataset = None, optimizer: Optimizer = None, teleport_fn: Callable = None) -> nn.Module:
+          val_dataset: Dataset = None, optimizer: Optimizer = None) -> nn.Module:
     if optimizer is None:
-        if teleport_fn is None:
-            optimizer = optim.Adam(model.parameters(), lr=config.lr)
-        else:
-            optimizer = optim.SGD(model.parameters(), lr=config.lr)
+        optimizer = get_optimizer_from_model_and_config(model, config)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches)
 
     for epoch in range(config.epochs):
-        if teleport_fn is not None and (epoch % config.teleport_every_n_epochs) == 0 and epoch > 0:
-            model = teleport_fn(model, train_dataset, metrics, config)
+        if (isinstance(config, TeleportationTrainingConfig)
+                and (epoch % config.every_n_epochs) == 0
+                and epoch > 0):
+            model = config.teleport_fn(model, train_dataset, metrics, config)
             # Force a new optimizer in case the model was swapped as a result of the teleportations
-            optimizer = optim.SGD(model.parameters(), lr=config.lr)
+            optimizer = get_optimizer_from_model_and_config(model, config)
 
         train_epoch(model, metrics.criterion, optimizer, train_loader, epoch,
                     device=config.device, config=config)

@@ -8,6 +8,8 @@ from neuralteleportation.layers.activation import ReLUCOB
 from neuralteleportation.layers.neuralteleportation import FlattenCOB
 from neuralteleportation.layers.neuron import LinearCOB
 
+__all__ = ['MLPCOB']
+
 
 class MLPCOB(nn.Module):
     """Multi-layer Perceptron model class.

@@ -1,14 +1,12 @@
 import argparse
+import copy
+import pathlib
+import random
 from dataclasses import dataclass
-from typing import Tuple
 
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-import random
-import pathlib
-import copy
-
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -16,20 +14,17 @@ from torchvision.datasets import VisionDataset
 
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
-from neuralteleportation.training.experiment_setup import get_model_names, get_model_from_name
-from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_mnist_datasets
+from neuralteleportation.training.config import TrainingMetrics, TeleportationTrainingConfig
+from neuralteleportation.training.experiment_setup import get_model_names, get_model, get_dataset_subsets, \
+    get_optimizer_from_model_and_config
 from neuralteleportation.training.training import train_epoch, test
 
 __models__ = get_model_names()
 
 
 @dataclass
-class CompareTrainingConfig(TrainingConfig):
+class CompareTrainingConfig(TeleportationTrainingConfig):
     targeted_teleportation: bool = False
-    teleport_every_n_epochs: int = 4
-    cob_range: float = 0.5
-    cob_sampling: str = "within_landscape"
 
 
 def argumentparser():
@@ -56,23 +51,12 @@ def argumentparser():
     return parser.parse_args()
 
 
-def generate_experience_models(model: str, batch_size, input_dims: Tuple[int, int, int], device: str = 'cpu') -> tuple:
+def generate_experience_models(dataset: str, model: str, device: str = 'cpu') -> tuple:
     """
         Creates 3 models based on the same initial set of weights.
     """
-    w, h, dims = input_dims
-    net1 = get_model_from_name(model, num_classes=10, input_channels=dims)
-    net1 = NeuralTeleportationModel(network=net1,
-                                    input_shape=(batch_size, dims, w, h)).to(device)
-
-    net2 = copy.deepcopy(net1)
-    net2 = NeuralTeleportationModel(network=net2,
-                                    input_shape=(batch_size, dims, w, h)).to(device)
-    net3 = copy.deepcopy(net1)
-    net3 = NeuralTeleportationModel(network=net3,
-                                    input_shape=(args.batch_size, dims, w, h)).to(device)
-
-    return net1, net2, net3
+    net1 = get_model(dataset, model, device=device)
+    return net1, copy.deepcopy(net1), copy.deepcopy(net1)
 
 
 def start_training(model: NeuralTeleportationModel,
@@ -93,7 +77,7 @@ def start_training(model: NeuralTeleportationModel,
             np.array containing the validation accuracy results of every epochs.
     """
     model.to(config.device)
-    optimizer = torch.optim.SGD(lr=config.lr, params=model.parameters())
+    optimizer = get_optimizer_from_model_and_config(model, config)
 
     results = []
     for e in np.arange(1, args.epochs + 1):
@@ -106,14 +90,14 @@ def start_training(model: NeuralTeleportationModel,
         results.append(test(model=model, dataset=valset, metrics=metric, config=config)['accuracy'])
         model.train()
 
-        if e % config.teleport_every_n_epochs == 0 and random.random() <= teleport_chance:
+        if e % config.every_n_epochs == 0 and random.random() <= teleport_chance:
             print("teleported model")
             if config.targeted_teleportation:
                 # TODO: use teleportation function here when they are available.
                 raise NotImplementedError
             else:
                 model.random_teleport(cob_range=config.cob_range, sampling_type=config.cob_sampling)
-                optimizer = torch.optim.SGD(lr=config.lr, params=model.parameters())
+                optimizer = get_optimizer_from_model_and_config(model, config)
 
     model.cpu()  # Force the network to go out of the cuda mem.
 
@@ -127,20 +111,14 @@ if __name__ == '__main__':
     if torch.cuda.is_available():
         device = 'cuda'
 
-    if args.dataset == 'cifar10':
-        trainset, valset, testset = get_cifar10_datasets()
-    elif args.dataset == 'mnist':
-        trainset, valset, testset = get_mnist_datasets()
+    trainset, valset, testset = get_dataset_subsets(args.dataset)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size)
 
-    w, h = trainset.data.shape[1:3]
-    dims = 1 if trainset.data.ndim < 4 else trainset.data.shape[3]
-
-    nets = generate_experience_models(args.model, args.batch_size, (w, h, dims), device=device)
+    nets = generate_experience_models(args.dataset, args.model, device=device)
     init_weights = nets[0].get_weights()
 
     metric = TrainingMetrics(criterion=nn.CrossEntropyLoss(), metrics=[accuracy])
-    config = CompareTrainingConfig(lr=args.lr,
+    config = CompareTrainingConfig(optimizer=("SGD", {"lr": 1e-3}),
                                    epochs=args.epochs,
                                    batch_size=args.batch_size,
                                    device=device,

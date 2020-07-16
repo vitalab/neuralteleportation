@@ -55,10 +55,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         device = torch.device('cuda')
 
-    if args.dataset == "cifar10":
-        trainset, valset, testset = experiment_setup.get_cifar10_datasets()
-    elif args.dataset == "mnist":
-        trainset, valset, testset = experiment_setup.get_mnist_datasets()
+    trainset, valset, testset = experiment_setup.get_dataset_subsets(args.dataset)
 
     data_size = (args.batch_size, trainset.data.shape[3], trainset.data.shape[1], trainset.data.shape[2])
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=False)
@@ -67,10 +64,7 @@ if __name__ == "__main__":
         net = torch.load(args.load_model, map_location=device)
         net = NeuralTeleportationModel(net, input_shape=data_size).to(device)
     else:
-        net = experiment_setup.get_model_from_name(args.model,
-                                                   num_classes=10,
-                                                   input_channels=dims)
-        net = NeuralTeleportationModel(network=net, input_shape=data_size).to(device)
+        net = experiment_setup.get_model(args.dataset, args.model, device=device.type)
 
     criterion = nn.CrossEntropyLoss()
     if args.train:

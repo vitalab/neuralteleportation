@@ -2,7 +2,9 @@
 Closed form optimization on a network's change of basis to find the change of basis that teleports
 to a given set of weights.
 """
+import argparse
 from copy import deepcopy
+from os.path import join as pjoin
 
 import torch
 import torch.nn as nn
@@ -11,11 +13,8 @@ from neuralteleportation.metrics import accuracy
 from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
-from neuralteleportation.training.experiment_setup import get_mnist_datasets
+from neuralteleportation.training.experiment_setup import get_dataset_subsets
 from neuralteleportation.training.training import train, test
-import argparse
-from os.path import join as pjoin
-
 from neuralteleportation.utils.pathutils import get_nonexistent_path
 
 
@@ -38,7 +37,7 @@ if __name__ == '__main__':
     config = TrainingConfig(epochs=args.epochs, device=device, shuffle_batches=True)
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
-    mnist_train, mnist_val, mnist_test = get_mnist_datasets()
+    mnist_train, mnist_val, mnist_test = get_dataset_subsets("mnist")
 
     sample_input_shape = (1, 1, 28, 28)
     hidden_layers = (128, 10)
