@@ -57,8 +57,9 @@ if __name__ == '__main__':
     if args.train_model:
         train(model, trainset, metric, config)
     a = torch.linspace(args.x[0], args.x[1], args.x[2])
-    w_o = model.get_weights()
+    param_o = model.get_params()
     model.random_teleport(args.cob_range, args.cob_sampling)
-    w_t = model.get_weights()
-    loss, acc = ll.generate_1D_linear_interp(model, w_o, w_t, a, metric=metric, config=config, trainset=trainset)
+    param_t = model.get_params()
+
+    loss, acc = ll.generate_1D_linear_interp(model, param_o, param_t, a, metric=metric, config=config, trainset=trainset)
     ll.plot_interp(loss, acc, a)

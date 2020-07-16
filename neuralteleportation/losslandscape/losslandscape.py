@@ -99,18 +99,27 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
     return w, final
 
 
-def generate_1D_linear_interp(model: NeuralTeleportationModel, w_o: torch.Tensor, w_t: torch.Tensor, a: torch.Tensor,
-                              trainset: Dataset, metric: TrainingMetrics, config: TrainingConfig):
+def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[torch.Tensor,torch.Tensor],
+                              param_t: Tuple[torch.Tensor,torch.Tensor], a: torch.Tensor,
+                              trainset: Dataset, metric: TrainingMetrics, config: TrainingConfig,
+                              use_cob_interp: bool = True):
     """
         This is 1-Dimensional Linear Interpolaiton
         θ(α) = (1−α)θ + αθ′
     """
     loss = []
     acc = []
-
+    w_o, cob_o = param_o
+    w_t, cob_t = param_t
     for coord in a:
         w = (1 - coord) * w_o + coord * w_t
-        model.set_weights(w)
+        if use_cob_interp:
+            cob = (1 - coord) * cob_o + coord * cob_t
+        else:
+            cob = cob_o
+            if w.equal(w_t):
+                cob = cob_t
+        model.set_params(w, cob)
         res = test(model, trainset, metric, config)
         loss.append(res['loss'])
         acc.append(res['accuracy'])
