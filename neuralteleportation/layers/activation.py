@@ -11,6 +11,9 @@ class ActivationLayerMixin(COBForwardMixin, NeuralTeleportationLayerMixin):
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.cob = prev_cob
 
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)
 
