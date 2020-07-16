@@ -74,7 +74,8 @@ def _teleport_and_train(model: Tuple[str, nn.Module], train_dataset: Dataset, me
     # Teleport the model to obtain N different models corresponding to the same function
     # NOTE: The input shape passed to `NeuralTeleportationModel` must take into account the batch dimension
     teleportation_model = NeuralTeleportationModel(network=model, input_shape=(2,) + config.input_shape)
-    teleported_models = [deepcopy(teleportation_model).random_teleport().network
+    teleported_models = [deepcopy(teleportation_model).random_teleport(cob_range=config.cob_range,
+                                                                      sampling_type=config.cob_sampling).network
                          for _ in range(config.num_teleportations)]
 
     # Call recursively the training algorithm on teleported models, with less epochs left to perform
