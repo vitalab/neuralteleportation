@@ -80,17 +80,27 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         # Check if the weights were updated during training on loading weights.
         if get_proxy:
             self._set_proxy_weights()
-
-        if self.bias is not None and bias:
-            if flatten:
-                return self.w.flatten(), self.b.flatten()
+            if self.bias is not None and bias:
+                if flatten:
+                    return self.w.flatten(), self.b.flatten()
+                else:
+                    return self.w, self.b
             else:
-                return self.w, self.b
+                if flatten:
+                    return self.w.flatten(),
+                else:
+                    return self.w,
         else:
-            if flatten:
-                return self.w.flatten(),
+            if self.bias is not None and bias:
+                if flatten:
+                    return self.weight.flatten(), self.bias.flatten()
+                else:
+                    return self.weight, self.bias
             else:
-                return self.w,
+                if flatten:
+                    return self.weight.flatten(),
+                else:
+                    return self.weight,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
