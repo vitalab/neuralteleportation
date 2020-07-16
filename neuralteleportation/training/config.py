@@ -11,6 +11,8 @@ class TrainingConfig:
     epochs: int = 10
     batch_size: int = 32
     device: str = 'cpu'
+    cob_range: float = 0.5
+    cob_sampling: str = 'within_landscape'
     exp_logger: BaseLogger = None
     shuffle_batches: bool = False
     weight_decay: float = 0

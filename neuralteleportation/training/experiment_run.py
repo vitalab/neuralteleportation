@@ -25,15 +25,6 @@ def run_model_training(train_fct: Callable, model: nn.Module,
     print()
 
 
-def run_single_output_training(train_fct: Callable, models: Sequence[nn.Module],
-                               config: TrainingConfig, metrics: TrainingMetrics,
-                               train_set: VisionDataset, test_set: VisionDataset,
-                               val_set: VisionDataset = None):
-    for model in models:
-        run_model_training(train_fct, model, config, metrics,
-                           train_set, test_set, val_set)
-
-
 def run_multi_output_training(train_fct: Callable, models: Sequence[nn.Module],
                               config: TrainingConfig, metrics: TrainingMetrics,
                               train_set: VisionDataset, test_set: VisionDataset,
