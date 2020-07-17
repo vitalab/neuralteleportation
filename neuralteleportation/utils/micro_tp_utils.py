@@ -399,7 +399,7 @@ def dot_product_between_teleportation(network, dataset,
               f'reset weights: {reset_weights}')
 
     plt.ylabel('log10(|Scalar product|)')
-    plt.xlabel('log10(COB)')
+    plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
     plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_within_landscape_'
@@ -413,7 +413,7 @@ def dot_product_between_teleportation(network, dataset,
               f'reset weights: {reset_weights}')
 
     plt.ylabel('Theta')
-    plt.xlabel('log10(COB)')
+    plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
     plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_within_landscape_'
