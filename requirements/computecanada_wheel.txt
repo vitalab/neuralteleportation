@@ -1,0 +1,12 @@
+scikit-image
+scikit-learn
+h5py
+tqdm
+torch
+torchvision
+packaging
+seaborn
+torchsummary
+networkx
+tensorboard
+visdom
