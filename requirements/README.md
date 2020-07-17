@@ -25,6 +25,11 @@ servers. For more information on how to configure virtual environments on Comput
 please refer to their own
 [documentation on the subject](https://docs.computecanada.ca/wiki/Python#Creating_and_using_a_virtual_environment).
 
+> NOTE: The job submission scripts handle automatically handle the creation of virtual environments directly on the
+> compute nodes, which is arguably the optimal way to manage environments. Therefore, the instructions detailed below
+> do not need to be run, but rather serve as reference in case somebody would want to setup an environment accessible
+> from login nodes.  
+
 On Compute Canada's servers, the recommended tool to manage virtual environments is Python's own virtualenv, rather
 than Conda. It is also recommended to use packages compiled specially by Compute Canada for the servers' architectures,
 instead of generic packages automatically downloaded by pip. This last recommendation explains why some of the
@@ -37,21 +42,28 @@ module load python/3.7
 module load scipy-stack # For scipy, matplotlib and pandas
 virtualenv --no-download <path_to_virtual_env>
 ```
-
 After the virtual environment is created, it is necessary to activate it and update the base environment.
 ```bash
 source <path_to_virtual_env>/bin/activate
 pip install --upgrade setuptools pip wheel
 ```
-
 Afterwards, the environment's packages can be installed from the requirements file, like follows:
 ```bash
 pip install --no-index -r requirements/computecanada_wheel.txt
-pip install -r requirements/computecanada_no_wheel.txt
 ```
-
-Do not forget to also install the project's package, which will allow to import modules from the project, using the
-following command:
+Finally, it is necessary to make the project's package visible to the python interpreter. If the environment is to be
+used by a single user, than the best solution is to simply install the package in editable mode with:
 ```bash
 pip install -e .
+```
+However, if the virtual environment is shared between multiple users (e.g. installed somewhere in
+`~/projects/def-pmjodoin` in order to be accessible to a whole team of people), then installing the package could
+result in conflicts and users overwriting each other's installations. People might not even end up running the version
+of the code they would expect!
+
+In that case, the recommended approach is to indicate to the python interpreter *where* to look for the package right
+before actually running scripts, by setting the PYTHONPATH environment variable. This would look something like this:
+```bash
+export PYTHONPATH=$PYTHONPATH:<PROJECT_ROOT_DIR>
+python <your_script.py>
 ```

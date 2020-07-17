@@ -7,24 +7,55 @@
 #SBATCH --mem=32000M               # memory (per node)
 #SBATCH --time=00-12:00            # time (DD-HH:MM)
 
-GIT_CLONE_DIR=$1
-EXPERIMENT_CONFIG_FILE=$2
+usage()
+{
+  echo "Usage: submit_teleport_training [ -d | --project_root_dir ] [ -c | --experiment_config_file ]"
+  exit 2
+}
 
-# Navigate to where you git cloned the repository
-cd "$GIT_CLONE_DIR" || {
-  echo "Could not cd to directory: $GIT_CLONE_DIR"
+PARSED_ARGUMENTS=$(getopt -n submit_teleport_training -o d:c: --long project_root_dir:,experiment_config_file: -- "$@")
+VALID_ARGUMENTS=$?
+if [ "$VALID_ARGUMENTS" != "0" ]; then
+  usage
+fi
+
+eval set -- "$PARSED_ARGUMENTS"
+while :
+do
+  case "$1" in
+    -d | --project_root_dir)        project_root_dir="$2"       ; shift 2 ;;
+    -c | --experiment_config_file)  experiment_config_file="$2"  ; shift 2 ;;
+    # -- means the end of the arguments; drop this, and break out of the while loop
+    --) shift; break ;;
+    # If invalid options were passed, then getopt should have reported an error,
+    # which we checked as VALID_ARGUMENTS when getopt was called...
+    *) echo "Unexpected option: $1 - this should not happen."
+       usage ;;
+  esac
+done
+
+required_args=("$project_root_dir" "$experiment_config_file")
+for required_arg in "${required_args[@]}"; do
+  if [ -z "$required_arg" ]
+    then
+      echo "Missing one or more required argument(s)"; usage
+  fi
+done
+
+# Navigate to the project's root directory
+cd "$project_root_dir" || {
+  echo "Could not cd to directory: $project_root_dir. Verify that it exists."
   exit 1
 }
 
-# Activate shared virtual environment for the project
-source "$HOME"/projects/def-pmjodoin/vitalab/virtualenv/neuralteleporation/bin/activate
-
-# Make the code of the project visible to the python interpreter, without installing it in the environment.
-# This is done to allow multiple users to use the same environment with different version of the project code.
-export PYTHONPATH=$PYTHONPATH:$PWD
+# Install and activate a virtual environment directly on the compute node
+module load python/3.7
+module load scipy-stack # For scipy, matplotlib and pandas
+virtualenv --no-download "$SLURM_TMPDIR"/env
+source "$SLURM_TMPDIR"/env/bin/activate
+pip install --upgrade setuptools pip wheel
+pip install --no-index -r requirements/computecanada_wheel.txt
+pip install .
 
 # Run task
-python neuralteleporation/experiments/teleport_training.py --config "$EXPERIMENT_CONFIG_FILE"
-
-# Exit normally on completion
-exit
+python neuralteleporation/experiments/teleport_training.py --config "$experiment_config_file"
