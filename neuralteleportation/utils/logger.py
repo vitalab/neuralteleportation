@@ -1,5 +1,5 @@
 import numpy as np
-import visdom
+# import visdom
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -34,7 +34,7 @@ class VisdomLogger(BaseLogger):
     def __init__(self, env, server="http://localhost", port=8097):
         super(VisdomLogger, self).__init__()
         self.env = env
-        self.vis = visdom.Visdom(env=self.env, server=server, port=port)
+        # self.vis = visdom.Visdom(env=self.env, server=server, port=port)
         self.scalars = {}
 
     def add_scalar(self, name, value, step):

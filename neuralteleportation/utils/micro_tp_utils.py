@@ -318,7 +318,6 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
 
 def dot_product_between_teleportation(network, dataset,
                                       network_descriptor=None,
-                                      reset_weights=False,
                                       iterations=200,
                                       device='cpu') -> None:
     """
@@ -332,8 +331,8 @@ def dot_product_between_teleportation(network, dataset,
 
         network_descriptor:     String describing the content of the network
 
-        reset_weights:          indicates if the weights of the model will be reset to their original value before
-                                each teleportation, or if the teleportation are done back-to-back
+        iterations:             Number of times the micro-teleportation for statistical (mean, variance, etc)
+                                calculation
 
         device:                 Device used to compute the netork operations ('cpu' or 'cuda')
     """
@@ -360,15 +359,12 @@ def dot_product_between_teleportation(network, dataset,
 
     w1 = model.get_weights().detach().to(device)
 
+    dot_product_results = []
+    angles = []
 
     for cob in cobs:
 
-        dot_product_results = []
-        unit_dot_product_results = []
-        angles = []
-
         dot_product_result = 0
-        unit_dot_product_result = 0
         angle = 0
 
         for _ in range(0, iterations):
@@ -379,43 +375,37 @@ def dot_product_between_teleportation(network, dataset,
             model.random_teleport(cob_range=cob, sampling_type='within_landscape', center=max(cobs))
             w2 = model.get_weights().detach().to(device)
 
-            dot_product_result +=  torch.matmul(torch.tensor(w1).to(device)/tensor_norm(w1), torch.tensor(w2).to(device)/tensor_norm(w2)).item()
-            unit_dot_product_result += torch.matmul(torch.tensor(w1).to(device), torch.tensor(w2).to(device)).item()
-            angle += np.degrees(torch.atan(normalized_dot_product(w1, w2).item()).cpu())
+            # cos(theta) = (w1 w2)/(||w1|| ||w2||)
+            dot_product_result += normalized_dot_product(w1, w2)
+            angle += np.degrees(torch.atan(normalized_dot_product(w1, w2)).cpu())
 
         dot_product_result /= iterations
-        unit_dot_product_result /= iterations
         angle /= iterations
 
-        unit_dot_product_results.append(dot_product_result)
-        dot_product_results.append(unit_dot_product_result)
-        angles.append(angle)
+        dot_product_results.append(dot_product_result.item())
+        angles.append(angle.item())
 
     dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
 
     plt.plot(cobs, dot_product_results.cpu())
-    plt.title(f'Sacalar product between original and \nteleported weights with '
-              f'respect to COB\'s order of magnitude\n{network_descriptor}, '
-              f'reset weights: {reset_weights}')
+    plt.title(f'Scalar product between original and \nteleported weights with '
+              f'respect to COB\'s order of magnitude\n{network_descriptor}')
 
     plt.ylabel('log10(|Scalar product|)')
     plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_within_landscape_'
-                f'reset_weights_{reset_weights}.png')
+    plt.savefig(f'{series_dir}/dot_product_vs_cob_{network_descriptor}_Samp_type_within_landscape')
     plt.show()
 
 
     plt.plot(cobs, angles)
     plt.title(f'Angle between original and \nteleported weights with '
-              f'respect to COB\'s order of magnitude\n{network_descriptor}, '
-              f'reset weights: {reset_weights}')
+              f'respect to COB\'s order of magnitude\n{network_descriptor}')
 
     plt.ylabel('Theta')
     plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_within_landscape_'
-                f'reset_weights_{reset_weights}.png')
+    plt.savefig(f'{series_dir}/angle_vs_cob_{network_descriptor}_Samp_type_within_landscape')
     plt.show()

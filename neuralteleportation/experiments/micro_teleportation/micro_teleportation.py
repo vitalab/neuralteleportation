@@ -67,9 +67,13 @@ if __name__ == '__main__':
 
     config = MicroTeleportationTrainingConfig(input_shape=(3, 32, 32), device=device, batch_size=10,
                                               num_teleportations=1, epochs=5)
-
-    models = get_cifar10_models()
-    models.append(get_cifar10_MLP())
+    ##TODO take of dummy list, uncomments models and put back full data
+    # models = get_cifar10_models()
+    models = list()
+    models.append(MLPCOB(num_classes=10, input_shape=config.input_shape))
+    cifar10_train.data = cifar10_train.data[:64, :, :, :]
+    cifar10_val.data = cifar10_val.data[:64, :, :, :]
+    cifar10_test.data = cifar10_test.data[:64, :, :, :]
 
     Path('models').mkdir(parents=True, exist_ok=True)
 
@@ -97,7 +101,7 @@ if __name__ == '__main__':
     cifar100_train, cifar100_val, cifar100_test = get_cifar100_datasets()
 
     models = get_cifar100_models()
-    models.append(get_cifar100_MLP())
+    models.append(MLPCOB(num_classes=100, input_shape=config.input_shape))
 
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifa100').exists():
