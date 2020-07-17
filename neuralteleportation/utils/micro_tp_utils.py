@@ -315,7 +315,6 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
             plt.show()
 
 
-
 def dot_product_between_teleportation(network, dataset,
                                       network_descriptor=None,
                                       iterations=200,
@@ -397,7 +396,6 @@ def dot_product_between_teleportation(network, dataset,
     Path(series_dir).mkdir(parents=True, exist_ok=True)
     plt.savefig(f'{series_dir}/dot_product_vs_cob_{network_descriptor}_Samp_type_within_landscape')
     plt.show()
-
 
     plt.plot(cobs, angles)
     plt.title(f'Angle between original and \nteleported weights with '

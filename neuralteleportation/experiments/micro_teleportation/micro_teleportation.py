@@ -89,8 +89,7 @@ if __name__ == '__main__':
                                         device=device)
 
         dot_product_between_teleportation(network=model, dataset=cifar10_test,
-                                          network_descriptor=f'{model.__class__.__name__} on CIFAR10',
-                                          reset_weights=False, device=device)
+                                          network_descriptor=f'{model.__class__.__name__} on CIFAR10', device=device)
 
 
     # Run on CIFAR100
@@ -105,7 +104,8 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifa100'))
         else:
             print(f'training model: models/{model.__class__.__name__}_cifar100')
-            run_multi_output_training(train, [model], config, metrics, cifar100_train, cifar100_test, val_set=cifar100_val)
+            run_multi_output_training(train, [model], config, metrics, cifar100_train, cifar100_test,
+                                      val_set=cifar100_val)
             torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar100')
 
     for model in models:
@@ -114,5 +114,4 @@ if __name__ == '__main__':
                                         device=device)
 
         dot_product_between_teleportation(network=model, dataset=cifar100_test,
-                                         network_descriptor=f'{model.__class__.__name__} on CIFAR100',
-                                         reset_weights=False, device=device)
+                                          network_descriptor=f'{model.__class__.__name__} on CIFAR100', device=device)
