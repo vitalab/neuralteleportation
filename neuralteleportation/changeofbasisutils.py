@@ -32,7 +32,6 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'within_lan
     """
     # Change of basis in interval [1-range_cob, 1+range_cob]
     if sampling_type == 'within_landscape':
-        print(f'range_cob: {range_cob}, center: {center}')
         assert not (range_cob > center or center <= 0), 'This range for change of basis sampling allows for negative ' \
                                                         'changes of basis.'
         if center != 1:
