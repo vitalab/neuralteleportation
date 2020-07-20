@@ -54,7 +54,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
     Args:
         network :               the model which we wish to use to compute the micro-teleporations
 
-        dataset                 the dataset that will be used to calculate the gradient and get dimensions for the
+        dataset:                 the dataset that will be used to calculate the gradient and get dimensions for the
                                 neural teleportation model
 
         nb_teleport:            The number of time the network is teleported and the scalar product calculated. An
@@ -63,6 +63,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
         network_descriptor:     String describing the content of the network
 
         sampling_types :        Teleportation sampling types, governs how the change of basis is computed
+
+        batch_sizes:             Size of the minibatch used to perform gradient calculation
 
         criterion:              the loss function used to compute the gradient
 
@@ -384,13 +386,11 @@ def dot_product_between_teleportation(network, dataset,
         dot_product_results.append(dot_product_result.item())
         angles.append(angle.item())
 
-    dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
-
     plt.plot(cobs, dot_product_results.cpu())
     plt.title(f'Scalar product between original and \nteleported weights with '
               f'respect to COB\'s order of magnitude\n{network_descriptor}')
 
-    plt.ylabel('log10(|Scalar product|)')
+    plt.ylabel('Scalar product')
     plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
