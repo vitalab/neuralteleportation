@@ -339,9 +339,6 @@ def dot_product_between_teleportation(network, dataset,
     """
     series_dir = f'images/series_dot_prod_vs_cob/{network_descriptor}'
 
-    ##TODO remove
-    nb_teleport = 1
-
     if torch.cuda.is_available():
         print(f'{green}Using CUDA{reset}')
         network = network.cuda()
