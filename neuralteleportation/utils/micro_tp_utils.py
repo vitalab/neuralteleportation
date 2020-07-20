@@ -26,7 +26,7 @@ def tensor_norm(t: Tensor) -> Tensor:
 
 def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
     """
-    This function returns the normalized scalar products between two tensors. In order to make the methode
+    This function returns the normalized scalar products between two tensors. In order to make the method
     device-agnostic, if the inputs are numpy arrays, they're converted to pytorch tensors
 
     Args:
@@ -68,7 +68,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
 
         criterion:              the loss function used to compute the gradient
 
-        device:                 Device used to compute the netork operations ('cpu' or 'cuda')
+        device:                 Device used to compute the network operations ('cpu' or 'cuda')
 
         verbose:                If true, the method will output extensive details about the calculated vectors and
                                 aggregated data (mainly for debugging purposes)
@@ -335,7 +335,7 @@ def dot_product_between_teleportation(network, dataset,
         nb_teleport:             Number of times the micro-teleportation for statistical (mean, variance, etc)
                                 calculation
 
-        device:                 Device used to compute the netork operations ('cpu' or 'cuda')
+        device:                 Device used to compute the network operations ('cpu' or 'cuda')
     """
     series_dir = f'images/series_dot_prod_vs_cob/{network_descriptor}'
 
