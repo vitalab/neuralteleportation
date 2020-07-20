@@ -40,7 +40,7 @@ def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
     return torch.matmul(t1, t2) / (tensor_norm(t1) * tensor_norm(t2))
 
 
-def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_descriptor='',
+def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_descriptor='',
                                     sampling_types=['within_landscape'],
                                     batch_sizes=[8, 16, 32, 64],
                                     criterion=None,
@@ -319,7 +319,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
 
 def dot_product_between_teleportation(network, dataset,
                                       network_descriptor=None,
-                                      iterations=200,
+                                      nb_teleport=100,
                                       device='cpu') -> None:
     """
     This method tests the scalar product between the initial and teleported set of weights and plots the results with
@@ -332,7 +332,7 @@ def dot_product_between_teleportation(network, dataset,
 
         network_descriptor:     String describing the content of the network
 
-        iterations:             Number of times the micro-teleportation for statistical (mean, variance, etc)
+        nb_teleport:             Number of times the micro-teleportation for statistical (mean, variance, etc)
                                 calculation
 
         device:                 Device used to compute the netork operations ('cpu' or 'cuda')
@@ -368,7 +368,7 @@ def dot_product_between_teleportation(network, dataset,
         dot_product_result = 0
         angle = 0
 
-        for _ in range(0, iterations):
+        for _ in range(0, nb_teleport):
             # reset the weights
             model.set_weights(w1)
 
@@ -380,8 +380,8 @@ def dot_product_between_teleportation(network, dataset,
             dot_product_result += normalized_dot_product(w1, w2)
             angle += np.degrees(torch.atan(normalized_dot_product(w1, w2)).cpu())
 
-        dot_product_result /= iterations
-        angle /= iterations
+        dot_product_result /= nb_teleport
+        angle /= nb_teleport
 
         dot_product_results.append(dot_product_result.item())
         angles.append(angle.item())
