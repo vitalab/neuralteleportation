@@ -42,11 +42,11 @@ if __name__ == '__main__':
     sample_input_shape = (1, 1, 28, 28)
     hidden_layers = (128, 10)
 
-    net1 = MLPCOB(num_classes=10, hidden_layers=hidden_layers).to(device)
+    net1 = MLPCOB(input_shape=(1, 28, 28), num_classes=10, hidden_layers=hidden_layers).to(device)
     if args.same_init:
         net2 = deepcopy(net1)
     else:
-        net2 = MLPCOB(num_classes=10, hidden_layers=hidden_layers).to(device)
+        net2 = MLPCOB(input_shape=(1, 28, 28), num_classes=10, hidden_layers=hidden_layers).to(device)
 
     model1 = NeuralTeleportationModel(network=net1, input_shape=sample_input_shape)
     if args.weights1 is not None:

@@ -53,7 +53,10 @@ def get_model(dataset_name: str, model_name: str, device: str = 'cpu', **model_k
 
     # Dynamically determine the parameters for initializing the model based on the dataset
     model_kwargs.update(get_dataset_info(dataset_name, "num_classes"))
-    if "mlp" not in model_name.lower():
+    if "mlp" in model_name.lower():
+        input_channels, image_size = get_dataset_info(dataset_name, "input_channels", "image_size").values()
+        model_kwargs.update(input_shape=(input_channels, *image_size))
+    else:
         model_kwargs.update(get_dataset_info(dataset_name, "input_channels"))
 
     # Instantiate the model

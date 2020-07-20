@@ -15,13 +15,13 @@ class MLPCOB(nn.Module):
     """Multi-layer Perceptron model class.
 
     Args:
-        num_classes (int) - number of classification classes
         input_shape (list of 3 ints) - the channels, height and width of the input
+        num_classes (int) - number of classification classes
         hidden_layers (list of ints) - the number of neurons in each hidden layer
 
     """
 
-    def __init__(self, num_classes, input_shape=(1, 28, 28), hidden_layers=(128,)):
+    def __init__(self, input_shape, num_classes, hidden_layers=(128,)):
         super().__init__()
 
         # Create the input and hidden layers
@@ -44,5 +44,5 @@ class MLPCOB(nn.Module):
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    mlp = MLPCOB(num_classes=10)
+    mlp = MLPCOB(input_shape=(1, 28, 28), num_classes=10)
     test_teleport(mlp, (1, 1, 28, 28), verbose=True)
