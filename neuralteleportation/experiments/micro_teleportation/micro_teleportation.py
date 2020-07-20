@@ -75,8 +75,9 @@ if __name__ == '__main__':
 
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifar10').exists():
-            print(f'fetchning existing model: models/{model.__class__.__name__}_cifar10')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10'))
+            print(f'fetching saved model: models/{model.__class__.__name__}_cifar10')
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10',
+                                             map_location=torch.device(device)))
         else:
             print(f'training model: {model.__class__.__name__}_cifar10')
             run_multi_output_training(train, [model], config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
@@ -100,8 +101,9 @@ if __name__ == '__main__':
 
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifar100').exists():
-            print(f'fetchning existing model: models/{model.__class__.__name__}_cifar100')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100'))
+            print(f'fetching saved model: models/{model.__class__.__name__}_cifar100')
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100',
+                                             map_location=torch.device(device)))
         else:
             print(f'training model: models/{model.__class__.__name__}_cifar100')
             run_multi_output_training(train, [model], config, metrics, cifar100_train, cifar100_test,
