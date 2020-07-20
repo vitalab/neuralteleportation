@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifar10').exists():
-            print(f'fetchning existing model: models/{model.__class__.__name__}_cifar10')
+            print(f'fetching saved model: models/{model.__class__.__name__}_cifar10')
             model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10',
                                              map_location=torch.device(device)))
         else:
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifar100').exists():
-            print(f'fetchning existing model: models/{model.__class__.__name__}_cifar100')
+            print(f'fetching saved model: models/{model.__class__.__name__}_cifar100')
             model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100',
                                              map_location=torch.device(device)))
         else:
