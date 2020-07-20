@@ -54,7 +54,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
     Args:
         network :               the model which we wish to use to compute the micro-teleporations
 
-        dataset                 the dataset that will be used to calculate the gradient and get dimensions for the
+        dataset:                 the dataset that will be used to calculate the gradient and get dimensions for the
                                 neural teleportation model
 
         nb_teleport:            The number of time the network is teleported and the scalar product calculated. An
@@ -63,6 +63,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=200, network_d
         network_descriptor:     String describing the content of the network
 
         sampling_types :        Teleportation sampling types, governs how the change of basis is computed
+
+        batch_sizes:             Size of the minibatch used to perform gradient calculation
 
         criterion:              the loss function used to compute the gradient
 
