@@ -37,6 +37,9 @@ def unravel_matrix_config(config_path: Path, output_dir: Path) -> int:
 
                     # w/ teleport configuration
                     else:  # teleport == "teleport"
+                        # Copy the config to play around with its content without affecting the config loaded in memory
+                        teleport_config_kwargs = teleport_config_kwargs.copy()
+
                         teleport_mode_obj = teleport_config_kwargs.pop("mode")
                         teleport_mode_configs = []
                         for teleport_mode, teleport_mode_config_kwargs in teleport_mode_obj.items():
