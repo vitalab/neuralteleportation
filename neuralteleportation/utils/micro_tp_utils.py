@@ -371,12 +371,12 @@ def dot_product_between_teleportation(network, dataset,
         dot_product_result = 0
         angle = 0
 
-        for _ in range(0, nb_teleport):
+        for _ in tqdm(range(0, nb_teleport)):
             # reset the weights
             model.set_weights(w1)
 
             # teleport and get the new weights
-            model.random_teleport(cob_range=cob, sampling_type='within_landscape', center=max(cobs))
+            model.random_teleport(cob_range=cob, sampling_type='within_landscape')
             w2 = model.get_weights().detach().to(device)
 
             # cos(theta) = (w1 w2)/(||w1|| ||w2||)
