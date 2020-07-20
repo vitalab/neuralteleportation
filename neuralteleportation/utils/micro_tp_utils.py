@@ -384,13 +384,11 @@ def dot_product_between_teleportation(network, dataset,
         dot_product_results.append(dot_product_result.item())
         angles.append(angle.item())
 
-    dot_product_results = torch.log10(torch.abs(torch.tensor(dot_product_results)).to(device))
-
     plt.plot(cobs, dot_product_results.cpu())
     plt.title(f'Scalar product between original and \nteleported weights with '
               f'respect to COB\'s order of magnitude\n{network_descriptor}')
 
-    plt.ylabel('log10(|Scalar product|)')
+    plt.ylabel('Scalar product')
     plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)

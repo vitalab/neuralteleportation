@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 from typing import Dict, Tuple, Union
 
+##TODO take off for PR
+import sys
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/training')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/experiments')
+
 import torch.optim as optim
 from torch import nn
 from torch.optim.optimizer import Optimizer
@@ -69,7 +76,7 @@ if __name__ == '__main__':
                                               num_teleportations=1, epochs=5)
 
     models = get_cifar10_models()
-    models.append(MLPCOB(num_classes=10, input_shape=config.input_shape))
+    models.append(MLPCOB(num_classes=10, input_shape=config.input_shape, hidden_layers=(10, 10, 10)))
 
     Path('models').mkdir(parents=True, exist_ok=True)
 
@@ -96,12 +103,12 @@ if __name__ == '__main__':
     cifar100_train, cifar100_val, cifar100_test = get_cifar100_datasets()
 
     models = get_cifar100_models()
-    models.append(MLPCOB(num_classes=100, input_shape=config.input_shape))
+    models.append(MLPCOB(num_classes=100, input_shape=config.input_shape, hidden_layers=(10, 10, 10)))
 
     for model in models:
-        if Path(f'models/{model.__class__.__name__}_cifa100').exists():
-            print(f'fetchning existing model: models/{model.__class__.__name__}_cifa100')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifa100'))
+        if Path(f'models/{model.__class__.__name__}_cifar100').exists():
+            print(f'fetchning existing model: models/{model.__class__.__name__}_cifar100')
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100'))
         else:
             print(f'training model: models/{model.__class__.__name__}_cifar100')
             run_multi_output_training(train, [model], config, metrics, cifar100_train, cifar100_test,
