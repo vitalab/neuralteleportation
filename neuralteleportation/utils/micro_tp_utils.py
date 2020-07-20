@@ -339,6 +339,9 @@ def dot_product_between_teleportation(network, dataset,
     """
     series_dir = f'images/series_dot_prod_vs_cob/{network_descriptor}'
 
+    ##TODO remove
+    nb_teleport = 1
+
     if torch.cuda.is_available():
         print(f'{green}Using CUDA{reset}')
         network = network.cuda()
@@ -386,7 +389,7 @@ def dot_product_between_teleportation(network, dataset,
         dot_product_results.append(dot_product_result.item())
         angles.append(angle.item())
 
-    plt.plot(cobs, dot_product_results.cpu())
+    plt.plot(cobs, dot_product_results)
     plt.title(f'Scalar product between original and \nteleported weights with '
               f'respect to COB\'s order of magnitude\n{network_descriptor}')
 

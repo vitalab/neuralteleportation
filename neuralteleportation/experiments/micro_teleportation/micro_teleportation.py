@@ -77,13 +77,15 @@ if __name__ == '__main__':
 
     models = get_cifar10_models()
     models.append(MLPCOB(num_classes=10, input_shape=config.input_shape, hidden_layers=(10, 10, 10)))
+    models = [models[0]]
 
     Path('models').mkdir(parents=True, exist_ok=True)
 
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifar10').exists():
             print(f'fetchning existing model: models/{model.__class__.__name__}_cifar10')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10'))
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10',
+                                             map_location=torch.device(device)))
         else:
             print(f'training model: {model.__class__.__name__}_cifar10')
             run_multi_output_training(train, [model], config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
@@ -91,9 +93,9 @@ if __name__ == '__main__':
 
     for model in models:
 
-        micro_teleportation_dot_product(network=model, dataset=cifar10_test,
-                                        network_descriptor=f'{model.__class__.__name__} on CIFAR10',
-                                        device=device)
+        # micro_teleportation_dot_product(network=model, dataset=cifar10_test,
+        #                                 network_descriptor=f'{model.__class__.__name__} on CIFAR10',
+        #                                 device=device)
 
         dot_product_between_teleportation(network=model, dataset=cifar10_test,
                                           network_descriptor=f'{model.__class__.__name__} on CIFAR10', device=device)
@@ -108,7 +110,8 @@ if __name__ == '__main__':
     for model in models:
         if Path(f'models/{model.__class__.__name__}_cifar100').exists():
             print(f'fetchning existing model: models/{model.__class__.__name__}_cifar100')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100'))
+            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100',
+                                             map_location=torch.device(device)))
         else:
             print(f'training model: models/{model.__class__.__name__}_cifar100')
             run_multi_output_training(train, [model], config, metrics, cifar100_train, cifar100_test,

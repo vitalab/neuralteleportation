@@ -1,5 +1,5 @@
 import numpy as np
-import visdom
+# import visdom
 from torch.utils.tensorboard import SummaryWriter
 
 
