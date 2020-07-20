@@ -36,7 +36,7 @@ for required_arg in "${required_args[@]}"; do
   fi
 done
 
-for experiment_config_file in $experiment_config_dir; do
+for experiment_config_file in "$experiment_config_dir"/*.yml; do
   sbatch --mail-user="$email" --mail-type=ALL \
     ./submit_teleport_training.sh -d "$project_root_dir" -c "$experiment_config_file"
 done
