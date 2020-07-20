@@ -24,10 +24,6 @@ __training_configs__ = {"no_teleport": TrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig}
 
 
-# Time it takes to run different models, in `D-HH:MM:SS` format
-# MODEL_RUN_TIMES = {'mlp': "0-02:00:00", 'vggnet': "0-02:00:00", 'resnet': "0-02:00:00", 'densenet': "0-02:00:00"}
-
-
 def run_experiment(config_path: Path, comet_config: Path) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
