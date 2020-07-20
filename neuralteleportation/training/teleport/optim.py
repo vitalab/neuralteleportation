@@ -79,8 +79,8 @@ def weighted_grad_norm(model: NeuralTeleportationModel, data: Tensor, target: Te
 
 def loss_lookahead_diff(model: NeuralTeleportationModel, data: Tensor, target: Tensor,
                         metrics: TrainingMetrics, config: OptimalTeleportationTrainingConfig) -> Number:
-    # Save the weights of the model before performing the lookahead
-    model_weights = model.get_weights()
+    # Save the state of the model, prior to performing the lookahead
+    state_dict = model.state_dict()
 
     # Initialize a new optimizer to perform lookahead
     optimizer = get_optimizer_from_model_and_config(model, config)
@@ -97,10 +97,8 @@ def loss_lookahead_diff(model: NeuralTeleportationModel, data: Tensor, target: T
     lookahead_loss = torch.stack([metrics.criterion(model(data_batch), target_batch)
                                   for data_batch, target_batch in zip(data, target)]).mean(dim=0)
 
+    # Restore the state of the model prior to the lookahead
+    model.load_state_dict(state_dict)
+
     # Compute the difference between the lookahead loss and the original loss
-    loss_diff = loss - lookahead_loss
-
-    # Restore the weights of the model from before the lookahead
-    model.set_weights(model_weights)
-
-    return loss_diff.item()
+    return (loss - lookahead_loss).item()
