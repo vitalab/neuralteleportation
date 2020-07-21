@@ -26,7 +26,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         if (isinstance(config, TeleportationTrainingConfig)
                 and (epoch % config.every_n_epochs) == 0
                 and epoch > 0):
-            model = config.teleport_fn(model, train_dataset, metrics, config)
+            model = config.teleport_fn(model=model, train_dataset=train_dataset, metrics=metrics, config=config)
             # Force a new optimizer in case the model was swapped as a result of the teleportations
             optimizer = get_optimizer_from_model_and_config(model, config)
 

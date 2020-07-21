@@ -2,14 +2,11 @@ import random
 from dataclasses import dataclass, field
 from typing import Callable
 
-from torch.utils.data import Dataset
-
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.config import TeleportationTrainingConfig, TrainingMetrics
+from neuralteleportation.training.config import TeleportationTrainingConfig
 
 
-def teleport_model_randomly(model: NeuralTeleportationModel, train_dataset: Dataset,
-                            metrics: TrainingMetrics, config: "RandomTeleportationTrainingConfig") \
+def teleport_model_randomly(model: NeuralTeleportationModel, config: "RandomTeleportationTrainingConfig", **kwargs) \
         -> NeuralTeleportationModel:
     if random.random() < config.teleport_prob:
         print("Applying random COB to model in training")
