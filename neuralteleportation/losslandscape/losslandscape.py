@@ -101,30 +101,32 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
 
 def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[torch.Tensor,torch.Tensor],
                               param_t: Tuple[torch.Tensor,torch.Tensor], a: torch.Tensor,
-                              trainset: Dataset, metric: TrainingMetrics, config: TrainingConfig,
-                              use_cob_interp: bool = True):
+                              trainset: Dataset, valset: Dataset,
+                              metric: TrainingMetrics, config: TrainingConfig
+                              ) -> Tuple[list, list, list]:
     """
         This is 1-Dimensional Linear Interpolaiton
         θ(α) = (1−α)θ + αθ′
     """
     loss = []
-    acc = []
+    acc_t = []
+    acc_v = []
     w_o, cob_o = param_o
     w_t, cob_t = param_t
     for coord in a:
+        # Interpolate the weight from W to T(W),
+        # then interpolate the cob for the activation
+        # and batchnorm layers only.
         w = (1 - coord) * w_o + coord * w_t
-        if use_cob_interp:
-            cob = (1 - coord) * cob_o + coord * cob_t
-        else:
-            cob = cob_o
-            if w.equal(w_t):
-                cob = cob_t
+        cob = (1 - coord) * cob_o + coord * cob_t
         model.set_params(w, cob)
         res = test(model, trainset, metric, config)
         loss.append(res['loss'])
-        acc.append(res['accuracy'])
+        acc_t.append(res['accuracy'])
+        res = test(model, valset, metric, config)
+        acc_v.append(res['accuracy'])
 
-    return loss, acc
+    return loss, acc_t, acc_v
 
 
 def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tuple[torch.Tensor, torch.Tensor],
@@ -213,7 +215,8 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
     plt.show()
 
 
-def plot_interp(loss: List[torch.Tensor], acc: List[torch.Tensor], a: torch.Tensor):
+def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torch.Tensor,
+                acc_val: List[torch.Tensor] = None):
     # Find the nearest value of a=0 and a=1
     idx_o = torch.abs(a - 0).argmin().item()
     idx_t = torch.abs(a - 1).argmin().item()
@@ -222,13 +225,17 @@ def plot_interp(loss: List[torch.Tensor], acc: List[torch.Tensor], a: torch.Tens
     ax2 = ax1.twinx()
     ax1.set_title("Linear Interpolation between W and T(W)")
     ax1.set_ylabel("Loss", color='b')
-    ax1.plot(a, loss, 'bo', markersize=2)
-    ax1.plot(a[idx_o], loss[idx_o], 'ko', markersize=3, label='W')
-    ax1.plot(a[idx_t], loss[idx_t], 'yo', markersize=3, label="T(W)")
+    ax1.plot(a, loss, 'bo', markersize=5)
+    ax1.plot(a[idx_o], loss[idx_o], 'ko', markersize=10, label='W')
+    ax1.plot(a[idx_t], loss[idx_t], 'yo', markersize=10, label="T(W)")
     ax2.set_ylabel('Accuracy', color='r')
-    ax2.plot(a, acc, 'ro', markersize=2)
-    ax2.plot(a[idx_o], acc[idx_o], 'kx', markersize=3, label='W')
-    ax2.plot(a[idx_t], acc[idx_t], 'yx', markersize=3, label="T(W)")
+    ax2.plot(a, acc_train, 'ro', markersize=5)
+    ax2.plot(a[idx_o], acc_train[idx_o], 'kx', markersize=10, label='train_W')
+    ax2.plot(a[idx_t], acc_train[idx_t], 'yx', markersize=10, label="train_T(W)")
+    if acc_val:
+        ax2.plot(a, acc_val, 'go', markersize=5)
+        ax2.plot(a[idx_o], acc_val[idx_o], 'kx', markersize=3, label='val_W')
+        ax2.plot(a[idx_t], acc_val[idx_t], 'yx', markersize=3, label="val_T(W)")
     plt.show()
 
 

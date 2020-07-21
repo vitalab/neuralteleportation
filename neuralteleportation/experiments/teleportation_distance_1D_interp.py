@@ -4,9 +4,8 @@ import torch
 import torch.nn as nn
 from torch.cuda import is_available as cuda_avail
 
-from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 from neuralteleportation.training.training import train
-from neuralteleportation.training.experiment_setup import get_cifar10_datasets
+from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_model_from_name, get_model_names
 from neuralteleportation.training.config import TrainingMetrics
 from neuralteleportation.losslandscape import losslandscape as ll
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
@@ -15,7 +14,7 @@ from neuralteleportation.metrics import accuracy
 
 def argument_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", "-e", type=int, default=3,
+    parser.add_argument("--epochs", "-e", type=int, default=10,
                         help="How many epochs should the network train in total")
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Defines how big the batch size is")
@@ -24,10 +23,11 @@ def argument_parser():
     parser.add_argument("--cob_sampling", type=str, default="within_landscape",
                         choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
-    parser.add_argument("--x", nargs=3, type=int, default=[0, 1, 50],
+    parser.add_argument("--x", nargs=3, type=float, default=[-0.5, 1.5, 100],
                         help="Defines the precision of the alpha")
-    parser.add_argument("--train_model", action="store_true", default=False,
+    parser.add_argument("--train", action="store_true", default=False,
                         help="Whether or not the model should train before teleportation.")
+    parser.add_argument("--model", type=str, default="resnet18COB", choices=get_model_names())
 
     return parser.parse_args()
 
@@ -38,10 +38,9 @@ if __name__ == '__main__':
     device = 'cuda' if cuda_avail() else 'cpu'
 
     trainset, valset, testset = get_cifar10_datasets()
-    # Uncommented for debug
-    # trainset.data = trainset.data[:100]
 
-    model = NeuralTeleportationModel(resnet18COB(num_classes=10), input_shape=(args.batch_size, 3, 32, 32)).to(device)
+    back_model = get_model_from_name(args.model, num_classes=10, input_channels=3)
+    model = NeuralTeleportationModel(back_model, input_shape=(args.batch_size, 3, 32, 32)).to(device)
     metric = TrainingMetrics(
         criterion=nn.CrossEntropyLoss(),
         metrics=[accuracy]
@@ -54,12 +53,15 @@ if __name__ == '__main__':
         teleport_at=[args.epochs],
         device=device
     )
-    if args.train_model:
+    if args.train:
         train(model, trainset, metric, config)
-    a = torch.linspace(args.x[0], args.x[1], args.x[2])
+    a = torch.linspace(args.x[0], args.x[1], int(args.x[2]))
     param_o = model.get_params()
     model.random_teleport(args.cob_range, args.cob_sampling)
     param_t = model.get_params()
 
-    loss, acc = ll.generate_1D_linear_interp(model, param_o, param_t, a, metric=metric, config=config, trainset=trainset)
-    ll.plot_interp(loss, acc, a)
+    loss, acc_t, acc_v = ll.generate_1D_linear_interp(model, param_o, param_t, a,
+                                                      metric=metric, config=config,
+                                                      trainset=trainset, valset=valset
+                                                      )
+    ll.plot_interp(loss, acc_t, a, acc_val=acc_v)
