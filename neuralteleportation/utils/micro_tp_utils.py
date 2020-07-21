@@ -37,7 +37,7 @@ def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
         t2 = torch.tensor(t2)
     if type(t1) is np.ndarray:
         t1 = torch.tensor(t1)
-    return torch.matmul(t1, t2) / (tensor_norm(t1) * tensor_norm(t2))
+    return torch.matmul(t1.float(), t2.float()) / (tensor_norm(t1) * tensor_norm(t2))
 
 
 def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_descriptor='',
@@ -388,7 +388,7 @@ def dot_product_between_teleportation(network, dataset,
 
     plt.plot(cobs, dot_product_results)
     plt.title(f'Scalar product between original and \nteleported weights with '
-              f'respect to COB\'s order of magnitude\n{network_descriptor}')
+              f'respect to COB\n{network_descriptor}')
 
     plt.ylabel('Scalar product')
     plt.xlabel('change of basis')
@@ -407,3 +407,222 @@ def dot_product_between_teleportation(network, dataset,
     Path(series_dir).mkdir(parents=True, exist_ok=True)
     plt.savefig(f'{series_dir}/angle_vs_cob_{network_descriptor}_Samp_type_within_landscape')
     plt.show()
+
+
+def get_raw_random_teleportations_data(network,
+                                       dataset,
+                                       nb_teleport=100,
+                                       network_descriptor='',
+                                       sampling_types=['within_landscape'],
+                                       batch_sizes=[8, 12, 16, 24, 32, 48, 64],
+                                       criterion=None,
+                                       device='cpu',
+                                       cobs=None,
+                                       save_results: bool = True,
+                                       load_csv_file:bool=False,
+                                       filename_prefix: str = '') -> pd.DataFrame:
+    """
+    This function returns the raw data from multiple random teleportation. The data is used to observe many relations
+    between the original set of weights/gradient and the teleported set of weight/gradient. The data is aggregated and
+    returned in a pandas Dataframe and saved to a csv file. If the file exists, it's possible to use it instead of
+    computing all calculation again.
+
+    Args:
+        network :               the model which we wish to use to compute the micro-teleporations
+
+        dataset:                 the dataset that will be used to calculate the gradient and get dimensions for the
+                                neural teleportation model
+
+        nb_teleport:            The number of time the network is teleported and the scalar product calculated. An
+                                average is then calculated.
+
+        network_descriptor:     String describing the content of the network
+
+        sampling_types :        Teleportation sampling types, governs how the change of basis is computed
+
+        batch_sizes:            Sizes of minibatch to test
+
+        criterion:              loss function used to compute the gradient
+
+        cobs:                   change of basis to test
+
+        device:                 Device used to compute the network operations ('cpu' or 'cuda')
+
+        save_results:           If true, the resuls are saved to a csv file
+
+        load_csv_file:          If true, and if the csv file exists, it is loaded instead of computing from scratch
+
+        filename_prefix:        Prefix added exclusively to the csv filename (unlike network_descriptor). Note that to
+                                load a csv file properly, this argument must correspond.
+    """
+
+    csv_results_filename = f'../experiments/micro_teleportation/' \
+                           f'{filename_prefix}{"_" * (filename_prefix != "")}' \
+                           f'tp_raw_data_{network_descriptor}_nb_teleports_{nb_teleport}.csv'
+
+    if load_csv_file and Path(csv_results_filename).exists():
+        aggregator = pd.read_csv(csv_results_filename)
+    else:
+        if cobs is None:
+            cobs = np.linspace(0.001, 0.999, 10)
+
+        # Arbitrary precision threshold for nullity comparison
+        torch.set_printoptions(precision=10, sci_mode=True)
+
+        if torch.cuda.is_available():
+            print(f'{green}Using CUDA{reset}')
+            network = network.cuda()
+
+        if (criterion is None):
+            loss_func = torch.nn.CrossEntropyLoss()
+        else:
+            loss_func = criterion
+
+        # Initialize the dataframe for data aggregation
+        aggregator = pd.DataFrame(columns=['model name',
+                                           'sampling type',
+                                           'batch size',
+                                           'COB range',
+                                           'weights vector length',
+                                           'Micro-teleportation vs Gradient',
+                                           'Micro-teleportation vs Gradient std',
+                                           'Gradient vs Random Vector',
+                                           'Gradient vs Random Vector std',
+                                           'Random Vector vs  Random Vector',
+                                           'Random Vector vs  Random Vector std',
+                                           'Micro-teleportation vs Random Vector',
+                                           'Micro-teleportation vs Random Vector std',
+                                           'Dot product orignal vs teleported weights',
+                                           'Dot product orignal vs teleported weights std',
+                                           'Orignal vs teleported weights',
+                                           'Orignal vs teleported weights std',
+                                           'Diff of gradients',
+                                           'Diff of gradients std'])
+
+        for sampling_type in sampling_types:
+            for batch_size in batch_sizes:
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+                data, target = next(iter(dataloader))
+
+                # save the initial weights to reset later
+                model = NeuralTeleportationModel(network=network, input_shape=data.shape)
+                model.to(device)
+                w = model.get_weights().detach().to(device)
+
+                for cob in cobs:
+                    angle_grad_micro_results = list()
+                    angle_grad_rand_results = list()
+                    angle_rand_rand_results = list()
+                    angle_rand_micro_results = list()
+                    dot_prod_w_tpw_results = list()
+                    angle_w_tpw_results = list()
+                    diff_between_gradients_norm_results = list()
+
+                    iterations = min(int(len(dataloader.dataset) / dataloader.batch_size), nb_teleport)
+
+                    for _ in tqdm(range(0, iterations)):
+
+                        # Get next data batch and gradient
+                        data, target = next(iter(dataloader))
+                        data, target = data.to(device), target.to(device)
+                        grad = model.get_grad(data, target, loss_func, zero_grad=False)
+
+                        # reset the weights for next teleportation
+                        model.set_weights(torch.tensor(w))
+
+                        # teleport and get the teleported weights
+                        model = model.random_teleport(cob_range=cob, sampling_type=sampling_type)
+                        tp_w = model.get_weights().detach().to(device, dtype=torch.double)
+
+                        # Get the teleported weights gradients
+                        tp_grad = model.get_grad(data, target, loss_func, zero_grad=False)
+
+                        # get teleportation vector
+                        micro_teleport_vec = (tp_w - w)
+
+                        # generate random vectors
+                        random_vector = (torch.rand(grad.shape) - 0.5).to(device)
+                        random_vector2 = (torch.rand(grad.shape) - 0.5).to(device)
+                        # random_vector = random_vector.to(device)
+                        # random_vector2 = random_vector2.to(device)
+
+                        # Dot product between the gradient and the telportation vector
+                        dot_prod_grad_micro = normalized_dot_product(grad, micro_teleport_vec)
+                        angle_grad_micro = np.degrees(torch.acos(dot_prod_grad_micro).cpu())
+                        angle_grad_micro_results.append(angle_grad_micro)
+
+                        # Dot product between the gradient and the first random vector
+                        dot_prod_grad_rand = normalized_dot_product(grad, random_vector)
+                        angle_grad_rand = np.degrees(torch.acos(dot_prod_grad_rand).cpu())
+                        angle_grad_rand_results.append(angle_grad_rand)
+
+                        # Dot product between 2 random vectors
+                        dot_prod_rand_rand = normalized_dot_product(random_vector2, random_vector)
+                        angle_rand_rand = np.degrees(torch.acos(dot_prod_rand_rand).cpu())
+                        angle_rand_rand_results.append(angle_rand_rand)
+
+                        # Dot pruduct between a random vector and the teleportation vector
+                        dot_prod_rand_micro = normalized_dot_product(random_vector2, micro_teleport_vec)
+                        angle_rand_micro = np.degrees(torch.acos(dot_prod_rand_micro).cpu())
+                        angle_rand_micro_results.append(angle_rand_micro)
+
+                        # Dot product between the orignal and teleported sets of weights
+                        dot_prod_w_tpw = normalized_dot_product(w, tp_w)
+                        dot_prod_w_tpw_results.append(dot_prod_w_tpw)
+
+                        angle_w_tpw = np.degrees(torch.atan(normalized_dot_product(w, tp_w)).cpu())
+                        angle_w_tpw_results.append(angle_w_tpw)
+
+                        # Difference between the gradient and the telported gradient norms
+                        diff_between_gradients_norm = tensor_norm(grad) - tensor_norm(tp_grad)
+                        diff_between_gradients_norm_results.append(diff_between_gradients_norm)
+
+                    angle_grad_micro_results = torch.tensor(angle_grad_micro_results)
+                    angle_grad_rand_results = torch.tensor(angle_grad_rand_results)
+                    angle_rand_rand_results = torch.tensor(angle_rand_rand_results)
+                    angle_rand_micro_results = torch.tensor(angle_rand_micro_results)
+                    dot_prod_w_tpw_results = torch.tensor(dot_prod_w_tpw_results)
+                    angle_w_tpw_results = torch.tensor(angle_w_tpw_results)
+                    diff_between_gradients_norm_results = torch.tensor(diff_between_gradients_norm_results)
+
+                    # Append resuslts to dataframe for further use
+                    aggregator = aggregator.append({'model name' : network_descriptor,
+                                                    'sampling type': sampling_type,
+                                                    'batch size': batch_size,
+                                                    'COB range': cob,
+                                                    'weights vector length': len(w),
+                                                    'Micro-teleportation vs Gradient':
+                                                        angle_grad_micro_results.mean(),
+                                                    'Micro-teleportation vs Gradient std':
+                                                        angle_grad_micro_results.std(),
+                                                    'Gradient vs Random Vector':
+                                                        angle_grad_rand_results.mean(),
+                                                    'Gradient vs Random Vector std':
+                                                        angle_grad_rand_results.std(),
+                                                    'Random Vector vs  Random Vector':
+                                                        angle_rand_rand_results.mean(),
+                                                    'Random Vector vs  Random Vector std':
+                                                        angle_rand_rand_results.std(),
+                                                    'Micro-teleportation vs Random Vector':
+                                                        angle_rand_micro_results.mean(),
+                                                    'Micro-teleportation vs Random Vector std':
+                                                        angle_rand_micro_results.std(),
+                                                    'Dot prodtuct orignal vs teleported weights':
+                                                        dot_prod_w_tpw_results.mean(),
+                                                    'Dot prodtuct orignal vs teleported weights std':
+                                                        dot_prod_w_tpw_results.std(),
+                                                    'Orignal vs teleported weights':
+                                                        angle_w_tpw_results.mean(),
+                                                    'Orignal vs teleported weights std':
+                                                        angle_w_tpw_results.std(),
+                                                    'Diff of gradients':
+                                                        diff_between_gradients_norm_results.mean(),
+                                                    'Diff of gradients std':
+                                                        diff_between_gradients_norm_results.std()},
+                                                   ignore_index=True)
+
+        # Save data to csv
+        if save_results:
+            aggregator.to_csv(csv_results_filename)
+
+    return aggregator
