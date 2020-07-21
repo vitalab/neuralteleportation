@@ -77,11 +77,12 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
                                                                               loss.item())
             pbar.set_postfix_str(output)
         step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
-        if config.comet_logger:  # TODO Add ``batch_idx % 500 == 0`` in case we make too many calls to the Comet API
-            config.comet_logger.log_metric("loss", loss.item())
-        if batch_idx % 500 == 0 and config.exp_logger:
+        if (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
+            if config.comet_logger:
+                config.comet_logger.log_metric("loss", loss.item())
             if config.exp_logger:
-                config.exp_logger.add_scalar("train_loss", loss.item(), step)
+                if config.exp_logger:
+                    config.exp_logger.add_scalar("train_loss", loss.item(), step)
     pbar.update()
     pbar.close()
 
