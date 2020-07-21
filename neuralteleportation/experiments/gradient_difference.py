@@ -2,6 +2,13 @@ from dataclasses import dataclass
 from typing import Dict, Tuple, Union
 import sys
 
+##TODO take off for PR
+import sys
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/training')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/experiments')
+
 import torch.optim as optim
 from torch import nn
 from torch.optim.optimizer import Optimizer
