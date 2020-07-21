@@ -125,7 +125,7 @@ if __name__ == '__main__':
                                    cob_range=args.cob_range,
                                    cob_sampling=args.cob_sampling,
                                    targeted_teleportation=args.targeted_teleportation,
-                                   teleport_every_n_epochs=args.teleport_every
+                                   every_n_epochs=args.teleport_every
                                    )
 
     res_vanilla = np.empty((args.run, args.epochs + 1))
