@@ -25,7 +25,7 @@ def train(model: Union[NeuralTeleportationModel, Tuple[str, NeuralTeleportationM
     if type(model) is tuple:
         model_name, model = model
     else:
-        model_name = model.__class__.__name__
+        model_name = str(model.network)[:str(model.network).find("(")]
 
     # Initialize an optimizer if there isn't already one
     if optimizer is None:
@@ -73,23 +73,27 @@ if __name__ == '__main__':
     Path('models').mkdir(parents=True, exist_ok=True)
 
     for model in models:
-        if Path(f'models/{model.__class__.__name__}_cifar10').exists():
-            print(f'fetching saved model: models/{model.__class__.__name__}_cifar10')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar10',
+        model_name = str(model.network)[:str(model.network).find("(")]
+
+        if Path(f'models/{model_name}_cifar10').exists():
+            print(f'fetching saved model: models/{model_name}_cifar10')
+            model.load_state_dict(torch.load(f'models/{model_name}_cifar10',
                                              map_location=torch.device(device)))
         else:
-            print(f'training model: {model.__class__.__name__}_cifar10')
+            print(f'training model: {model_name}_cifar10')
             run_multi_output_training(train, [model], config, metrics, cifar10_train, cifar10_test, val_set=cifar10_val)
-            torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar10')
+            torch.save(model.state_dict(), f'models/{model_name}_cifar10')
 
     for model in models:
+        model_name = str(model.network)[:str(model.network).find("(")]
 
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
-                                        network_descriptor=f'{model.__class__.__name__} on CIFAR10',
+                                        network_descriptor=f'{model_name} on CIFAR10',
                                         device=device)
 
         dot_product_between_teleportation(network=model, dataset=cifar10_test,
-                                          network_descriptor=f'{model.__class__.__name__} on CIFAR10', device=device)
+                                          network_descriptor=f'{model_name} on CIFAR10',
+                                          device=device)
 
 
     # Run on CIFAR100
@@ -98,20 +102,24 @@ if __name__ == '__main__':
     models = get_models_for_dataset("cifar100")
 
     for model in models:
-        if Path(f'models/{model.__class__.__name__}_cifar100').exists():
-            print(f'fetching saved model: models/{model.__class__.__name__}_cifar100')
-            model.load_state_dict(torch.load(f'models/{model.__class__.__name__}_cifar100',
+        model_name = str(model.network)[:str(model.network).find("(")]
+
+        if Path(f'models/{model_name}_cifar100').exists():
+            print(f'fetching saved model: models/{model_name}_cifar100')
+            model.load_state_dict(torch.load(f'models/{model_name}_cifar100',
                                              map_location=torch.device(device)))
         else:
-            print(f'training model: models/{model.__class__.__name__}_cifar100')
+            print(f'training model: models/{model_name}_cifar100')
             run_multi_output_training(train, [model], config, metrics, cifar100_train, cifar100_test,
                                       val_set=cifar100_val)
-            torch.save(model.state_dict(), f'models/{model.__class__.__name__}_cifar100')
+            torch.save(model.state_dict(), f'models/{model_name}_cifar100')
 
     for model in models:
+        model_name = str(model.network)[:str(model.network).find("(")]
+
         micro_teleportation_dot_product(network=model, dataset=cifar100_test,
-                                        network_descriptor=f'{model.__class__.__name__} on CIFAR100',
+                                        network_descriptor=f'{model_name} on CIFAR100',
                                         device=device)
 
         dot_product_between_teleportation(network=model, dataset=cifar100_test,
-                                          network_descriptor=f'{model.__class__.__name__} on CIFAR100', device=device)
+                                          network_descriptor=f'{model_name} on CIFAR100', device=device)
