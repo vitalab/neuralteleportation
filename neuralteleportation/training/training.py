@@ -6,7 +6,6 @@ import pandas as pd
 import torch
 from torch import Tensor
 from torch import nn
-from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -30,8 +29,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
             # Force a new optimizer in case the model was swapped as a result of the teleportations
             optimizer = get_optimizer_from_model_and_config(model, config)
 
-        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch,
-                    device=config.device, config=config)
+        train_epoch(model, metrics, optimizer, train_loader, epoch, device=config.device, config=config)
 
         if val_dataset:
             if config.comet_logger:
@@ -56,7 +54,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     return model
 
 
-def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
+def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
                 device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None) -> None:
     model.train()
     pbar = tqdm(enumerate(train_loader))
@@ -64,7 +62,9 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, target)
+        loss = metrics.criterion(output, target)
+        evaluated_metrics = {metric.__name__: metric(output, target) for metric in metrics.metrics}
+        evaluated_metrics["loss"] = loss.item()
         loss.backward()
         optimizer.step()
         if progress_bar:
@@ -79,10 +79,11 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
         step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
         if (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
             if config.comet_logger:
-                config.comet_logger.log_metric("loss", loss.item())
+                config.comet_logger.log_metrics(evaluated_metrics)
             if config.exp_logger:
                 if config.exp_logger:
-                    config.exp_logger.add_scalar("train_loss", loss.item(), step)
+                    for metric_name, value in evaluated_metrics.items():
+                        config.exp_logger.add_scalar(f"train_{metric_name}", value, step)
     pbar.update()
     pbar.close()
 
