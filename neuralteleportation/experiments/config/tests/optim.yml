@@ -1,0 +1,23 @@
+datasets:
+  - cifar100
+
+models:
+  - vgg16COB
+
+optimizers:
+  - cls: SGD
+    lr: 0.001
+
+teleportations:
+  teleport:
+    mode:
+      optim:
+        metric:
+          - weighted_grad_norm
+          - loss_lookahead_diff
+    every_n_epochs:
+      - 2
+    cob_sampling:
+      - within_landscape
+    cob_range:
+      - 0.5

@@ -9,8 +9,6 @@ from tqdm import tqdm
 from neuralteleportation.changeofbasisutils import get_random_cob
 from neuralteleportation.layers.neuralteleportation import NeuralTeleportationLayerMixin, COBForwardMixin
 
-from matplotlib import pyplot as plt
-
 
 class NeuronLayerMixin(NeuralTeleportationLayerMixin):
     in_features: int
@@ -25,9 +23,9 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
             Create new tensor for weights and bias to allow gradient to be computed with respect to cob.
         """
-        self.w = self.weight.clone().detach().requires_grad_(True).type_as(self.weight)
+        self.w = self.weight.clone().detach().requires_grad_()
         if self.bias is not None:
-            self.b = self.bias.clone().detach().requires_grad_(True).type_as(self.bias)
+            self.b = self.bias.clone().detach().requires_grad_()
 
     def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'within_landscape',
                 center: float = 1) -> torch.Tensor:
@@ -72,7 +70,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
         return int(nb_params)
 
-    def get_weights(self, flatten=True, bias=True) -> Tuple[torch.Tensor, ...]:
+    def get_weights(self, flatten=True, bias=True, get_proxy: bool = True) -> Tuple[torch.Tensor, ...]:
         """Get the weights from the layer.
 
         Returns:
@@ -80,19 +78,29 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         """
 
         # Check if the weights were updated during training on loading weights.
-        if not torch.all(torch.eq(self.weight, self.w.type_as(self.weight))) or (self.weight.device != self.w.device):
+        if get_proxy:
             self._set_proxy_weights()
-
-        if self.bias is not None and bias:
-            if flatten:
-                return self.w.flatten(), self.b.flatten()
+            if self.bias is not None and bias:
+                if flatten:
+                    return self.w.flatten(), self.b.flatten()
+                else:
+                    return self.w, self.b
             else:
-                return self.w, self.b
+                if flatten:
+                    return self.w.flatten(),
+                else:
+                    return self.w,
         else:
-            if flatten:
-                return self.w.flatten(),
+            if self.bias is not None and bias:
+                if flatten:
+                    return self.weight.flatten(), self.bias.flatten()
+                else:
+                    return self.weight, self.bias
             else:
-                return self.w,
+                if flatten:
+                    return self.weight.flatten(),
+                else:
+                    return self.weight,
 
     def set_weights(self, weights: torch.Tensor):
         """Set weights for the layer.
@@ -113,12 +121,15 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             self.b = weights[counter:counter + b_nb_params].reshape(b_shape)
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
-    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
         self.weight = nn.Parameter(self.w, requires_grad=True)
         if self.bias is not None:
             self.b = self.bias * next_cob.type_as(self.bias)
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
+
+    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         """Computes the factor to apply to the weights of the current layer to perform a change of basis.
@@ -178,7 +189,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
 class LinearCOB(NeuronLayerMixin, nn.Linear):
 
-    def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         if len(prev_cob) != self.in_features:  # if previous layer is Conv2D, duplicate cob for each feature map.
             feature_map_size = self.in_features // len(prev_cob)  # size of feature maps
             cob = []
@@ -186,7 +197,7 @@ class LinearCOB(NeuronLayerMixin, nn.Linear):
                 cob.append(c.repeat(feature_map_size))
             prev_cob = torch.cat(cob, dim=0)
 
-        super().apply_cob(prev_cob, next_cob)
+        super().teleport(prev_cob, next_cob)
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
         return next_cob[..., None] / prev_cob[None, ...]
@@ -279,8 +290,11 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
         self.in_features = self.out_features = self.num_features
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
-        self.prev_cob = prev_cob
         super().apply_cob(prev_cob, next_cob)
+        self.prev_cob = prev_cob
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        super().teleport(prev_cob, next_cob)
 
     def _get_cob_weight_factor(self, prev_cob: np.ndarray, next_cob: np.ndarray) -> np.ndarray:
         return next_cob
