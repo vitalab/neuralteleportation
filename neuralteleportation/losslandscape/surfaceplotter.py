@@ -383,7 +383,7 @@ class SurfacePlotter:
 
 if __name__ == '__main__':
     from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-    from neuralteleportation.training.experiment_setup import get_cifar10_datasets
+    from neuralteleportation.training.experiment_setup import get_dataset_subsets
     from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
     device = torch.device('cpu')
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     # Parameters of the surface plotter.
     batch_size = 128
 
-    trainset, valset, testset = get_cifar10_datasets()
+    trainset, valset, testset = get_dataset_subsets("cifar10")
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
 
     criterion = nn.CrossEntropyLoss()

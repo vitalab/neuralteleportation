@@ -198,7 +198,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     input_shape_densenet = (32, 3, 32, 32)
-    trainset, valset, testset = experiment_setup.get_cifar10_datasets()
+    trainset, valset, testset = experiment_setup.get_dataset_subsets("cifar10")
     train_loader = DataLoader(trainset, batch_size=input_shape_densenet[0], shuffle=True)
 
     pbar = tqdm(enumerate(train_loader))

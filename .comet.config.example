@@ -1,0 +1,8 @@
+# You should copy this file as `.comet.config` (so that it will be ignored by git)
+# and modify the `api_key` field with your own API key (which you can find when accessing
+# https://www.comet.ml/marcoarmenta/neuralteleportation when logged in to your Comet account).
+
+[comet]
+api_key=<YOUR_API_KEY>
+workspace=marcoarmenta
+project_name=neuralteleportation

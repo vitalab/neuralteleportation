@@ -29,7 +29,8 @@ if __name__ == '__main__':
 
     torch.manual_seed(args.seed)
 
-    model = NeuralTeleportationModel(network=MLPCOB(num_classes=10), input_shape=(1, 1, 28, 28))
+    model = NeuralTeleportationModel(network=MLPCOB(input_shape=(1, 28, 28), num_classes=10),
+                                     input_shape=(1, 1, 28, 28))
 
     # Get the initial set of weights and teleport.
     initial_weights = model.get_weights()
