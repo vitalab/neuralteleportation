@@ -77,7 +77,7 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
                                                                               loss.item())
             pbar.set_postfix_str(output)
         step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
-        if (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
+        if config is not None and (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
             if config.comet_logger:
                 config.comet_logger.log_metrics(evaluated_metrics)
             if config.exp_logger:
