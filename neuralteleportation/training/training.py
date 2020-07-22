@@ -1,47 +1,75 @@
 from collections import defaultdict
-from typing import Sequence, Callable
+from typing import Sequence, Callable, Any, Dict
 
+import numpy as np
 import pandas as pd
 import torch
-import torch.optim as optim
 from torch import Tensor
 from torch import nn
-from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
+from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, TeleportationTrainingConfig
+from neuralteleportation.training.experiment_setup import get_optimizer_from_model_and_config
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig,
-          val_dataset: Dataset = None, optimizer: Optimizer = None):
+          val_dataset: Dataset = None, optimizer: Optimizer = None) -> nn.Module:
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=config.lr)
+        optimizer = get_optimizer_from_model_and_config(model, config)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches)
 
-    for epoch in range(1, config.epochs + 1):
-        train_epoch(model, metrics.criterion, optimizer,
-                    train_loader, epoch, device=config.device)
+    for epoch in range(config.epochs):
+        if (isinstance(config, TeleportationTrainingConfig)
+                and (epoch % config.every_n_epochs) == 0
+                and epoch > 0):
+            model = config.teleport_fn(model=model, train_dataset=train_dataset, metrics=metrics, config=config)
+            # Force a new optimizer in case the model was swapped as a result of the teleportations
+            optimizer = get_optimizer_from_model_and_config(model, config)
+
+        train_epoch(model, metrics, optimizer, train_loader, epoch, device=config.device, config=config)
+
         if val_dataset:
-            val_res = test(model, val_dataset, metrics, config)
+            if config.comet_logger:
+                with config.comet_logger.validate():
+                    val_res = test(model, val_dataset, metrics, config)
+            else:
+                val_res = test(model, val_dataset, metrics, config)
+
+            print("Validation: {}".format(val_res))
+            if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
+                print("Stopping: Loss NaN!")
+                if config.exp_logger:
+                    config.exp_logger.add_text(
+                        "Info", "Stopped due to Loss NaN.")
+                break
+            if config.exp_logger is not None:
+                config.exp_logger.add_scalar(
+                    "val_loss", val_res["loss"], epoch)
+                config.exp_logger.add_scalar(
+                    "val_accuracy", val_res["accuracy"], epoch)
+
+    return model
 
 
-def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
-                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None):
+def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
+                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None) -> None:
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, target)
+        loss = metrics.criterion(output, target)
+        evaluated_metrics = {metric.__name__: metric(output, target) for metric in metrics.metrics}
+        evaluated_metrics["loss"] = loss.item()
         loss.backward()
         optimizer.step()
         if progress_bar:
             output = 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch,
-                                                                              (batch_idx+1) *
+                                                                              (batch_idx + 1) *
                                                                               train_loader.batch_size,
                                                                               len(train_loader.dataset),
                                                                               100. * batch_idx /
@@ -49,7 +77,7 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
                                                                               loss.item())
             pbar.set_postfix_str(output)
         step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
-        if config is not None and ((not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0):
+        if (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
             if config.comet_logger:
                 config.comet_logger.log_metrics(evaluated_metrics)
             if config.exp_logger:
@@ -60,7 +88,7 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
     pbar.close()
 
 
-def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig):
+def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig) -> Dict[str, Any]:
     test_loader = DataLoader(dataset, batch_size=config.batch_size)
     model.eval()
     results = defaultdict(list)
@@ -82,12 +110,14 @@ def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: T
                              accuracy=pd.DataFrame(results['accuracy']).mean().values)
 
     pbar.close()
-    results = pd.DataFrame(results)
-    return dict(results.mean())
+    reduced_results = dict(pd.DataFrame(results).mean())
+    if config.comet_logger:
+        config.comet_logger.log_metrics(reduced_results)
+    return reduced_results
 
 
 def compute_metrics(metrics: Sequence[Callable[[Tensor, Tensor], Tensor]], y_hat: Tensor, y: Tensor,
-                    prefix: str = '', to_tensor: bool = True):
+                    prefix: str = '', to_tensor: bool = True) -> Dict[str, Any]:
     results = {}
     for metric in metrics:
         m = metric(y_hat, y)

@@ -1,0 +1,20 @@
+datasets:
+  - cifar100
+
+models:
+  - vgg16COB
+
+optimizers:
+  - cls: SGD
+    lr: 0.001
+
+teleportations:
+  teleport:
+    mode:
+      random:
+    every_n_epochs:
+      - 2
+    cob_sampling:
+      - within_landscape
+    cob_range:
+      - 0.5

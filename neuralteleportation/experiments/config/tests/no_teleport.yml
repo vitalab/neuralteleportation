@@ -1,0 +1,13 @@
+datasets:
+  - cifar100
+
+models:
+  - MLPCOB
+  - vgg16COB
+
+optimizers:
+  - cls: SGD
+    lr: 0.001
+
+teleportations:
+  no_teleport:

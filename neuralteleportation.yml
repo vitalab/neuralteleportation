@@ -22,7 +22,7 @@ dependencies:
   - seaborn
   - h5py
   - pip:
-    - pytorch-lightning
+    - comet-ml
     - torchsummary
     - networkx
     - tensorboard
