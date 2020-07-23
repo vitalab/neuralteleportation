@@ -9,7 +9,7 @@ from neuralteleportation.losslandscape import losslandscape
 from neuralteleportation.losslandscape.losslandscape import LandscapeConfig
 from neuralteleportation.training.training import TrainingMetrics
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
-from neuralteleportation.training.experiment_setup import get_cifar10_datasets, resnet18COB
+from neuralteleportation.training.experiment_setup import get_dataset_subsets, get_model, get_model_names
 
 
 def argument_parser():
@@ -31,7 +31,7 @@ def argument_parser():
                         help="Defines the precision of the x-axis")
     parser.add_argument("--y", type=int, default=50,
                         help="Defines the precision of the y-axis")
-    parser.add_argument("--model", type=str, default="resnet18COB",
+    parser.add_argument("--model", type=str, default="resnet18COB", choices=get_model_names(),
                         help="Defines what model to plot the surface of.")
     parser.add_argument("--show_weight_traj", action="store_true", default=False,
                         help="Enable the plotting of the weights trajectory while training.")
@@ -58,8 +58,8 @@ if __name__ == '__main__':
         device=device
     )
 
-    model = resnet18COB(num_classes=10)
-    trainset, valset, testset = get_cifar10_datasets()
+    trainset, valset, testset = get_dataset_subsets("cifar10")
+    model = get_model("cifar10", args.model)
 
     x = torch.linspace(-1, 1, args.x)
     y = torch.linspace(-1, 1, args.y)
@@ -87,5 +87,5 @@ if __name__ == '__main__':
         w_x_dirrection, w_y_dirrection = losslandscape.generate_weights_direction(original_w, w_diff)
         weight_traj = losslandscape.generate_weight_trajectory(w_diff, (w_x_dirrection, w_y_dirrection))
 
-    teleport_idx = [i+(n+1) for n, i in enumerate(args.teleport_at)]
+    teleport_idx = [i + (n + 1) for n, i in enumerate(args.teleport_at)]
     losslandscape.plot_contours(x, y, loss, weight_traj, teleport_idx)

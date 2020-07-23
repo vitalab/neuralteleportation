@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.cuda import is_available as cuda_avail
 
 from neuralteleportation.training.training import train
-from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_model_from_name, get_model_names
+from neuralteleportation.training.experiment_setup import get_dataset_subsets, get_model, get_model_names
 from neuralteleportation.training.config import TrainingMetrics
 from neuralteleportation.losslandscape import losslandscape as ll
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
@@ -37,9 +37,9 @@ if __name__ == '__main__':
 
     device = 'cuda' if cuda_avail() else 'cpu'
 
-    trainset, valset, testset = get_cifar10_datasets()
+    trainset, valset, testset = get_dataset_subsets("cifar10")
 
-    back_model = get_model_from_name(args.model, num_classes=10, input_channels=3)
+    back_model = get_model("cifar10", args.model, num_classes=10, input_channels=3)
     model = NeuralTeleportationModel(back_model, input_shape=(args.batch_size, 3, 32, 32)).to(device)
     metric = TrainingMetrics(
         criterion=nn.CrossEntropyLoss(),

@@ -243,7 +243,7 @@ if __name__ == '__main__':
     from neuralteleportation.metrics import accuracy
     from torch.utils.data.dataloader import DataLoader
     from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-    from neuralteleportation.training.experiment_setup import get_cifar10_datasets
+    from neuralteleportation.training.experiment_setup import get_dataset_subsets, resnet18COB
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -260,7 +260,7 @@ if __name__ == '__main__':
         device=device
     )
     model = resnet18COB(num_classes=10)
-    trainset, valset, testset = get_cifar10_datasets()
+    trainset, valset, testset = get_dataset_subsets("cifar10")
     trainset.data = trainset.data[:5000]  # For the example, don't use all the data.
     trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
 
