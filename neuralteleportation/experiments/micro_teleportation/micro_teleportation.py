@@ -6,7 +6,7 @@ from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
-from utils.micro_tp_utils import *
+from neuralteleportation.utils.micro_tp_utils import *
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
 
