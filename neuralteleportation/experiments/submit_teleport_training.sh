@@ -53,7 +53,6 @@ module load python/3.7
 module load scipy-stack # For scipy, matplotlib and pandas
 virtualenv --no-download "$SLURM_TMPDIR"/env
 source "$SLURM_TMPDIR"/env/bin/activate
-pip install --upgrade setuptools pip wheel
 pip install --no-index -r requirements/computecanada_wheel.txt
 pip install .
 
