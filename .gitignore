@@ -133,5 +133,8 @@ dataset/*
 #vscode
 .vscode/
 
+# output
+neuralteleportation/experiments/micro_teleportation/images/**
+
 # Local config
 *.comet.config
