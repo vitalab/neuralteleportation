@@ -1,6 +1,7 @@
 scikit-image
 scikit-learn
 h5py
+PyYAML
 tqdm
 torch
 torchvision

@@ -12,6 +12,7 @@ dependencies:
   - scikit-learn
   - pandas
   - h5py
+  - pyyaml
   - tqdm
   - pytorch
   - torchvision
