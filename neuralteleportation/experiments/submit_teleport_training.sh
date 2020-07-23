@@ -49,6 +49,7 @@ cd "$project_root_dir" || {
 }
 
 # Install and activate a virtual environment directly on the compute node
+module load httpproxy # To allow connections to Comet server
 module load python/3.7
 module load scipy-stack # For scipy, matplotlib and pandas
 virtualenv --no-download "$SLURM_TMPDIR"/env
