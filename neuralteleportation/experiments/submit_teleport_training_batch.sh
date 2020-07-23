@@ -36,7 +36,14 @@ for required_arg in "${required_args[@]}"; do
   fi
 done
 
+# Navigate to the project's root directory
+cd "$project_root_dir" || {
+  echo "Could not cd to directory: $project_root_dir. Verify that it exists."
+  exit 1
+}
+
+# Submit individual jobs for all the configuration files in``experiment_config_dir``
 for experiment_config_file in "$experiment_config_dir"/*.yml; do
   sbatch --mail-user="$email" --mail-type=ALL \
-    ./submit_teleport_training.sh -d "$project_root_dir" -c "$experiment_config_file"
+    neuralteleportation/experiments/submit_teleport_training.sh -d "$project_root_dir" -c "$experiment_config_file"
 done
