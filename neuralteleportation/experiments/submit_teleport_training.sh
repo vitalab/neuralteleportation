@@ -62,5 +62,5 @@ compute_node_data_dir="$SLURM_TMPDIR"/data
 rsync -a "$dataset_shared_dir" "$compute_node_data_dir"
 
 # Run task
-python neuralteleportation/experiments/teleport_training.py --config "$experiment_config_file" \
+python neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
   --data_root_dir "$compute_node_data_dir"
