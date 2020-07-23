@@ -6,7 +6,6 @@ import pandas as pd
 import torch
 from torch import Tensor
 from torch import nn
-from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -35,7 +34,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         if (isinstance(config, TeleportationTrainingConfig)
                 and (epoch % config.every_n_epochs) == 0
                 and epoch > 0):
-            model = config.teleport_fn(model, train_dataset, metrics, config)
+            model = config.teleport_fn(model=model, train_dataset=train_dataset, metrics=metrics, config=config)
             # Force a new optimizer in case the model was swapped as a result of the teleportations
             # We need to recreate the optimizer with the new model's parameters and update it
             # with the previous optimizer's parameters otherwise any changes to the old optimizer will be lost
@@ -51,7 +50,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
             optimizer = update_optimizer_params(optimizer, old_optimizer_state)
         if lr_scheduler:
             print("Current LR: ", get_optimizer_lr(optimizer))
-        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch,
+        train_epoch(model, metrics, optimizer, train_loader, epoch,
                     device=config.device, config=config, lr_scheduler=lr_scheduler)
 
         if val_dataset:
@@ -79,7 +78,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
     return model
 
 
-def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
+def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
                 device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None, lr_scheduler=None) -> None:
     lr_scheduler_interval = None
     if config.lr_scheduler is not None:
@@ -90,7 +89,9 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, target)
+        loss = metrics.criterion(output, target)
+        evaluated_metrics = {metric.__name__: metric(output, target) for metric in metrics.metrics}
+        evaluated_metrics["loss"] = loss.item()
         loss.backward()
         optimizer.step()
         if progress_bar:
@@ -103,11 +104,14 @@ def train_epoch(model: nn.Module, criterion: _Loss, optimizer: Optimizer, train_
                                                                               loss.item())
             pbar.set_postfix_str(output)
         step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
-        if config.comet_logger:  # TODO Add ``batch_idx % 500 == 0`` in case we make too many calls to the Comet API
-            config.comet_logger.log_metric("loss", loss.item())
-        if batch_idx % 500 == 0 and config.exp_logger:
-            if config.exp_logger:
-                config.exp_logger.add_scalar("train_loss", loss.item(), step)
+        if config is not None:
+            if (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
+                if config.comet_logger:
+                    config.comet_logger.log_metrics(evaluated_metrics)
+                if config.exp_logger:
+                    if config.exp_logger:
+                        for metric_name, value in evaluated_metrics.items():
+                            config.exp_logger.add_scalar(f"train_{metric_name}", value, step)
         if lr_scheduler and lr_scheduler_interval == "step":
             lr_scheduler.step()
     pbar.update()

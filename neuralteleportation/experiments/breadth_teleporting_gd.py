@@ -38,7 +38,7 @@ def train(model: Union[NeuralTeleportationModel, Tuple[str, NeuralTeleportationM
     stopping_epoch = min(config.starting_epoch + config.every_n_epochs, config.epochs + 1)
     for epoch in range(config.starting_epoch, stopping_epoch):
         print(f'Training epoch {epoch} for {model_name} ...')
-        train_epoch(model, metrics.criterion, optimizer, train_loader, epoch, device=config.device)
+        train_epoch(model, metrics, optimizer, train_loader, epoch, device=config.device)
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))

@@ -81,11 +81,7 @@ def start_training(model: NeuralTeleportationModel,
 
     results = []
     for e in np.arange(1, args.epochs + 1):
-        train_epoch(model=model,
-                    criterion=metric.criterion,
-                    optimizer=optimizer,
-                    train_loader=trainloader,
-                    epoch=e,
+        train_epoch(model=model, metrics=metric, optimizer=optimizer, train_loader=trainloader, epoch=e,
                     device=config.device)
         results.append(test(model=model, dataset=valset, metrics=metric, config=config)['accuracy'])
         model.train()
@@ -125,7 +121,7 @@ if __name__ == '__main__':
                                    cob_range=args.cob_range,
                                    cob_sampling=args.cob_sampling,
                                    targeted_teleportation=args.targeted_teleportation,
-                                   teleport_every_n_epochs=args.teleport_every
+                                   every_n_epochs=args.teleport_every
                                    )
 
     res_vanilla = np.empty((args.run, args.epochs + 1))

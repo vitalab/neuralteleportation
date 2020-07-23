@@ -40,7 +40,7 @@ This repository contains the code necessary to teleport a neural network.
 * Can't use opperations in the foward method (only nn.Modules)
 * Can't use nn.modules more than once (causes error in graph creation and if the layer have teleportation parameters)
 * The order of layers is important when using Skip connections and residual connections. 
-The first input must be computed in the netork before the second input. The following example illustrates how to use these layers.
+The first input must be computed in the network before the second input. The following example illustrates how to use these layers.
 ```python
 class network(nn.Module):
     def forward(x):

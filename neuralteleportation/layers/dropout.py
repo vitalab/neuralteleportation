@@ -10,8 +10,14 @@ class DropoutCOB(NeuralTeleportationLayerMixin, nn.Dropout):
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
 
 class Dropout2dCOB(NeuralTeleportationLayerMixin, nn.Dropout2d):
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
