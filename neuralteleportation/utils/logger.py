@@ -1,5 +1,9 @@
+import configparser
+from pathlib import Path
+
 import numpy as np
 import visdom
+from comet_ml import Experiment
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -140,3 +144,10 @@ class MultiLogger(BaseLogger):
     def add_histogram(self, model, step):
         for logger in self.sub_loggers:
             logger.add_histogram(model, step)
+
+
+def init_comet_experiment(comet_config: Path) -> Experiment:
+    # Builds an `Experiment` using the content of the `comet` section of the configuration file
+    config = configparser.ConfigParser()
+    config.read(str(comet_config))
+    return Experiment(**dict(config["comet"]))
