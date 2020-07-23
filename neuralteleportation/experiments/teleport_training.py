@@ -45,6 +45,17 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
             # optimizers
             for optimizer_kwargs in config["optimizers"]:
                 optimizer_name = optimizer_kwargs.pop("cls")
+                lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
+                has_scheduler = False
+                if lr_scheduler_kwargs:
+                    lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
+                    lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
+                    if "lr_lambda" in lr_scheduler_kwargs.keys():
+                        lambda_str = lr_scheduler_kwargs.pop("lr_lambda")
+                        # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
+                        # This is needed to transform lambda functions defined as strings to a python callable
+                        lr_scheduler_kwargs["lr_lambda"] = eval(str(lambda_str))
+                    has_scheduler = True
 
                 # teleport configuration
                 for teleport, teleport_config_kwargs in config["teleportations"].items():
@@ -88,9 +99,13 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
                     for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                         training_config = training_config_cls(
                             optimizer=(optimizer_name, optimizer_kwargs),
+                            lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                             device='cuda',
                             comet_logger=init_comet_experiment(comet_config),
-                            epochs=20,  # TODO Move from hardcoded to config by dataset/model pair
+                            epochs=config["epochs"],
+                            batch_size=config["batch_size"],
+                            shuffle_batches=config["shuffle_batches"],
+                            drop_last_batch=config["drop_last_batch"],
                             **teleport_config_kwargs,
                             **teleport_mode_config_kwargs,
                         )
@@ -98,9 +113,12 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
                         # Run experiment (setting up a new model and optimizer for each experiment)
                         model = get_model(dataset_name, model_name, device=training_config.device)
                         optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
+                        lr_scheduler = None
+                        if has_scheduler:
+                            lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
                         run_model(model, training_config, metrics,
                                   train_set, test_set, val_set=val_set,
-                                  optimizer=optimizer)
+                                  optimizer=optimizer, lr_scheduler=lr_scheduler)
 
 
 def main():
