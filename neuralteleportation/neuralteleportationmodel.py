@@ -122,8 +122,7 @@ class NeuralTeleportationModel(nn.Module):
         self.set_change_of_basis(cob)
 
         for k, layer in enumerate(self.graph):
-            if isinstance(layer['module'], NeuronLayerMixin):
-                layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+            layer['module'].teleport(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def teleport_activations(self, cob: torch.Tensor):
         """
@@ -132,8 +131,7 @@ class NeuralTeleportationModel(nn.Module):
         self.set_change_of_basis(cob)
 
         for k, layer in enumerate(self.graph):
-            if not isinstance(layer['module'], NeuronLayerMixin):
-                layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
+            layer['module'].apply_cob(prev_cob=layer['prev_cob'], next_cob=layer['cob'])
 
     def set_change_of_basis(self, cob: torch.Tensor, contains_ones: bool = False):
         """
@@ -220,7 +218,7 @@ class NeuralTeleportationModel(nn.Module):
         """
         return [l for l in self.grapher.ordered_layers if isinstance(l, NeuronLayerMixin)]
 
-    def get_weights(self, concat: bool = True, flatten=True, bias=True) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def get_weights(self, concat: bool = True, flatten=True, bias=True, get_proxy_weight=False) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
             Return model weights
 
@@ -229,6 +227,7 @@ class NeuralTeleportationModel(nn.Module):
                             else in the form of a list of Tensors
             flatten (bool): if true weights are flattened
             bias (bool): if true bias is included
+            get_proxy_weight (bool): if true, will only get the proxy weights without updating.
 
         Returns:
             torch.Tensor or list containing model weights
@@ -237,7 +236,7 @@ class NeuralTeleportationModel(nn.Module):
         w = []
 
         for k, layer in enumerate(self.get_neuron_layers()):
-            w.extend(layer.get_weights(flatten=flatten, bias=bias))
+            w.extend(layer.get_weights(flatten=flatten, bias=bias, get_proxy=get_proxy_weight))
 
         if concat:
             return torch.cat(w)
@@ -364,6 +363,13 @@ class NeuralTeleportationModel(nn.Module):
             return torch.cat(cob)
         else:
             return cob
+
+    def get_params(self):
+        return self.get_weights(), self.get_cob()
+
+    def set_params(self, weights, cob):
+        self.teleport_activations(cob)
+        self.set_weights(weights)
 
 
 if __name__ == '__main__':

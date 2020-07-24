@@ -17,6 +17,9 @@ class MaxPool2dCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.MaxPool2d)
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.cob = prev_cob
 
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)
 
@@ -30,6 +33,9 @@ class AdaptiveAvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AdaptiveAvgPool2d):
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
 
 class AvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AvgPool2d):
     """Wrapper for the AvgPool2d change of basis layer.
@@ -38,6 +44,9 @@ class AvgPool2dCOB(NeuralTeleportationLayerMixin, nn.AvgPool2d):
     """
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
 
 
@@ -52,6 +61,9 @@ class UpsampleCOB(COBForwardMixin, NeuralTeleportationLayerMixin, nn.Upsample):
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.cob = prev_cob
+
+    def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        pass
 
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.cob * self.base_layer().forward(self, input / self.cob)

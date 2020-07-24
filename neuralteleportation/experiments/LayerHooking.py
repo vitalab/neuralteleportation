@@ -1,16 +1,15 @@
-import torch
-import matplotlib.pyplot as plt
 import argparse
+
+import matplotlib.pyplot as plt
+import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from neuralteleportation.training.training import train
-from neuralteleportation.training.config import *
-from neuralteleportation.training import experiment_setup
-from neuralteleportation.metrics import accuracy
-
 from neuralteleportation.layerhook import LayerHook
-from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
+from neuralteleportation.metrics import accuracy
+from neuralteleportation.training import experiment_setup
+from neuralteleportation.training.config import *
+from neuralteleportation.training.training import train
 
 __models__ = experiment_setup.get_model_names()
 
@@ -63,10 +62,8 @@ if __name__ == "__main__":
     transform = transforms.ToTensor()
     if args.dataset == "mnist":
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1),
-                                       transforms.ToTensor()])
-        trainset, valset, testset = experiment_setup.get_mnist_datasets(transform)
-    elif args.dataset == "cifar10":
-        trainset, valset, testset = experiment_setup.get_cifar10_datasets()
+                                        transforms.ToTensor()])
+    trainset, valset, testset = experiment_setup.get_dataset_subsets(args.dataset, transform=transform)
 
     data_train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     data_test_loader = DataLoader(testset, batch_size=batch_size, shuffle=True)
@@ -88,9 +85,7 @@ if __name__ == "__main__":
         plt.title("Original Image")
 
     # Change the model to a teleportable model.
-    net = experiment_setup.get_model_from_name(args.model, num_classes=10, input_channels=dims).to(device=device)
-    net = NeuralTeleportationModel(network=net, input_shape=(batch_size, dims, w, h))
-
+    net = experiment_setup.get_model(args.dataset, args.model, device=device.type)
     metric = TrainingMetrics(torch.nn.CrossEntropyLoss(), [accuracy])
     config = TrainingConfig(epochs=args.epochs, device=device.type, batch_size=batch_size)
     train(net, train_dataset=trainset, metrics=metric, config=config)
