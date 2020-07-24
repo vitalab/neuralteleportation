@@ -68,15 +68,17 @@ if __name__ == '__main__':
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
     # Run on CIFAR10
-    cifar10_train, cifar10_val, cifar10_test = get_cifar10_datasets()
+    cifar10_train, cifar10_val, cifar10_test = get_dataset_subsets("cifar10")
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     config = MicroTeleportationTrainingConfig(input_shape=(3, 32, 32), device=device, batch_size=10,
                                               num_teleportations=1, epochs=5)
 
-    models = get_cifar10_models()
+    models = get_models_for_dataset("cifar10")
     models.append(MLPCOB(num_classes=10, input_shape=config.input_shape, hidden_layers=(512, 1024, 512)))
+    model = MLPCOB(num_classes=10, input_shape=config.input_shape, hidden_layers=(10, 10, 10))
+    models = [model]
 
     Path('models').mkdir(parents=True, exist_ok=True)
 
@@ -106,9 +108,9 @@ if __name__ == '__main__':
 
 
     # # Run on CIFAR100
-    cifar100_train, cifar100_val, cifar100_test = get_cifar100_datasets()
+    cifar100_train, cifar100_val, cifar100_test = get_dataset_subsets("cifar100")
 
-    models = get_cifar100_models()
+    models = get_models_for_dataset("cifar100")
     models.append(MLPCOB(num_classes=100, input_shape=config.input_shape, hidden_layers=(10, 10, 10)))
 
     for model in models:
