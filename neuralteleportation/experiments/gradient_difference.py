@@ -37,7 +37,7 @@ def train(model: Union[nn.Module, Tuple[str, nn.Module]], train_dataset: Dataset
 
     # Initialize an optimizer if there isn't already one
     if optimizer is None:
-        optimizer = optim.SGD(model.parameters(), lr=config.lr)
+        optimizer = get_optimizer_from_model_and_config(model, config)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
 
