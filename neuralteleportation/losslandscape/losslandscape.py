@@ -11,6 +11,7 @@ from torch.utils.data.dataset import Dataset
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 from neuralteleportation.training.training import test, train_epoch
+from neuralteleportation.training.experiment_setup import get_optimizer_from_model_and_config
 
 
 @dataclass
@@ -83,16 +84,17 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
     """
     w = [model.get_weights().clone().detach().cpu()]
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
-    optim = torch.optim.Adam(model.parameters(), lr=config.lr)
+    optim = get_optimizer_from_model_and_config(model, config)
 
     for e in range(config.epochs):
         if e in config.teleport_at and config.teleport_at != 0:
             print("Teleporting Model...")
             model.random_teleport(cob_range=config.cob_range, sampling_type=config.cob_sampling)
             w.append(model.get_weights().clone().detach().cpu())
-            optim = torch.optim.Adam(model.parameters(), lr=config.lr)
+            optim = get_optimizer_from_model_and_config(model, config)
 
-        train_epoch(model, metric.criterion, train_loader=trainloader, optimizer=optim, epoch=e, device=config.device)
+        train_epoch(model, metrics=metric, config=config,
+                    train_loader=trainloader, optimizer=optim, epoch=e, device=config.device)
         w.append(model.get_weights().clone().detach().cpu())
 
     final = w[-1::][0]

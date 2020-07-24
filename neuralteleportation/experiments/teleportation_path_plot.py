@@ -17,6 +17,8 @@ def argument_parser():
 
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="Learning rate for the training")
+    parser.add_argument("--optimizer", type=str, default="Adam", choices=["Adam", "SGD"],
+                        help="Select the Gradient Descente Optimizer for the model's training.")
     parser.add_argument("--epochs", "-e", type=int, default=10,
                         help="for how many epochs should the model train")
     parser.add_argument("--batch_size", "-b", type=int, default=32,
@@ -49,7 +51,7 @@ if __name__ == '__main__':
         metrics=[accuracy]
     )
     config = LandscapeConfig(
-        lr=args.lr,
+        optimizer=(args.optimizer,{"lr": args.lr}),
         epochs=args.epochs,
         batch_size=args.batch_size,
         cob_range=args.cob_range,

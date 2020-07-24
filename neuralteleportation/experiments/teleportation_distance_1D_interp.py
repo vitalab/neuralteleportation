@@ -7,7 +7,7 @@ from torch.cuda import is_available as cuda_avail
 from neuralteleportation.training.training import train
 from neuralteleportation.training.experiment_setup import get_dataset_subsets, get_model, get_model_names
 from neuralteleportation.training.config import TrainingMetrics
-from neuralteleportation.losslandscape import losslandscape as ll
+from neuralteleportation.losslandscape.losslandscape import LandscapeConfig, generate_1D_linear_interp, plot_interp
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.metrics import accuracy
 
@@ -16,6 +16,10 @@ def argument_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", "-e", type=int, default=10,
                         help="How many epochs should the network train in total")
+    parser.add_argument("--lr", type=float, default=1e-3,
+                        help="The learning rate for model training")
+    parser.add_argument("--optimizer", type=str, default="Adam", choices=["Adam", "SGD"],
+                        help="Select the used Optimizer during model training")
     parser.add_argument("--batch_size", type=int, default=32,
                         help="Defines how big the batch size is")
     parser.add_argument("--cob_range", type=float, default=0.5,
@@ -45,7 +49,8 @@ if __name__ == '__main__':
         criterion=nn.CrossEntropyLoss(),
         metrics=[accuracy]
     )
-    config = ll.LandscapeConfig(
+    config = LandscapeConfig(
+        optimizer=(args.optimizer, {"lr": args.lr}),
         epochs=args.epochs,
         batch_size=args.batch_size,
         cob_range=args.cob_range,
@@ -60,8 +65,7 @@ if __name__ == '__main__':
     model.random_teleport(args.cob_range, args.cob_sampling)
     param_t = model.get_params()
 
-    loss, acc_t, acc_v = ll.generate_1D_linear_interp(model, param_o, param_t, a,
-                                                      metric=metric, config=config,
-                                                      trainset=trainset, valset=valset
-                                                      )
-    ll.plot_interp(loss, acc_t, a, acc_val=acc_v)
+    loss, acc_t, acc_v = generate_1D_linear_interp(model, param_o, param_t, a,
+                                                   metric=metric, config=config,
+                                                   trainset=trainset, valset=valset)
+    plot_interp(loss, acc_t, a, acc_val=acc_v)
