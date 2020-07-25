@@ -87,13 +87,14 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
     pbar.close()
 
     # Log the mean of each metric at the end of the epoch
-    reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
-    if config.comet_logger:
-        config.comet_logger.log_metrics(reduced_metrics, epoch=epoch)
-    if config.exp_logger:
+    if config is not None:
+        reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
+        if config.comet_logger:
+            config.comet_logger.log_metrics(reduced_metrics, epoch=epoch)
         if config.exp_logger:
-            for metric_name, value in reduced_metrics.items():
-                config.exp_logger.add_scalar(f"train_{metric_name}", value, epoch)
+            if config.exp_logger:
+                for metric_name, value in reduced_metrics.items():
+                    config.exp_logger.add_scalar(f"train_{metric_name}", value, epoch)
 
 
 def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig) -> Dict[str, Any]:
