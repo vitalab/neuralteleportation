@@ -17,7 +17,6 @@ class TrainingConfig:
     device: str = 'cpu'
     comet_logger: Experiment = None
     exp_logger: BaseLogger = None
-    log_every_n_batch: int = None
     shuffle_batches: bool = False
 
 
