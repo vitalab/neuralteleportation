@@ -9,7 +9,7 @@ from neuralteleportation.models.model_zoo import mlpcob, resnetcob, vggcob, dens
 from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
 from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-from neuralteleportation.models.model_zoo.vggcob import vgg16COB
+from neuralteleportation.models.model_zoo.vggcob import vgg16COB, vgg16_bnCOB
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 __dataset_config__ = {"mnist": {"cls": MNIST, "input_channels": 1, "image_size": (28, 28), "num_classes": 10},
@@ -27,7 +27,7 @@ __dataset_config__ = {"mnist": {"cls": MNIST, "input_channels": 1, "image_size":
                                                            (0.2023, 0.1994, 0.2010)),
                                   ])},
                       "cifar100": {"cls": CIFAR100, "input_channels": 3, "image_size": (32, 32), "num_classes": 100}}
-__models__ = [MLPCOB, vgg16COB, resnet18COB, densenet121COB]
+__models__ = [MLPCOB, vgg16COB, resnet18COB, densenet121COB, vgg16_bnCOB]
 
 from neuralteleportation.training.config import TrainingConfig
 
@@ -74,6 +74,8 @@ def get_model(dataset_name: str, model_name: str, device: str = 'cpu', **model_k
     else:
         model_kwargs.update(get_dataset_info(dataset_name, "input_channels"))
 
+    if "cifar" in dataset_name and ("resnet" in model_name or "densenet" in model_name):
+        model_kwargs.update({"for_dataset": "cifar"})
     # Instantiate the model
     model_factory = model_factories[model_name]
     model = model_factory(**model_kwargs)
@@ -89,10 +91,10 @@ def get_models_for_dataset(dataset_name: str) -> List[NeuralTeleportationModel]:
     return [get_model(dataset_name, model.__name__) for model in __models__]
 
 
-def get_optimizer_from_model_and_config(model: nn.Module, config: TrainingConfig, new_lr: float = None) -> Optimizer:
+def get_optimizer_from_model_and_config(model: nn.Module, config: TrainingConfig, lr: float = None) -> Optimizer:
     optimizer_name, optimizer_kwargs = config.optimizer
-    if new_lr:
-        optimizer_kwargs.update({"lr": new_lr})
+    if lr:
+        optimizer_kwargs.update({"lr": lr})
     return getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
 
 

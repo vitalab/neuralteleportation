@@ -31,6 +31,9 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
     # Setup metrics to compute
     metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
 
+    # Common training hyperparameters
+    training_params = config["training_params"]
+
     # datasets
     for dataset_name in config["datasets"]:
         train_set, val_set, test_set = get_dataset_subsets(dataset_name)
@@ -39,7 +42,7 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
         for model_name in config["models"]:
 
             # optimizers
-            for optimizer_kwargs in config["optimizers"]:
+            for optimizer_kwargs in config["optimizers"].copy():
                 optimizer_name = optimizer_kwargs.pop("cls")
                 lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
                 has_scheduler = False
@@ -47,10 +50,9 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
                     lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
                     lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
                     if "lr_lambda" in lr_scheduler_kwargs.keys():
-                        lambda_str = lr_scheduler_kwargs.pop("lr_lambda")
                         # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
                         # This is needed to transform lambda functions defined as strings to a python callable
-                        lr_scheduler_kwargs["lr_lambda"] = eval(str(lambda_str))
+                        lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
                     has_scheduler = True
 
                 # teleport configuration
@@ -94,14 +96,13 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
                     # Iterate over different possible training configurations
                     for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                         training_config = training_config_cls(
+                            model_name=model_name,
+                            dataset_name=dataset_name,
                             optimizer=(optimizer_name, optimizer_kwargs),
                             lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                             device='cuda',
                             comet_logger=init_comet_experiment(comet_config),
-                            epochs=config["epochs"],
-                            batch_size=config["batch_size"],
-                            shuffle_batches=config["shuffle_batches"],
-                            drop_last_batch=config["drop_last_batch"],
+                            **training_params,
                             **teleport_config_kwargs,
                             **teleport_mode_config_kwargs,
                         )
