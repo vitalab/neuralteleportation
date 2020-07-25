@@ -12,10 +12,11 @@ optimizers:
   - cls: SGD
     lr: 0.001
 
-epochs: 10
-batch_size: 32
-shuffle_batches: False
-drop_last_batch: False
+training_params:
+  epochs: 10
+  batch_size: 32
+  shuffle_batches: False
+  drop_last_batch: False
 
 teleportations:
   teleport:
