@@ -11,8 +11,6 @@ from neuralteleportation.utils.logger import BaseLogger
 
 @dataclass
 class TrainingConfig:
-    model_name: str = None
-    dataset_name: str = None
     optimizer: Tuple[str, Dict[str, Any]] = ("Adam", {"lr": 1e-3})
     lr_scheduler: Tuple[str, str, Dict[str, Any]] = None
     epochs: int = 10

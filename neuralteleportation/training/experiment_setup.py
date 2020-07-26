@@ -26,7 +26,19 @@ __dataset_config__ = {"mnist": {"cls": MNIST, "input_channels": 1, "image_size":
                                       transforms.Normalize((0.4914, 0.4822, 0.4465),
                                                            (0.2023, 0.1994, 0.2010)),
                                   ])},
-                      "cifar100": {"cls": CIFAR100, "input_channels": 3, "image_size": (32, 32), "num_classes": 100}}
+                      "cifar100": {"cls": CIFAR100, "input_channels": 3, "image_size": (32, 32), "num_classes": 100,
+                                   "train_transform": transforms.Compose([
+                                       transforms.RandomCrop(32, padding=4),
+                                       transforms.RandomHorizontalFlip(),
+                                       transforms.ToTensor(),
+                                       transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                                            (0.2023, 0.1994, 0.2010)),
+                                   ]),
+                                   "test_transform": transforms.Compose([
+                                       transforms.ToTensor(),
+                                       transforms.Normalize((0.4914, 0.4822, 0.4465),
+                                                            (0.2023, 0.1994, 0.2010)),
+                                   ])}}
 __models__ = [MLPCOB, vgg16COB, resnet18COB, densenet121COB, vgg16_bnCOB]
 
 from neuralteleportation.training.config import TrainingConfig

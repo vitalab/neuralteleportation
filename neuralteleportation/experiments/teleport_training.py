@@ -98,8 +98,6 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
                     # Iterate over different possible training configurations
                     for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                         training_config = training_config_cls(
-                            model_name=model_name,
-                            dataset_name=dataset_name,
                             optimizer=(optimizer_name, optimizer_kwargs),
                             lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                             device='cuda',
