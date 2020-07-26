@@ -1,5 +1,6 @@
 import itertools
 from pathlib import Path
+import copy
 
 # Necessary to import Comet first to use Comet's auto logging facility and
 # to avoid "Please import comet before importing these modules" error.
@@ -42,7 +43,8 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
         for model_name in config["models"]:
 
             # optimizers
-            for optimizer_kwargs in config["optimizers"].copy():
+            for optimizer_kwargs in config["optimizers"]:
+                optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
                 optimizer_name = optimizer_kwargs.pop("cls")
                 lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
                 has_scheduler = False
@@ -68,7 +70,7 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
                     # w/ teleport configuration
                     else:  # teleport == "teleport"
                         # Copy the config to play around with its content without affecting the config loaded in memory
-                        teleport_config_kwargs = teleport_config_kwargs.copy()
+                        teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
 
                         teleport_mode_obj = teleport_config_kwargs.pop("mode")
                         teleport_mode_configs = []
