@@ -21,15 +21,19 @@ class LandscapeConfig(TrainingConfig):
     cob_sampling: str = 'usual'
 
 
-def generate_random_2d_vector(weights: torch.Tensor, normalize: bool = True, seed: int = None) -> torch.Tensor:
+def generate_random_2d_vector(weights: List[torch.Tensor], ignore_biasbn: bool = False,
+                              normalize: bool = True, seed: int = None) -> List[torch.Tensor]:
     """
         Generates a random vector of size equals to the weights of the model.
     """
     if seed:
         torch.manual_seed(seed)
-    direction = torch.randn(weights.size())
+    if ignore_biasbn:
+        direction = [torch.randn(w.size()) for w in weights]
+    else:
+        direction = torch.randn(weights.size())
     if normalize:
-        normalize_direction(direction, weights)
+        normalize_direction(direction, weights, ignore_biasbn)
     return direction
 
 
@@ -49,7 +53,9 @@ def generate_direction_vector(checkpoints: List[torch.Tensor], teleport_at: List
     return res
 
 
-def normalize_direction(direction: torch.Tensor, weights: torch.Tensor):
+def normalize_direction(direction: Union[List[torch.Tensor], torch.Tensor],
+                        weights: Union[List[torch.Tensor], torch.Tensor],
+                        ignore_biasbn: bool = False):
     """
         Apply a filter normalization to the direction vector.
         d <- d/||d|| * ||w||
@@ -62,8 +68,14 @@ def normalize_direction(direction: torch.Tensor, weights: torch.Tensor):
         This process is a inplace operation.
     """
     assert len(direction) == len(weights), "Direction must have the same size as model weights"
-    w = weights.detach().cpu()
-    direction.mul_(w) / direction.norm()
+    if ignore_biasbn:
+        for d, w in zip(direction, weights):
+            if ignore_biasbn and d.dim() <= 1:
+                d.fill_(0)
+            else:
+                d.mul_(w.norm() / (d.norm() + 1e-10))
+    else:
+        direction.mul_(weights.norm() / direction.norm() + 1e-10)
 
 
 def compute_angle(vec1: torch.Tensor, vec2: torch.Tensor) -> torch.Tensor:
@@ -101,8 +113,8 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
     return w, final
 
 
-def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[torch.Tensor,torch.Tensor],
-                              param_t: Tuple[torch.Tensor,torch.Tensor], a: torch.Tensor,
+def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[torch.Tensor, torch.Tensor],
+                              param_t: Tuple[torch.Tensor, torch.Tensor], a: torch.Tensor,
                               trainset: Dataset, valset: Dataset,
                               metric: TrainingMetrics, config: TrainingConfig
                               ) -> Tuple[list, list, list]:
@@ -132,12 +144,11 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
 
 
 def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tuple[torch.Tensor, torch.Tensor],
-                                 surface: torch.Tensor, trainset: Dataset, metric: TrainingMetrics,
-                                 config: TrainingConfig) -> Tuple[List, List]:
+                                 weights: torch.Tensor, surface: torch.Tensor, trainset: Dataset,
+                                 metric: TrainingMetrics, config: TrainingConfig) -> Tuple[np.ndarray, np.ndarray]:
     """
         Generate a tensor containing the loss values from a given model.
     """
-    w = model.get_weights()
     loss = []
     acc = []
     delta, eta = directions
@@ -147,14 +158,15 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
             x, y = x.to(config.device, ), y.to(config.device, )
 
             # L (w + alpha*delta + beta*eta)
-            model.set_weights(w + (delta * x + eta * y).to(config.device))
-            # Model should not be in eval mode since we are going to change the weights and nothing else.
-            results = test(model, trainset, metric, config, eval_mode=False)
+            changes = (delta * x + eta * y).to(config.device)
+            w = torch.add(weights, changes)
+            model.set_weights(w)
+            results = test(model, trainset, metric, config)
 
             loss.append(results['loss'])
             acc.append(results['accuracy'])
 
-    return loss, acc
+    return np.array(loss), np.array(acc)
 
 
 def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -200,11 +212,13 @@ def generate_weight_trajectory(checkpoints: List[torch.Tensor],
 
 def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
                   weight_traj: Tuple[torch.Tensor, torch.Tensor] = None,
-                  teleport_idx: Union[int, List[int]] = None, levels: int = 25):
+                  teleport_idx: Union[int, List[int]] = None,
+                  vmin: int = 0.1, vmax: int = 10, levels: int = 0.5):
+    loss = loss.reshape((len(x), len(y)))
     plt.figure()
-    plt.contourf(x, y, loss, cmap='coolwarm', origin='lower', levels=levels)
+    plt.contourf(x, y, loss, cmap='coolwarm', levels=np.arange(vmin, vmax, levels))
     plt.colorbar()
-    cs = plt.contour(x, y, loss, colors='black', origin='lower', levels=levels)
+    cs = plt.contour(x, y, loss, colors='black', levels=np.arange(vmin, vmax, levels))
     plt.clabel(cs, cs.levels)
 
     if weight_traj:
@@ -214,7 +228,7 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
 
-    plt.show()
+    # plt.show()
 
 
 def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torch.Tensor,
