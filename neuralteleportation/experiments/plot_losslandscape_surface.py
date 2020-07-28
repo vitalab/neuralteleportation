@@ -32,9 +32,9 @@ def argument_parser():
                         help="save path and .pt file forthe selected network")
     parser.add_argument("--cob_range", type=float, default=0.5, help='set the CoB range for the teleportation.')
     parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
-    parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 32],
+    parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 31],
                         help="Defines the precision of the x")
-    parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 32],
+    parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 31],
                         help="Defines the precision of the y")
     parser.add_argument("--use_biasbn", action="store_true", default=False,
                         help="Wether or not to consider bias in layer and BatchNorm Layers in the direction vectors")
@@ -74,20 +74,20 @@ if __name__ == "__main__":
     if args.save_model:
         torch.save(net, args.save_model_location)
 
-    if not args.use_biasbn:
-        w_o = net.get_weights(flatten=False, concat=False)
-        delta = generate_random_2d_vector(w_o, ignore_biasbn=True)
-        eta = generate_random_2d_vector(w_o, ignore_biasbn=True)
-
-        w_o = torch.cat([w.flatten() for w in w_o])
-        delta = torch.cat([d.flatten() for d in delta])
-        eta = torch.cat([d.flatten() for d in eta])
-    else:
-        w_o = net.get_weights()
-        delta = generate_random_2d_vector(w_o)
-        eta = generate_random_2d_vector(w_o)
-    direction = delta, eta
     if args.plot_before:
+        if not args.use_biasbn:
+            w_o = net.get_weights(flatten=False, concat=False)
+            delta = generate_random_2d_vector(w_o, ignore_biasbn=True, seed=123)
+            eta = generate_random_2d_vector(w_o, ignore_biasbn=True, seed=321)
+
+            w_o = torch.cat([w.flatten() for w in w_o])
+            delta = torch.cat([d.flatten() for d in delta])
+            eta = torch.cat([d.flatten() for d in eta])
+        else:
+            w_o = net.get_weights()
+            delta = generate_random_2d_vector(w_o, seed=123)
+            eta = generate_random_2d_vector(w_o, seed=321)
+        direction = delta, eta
         loss_surf_before, _ = generate_contour_loss_values(net, direction, w_o,
                                                            surface, trainset, metric, config)
         plot_contours(x, y, loss_surf_before)
@@ -96,7 +96,19 @@ if __name__ == "__main__":
         net.set_weights(w_o)
 
     net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
-    w_t = net.get_weights()
+    if not args.use_biasbn:
+        w_t = net.get_weights(flatten=False, concat=False)
+        delta = generate_random_2d_vector(w_t, ignore_biasbn=True, seed=123)
+        eta = generate_random_2d_vector(w_t, ignore_biasbn=True, seed=321)
+
+        w_t = torch.cat([w.flatten() for w in w_t])
+        delta = torch.cat([d.flatten() for d in delta])
+        eta = torch.cat([d.flatten() for d in eta])
+    else:
+        w_t = net.get_weights()
+        delta = generate_random_2d_vector(w_t, seed=123)
+        eta = generate_random_2d_vector(w_t, seed=321)
+    direction = delta, eta
     loss_surf_after, acc = generate_contour_loss_values(net, direction, w_t, surface, trainset, metric, config)
     plot_contours(x, y, loss_surf_after)
 
