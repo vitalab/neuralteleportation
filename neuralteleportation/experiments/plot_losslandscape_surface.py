@@ -32,9 +32,9 @@ def argument_parser():
                         help="save path and .pt file forthe selected network")
     parser.add_argument("--cob_range", type=float, default=0.5, help='set the CoB range for the teleportation.')
     parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
-    parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 30],
+    parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 32],
                         help="Defines the precision of the x")
-    parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 30],
+    parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 32],
                         help="Defines the precision of the y")
     parser.add_argument("--use_biasbn", action="store_true", default=False,
                         help="Wether or not to consider bias in layer and BatchNorm Layers in the direction vectors")
