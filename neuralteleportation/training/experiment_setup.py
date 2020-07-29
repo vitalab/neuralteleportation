@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Tuple, List, Callable, Dict, Union, Any
 
 import torchvision.transforms as transforms
@@ -48,16 +49,17 @@ def get_dataset_info(dataset_name: str, *tags: str) -> Dict[str, Any]:
     return {tag: __dataset_config__[dataset_name.lower()][tag] for tag in tags}
 
 
-def get_dataset_subsets(dataset_name: str, transform=None) -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
+def get_dataset_subsets(dataset_name: str, root: Path = "/tmp", download: bool = True, transform=None) \
+        -> Tuple[VisionDataset, VisionDataset, VisionDataset]:
     if transform is None:
         transform = transforms.ToTensor()
     dataset_conf = __dataset_config__[dataset_name.lower()]
     dataset_cls = dataset_conf["cls"]
     train_transform = dataset_conf["train_transform"] if "train_transform" in dataset_conf.keys() else transform
     test_transform = dataset_conf["test_transform"] if "test_transform" in dataset_conf.keys() else transform
-    train_set = dataset_cls('/tmp', train=True, download=True, transform=train_transform)
-    val_set = dataset_cls('/tmp', train=False, download=True, transform=test_transform)
-    test_set = dataset_cls('/tmp', train=False, download=True, transform=test_transform)
+    train_set = dataset_cls(str(root), train=True, download=download, transform=train_transform)
+    val_set = dataset_cls(str(root), train=False, download=download, transform=test_transform)
+    test_set = dataset_cls(str(root), train=False, download=download, transform=test_transform)
     return train_set, val_set, test_set
 
 

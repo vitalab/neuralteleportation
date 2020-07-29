@@ -19,7 +19,6 @@ class TrainingConfig:
     device: str = 'cpu'
     comet_logger: Experiment = None
     exp_logger: BaseLogger = None
-    log_every_n_batch: int = None
     shuffle_batches: bool = False
 
 
@@ -37,7 +36,7 @@ class TeleportationTrainingConfig(TrainingConfig):
 @dataclass
 class TrainingMetrics:
     criterion: _Loss
-    metrics: Sequence[Callable[[Tensor, Tensor], Tensor]]
+    metrics: Sequence[Callable[[Tensor, Tensor], float]]
 
 
 _SERIALIZATION_EXCLUDED_FIELDS = ['comet_logger', 'exp_logger']

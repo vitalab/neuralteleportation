@@ -25,7 +25,7 @@ __training_configs__ = {"no_teleport": TrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig}
 
 
-def run_experiment(config_path: Path, comet_config: Path) -> None:
+def run_experiment(config_path: Path, comet_config: Path, data_root_dir: Path = None) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
 
@@ -37,7 +37,10 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
 
     # datasets
     for dataset_name in config["datasets"]:
-        train_set, val_set, test_set = get_dataset_subsets(dataset_name)
+        dataset_kwargs = {}
+        if data_root_dir is not None:
+            dataset_kwargs.update(root=data_root_dir, download=False)
+        train_set, val_set, test_set = get_dataset_subsets(dataset_name, **dataset_kwargs)
 
         # models
         for model_name in config["models"]:
@@ -126,9 +129,13 @@ def main():
                         help="Path to the YAML file describing the configuration matrix of the experiments to run")
     parser.add_argument("--comet_config", type=Path, default=Path(".comet.config"),
                         help="Path to the Comet config file indicating how to log the experiments")
+    parser.add_argument("--data_root_dir", type=Path,
+                        help="Root directory of data inside which each dataset creates its own directory. "
+                             "This option is useful in case the datasets must be pre-downloaded to a known location "
+                             "(e.g. when working on a cluster with no internet access).")
     args = parser.parse_args()
 
-    run_experiment(args.config, args.comet_config)
+    run_experiment(args.config, args.comet_config, data_root_dir=args.data_root_dir)
 
 
 if __name__ == '__main__':

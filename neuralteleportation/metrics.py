@@ -19,7 +19,7 @@ def accuracy_topk(output, target, topk=1):
         correct = pred.eq(target.view(1, -1).expand_as(pred))
         correct = correct[:topk].view(-1).float().sum(0)
         acc = correct / batch_size
-        return acc
+        return acc.item()
 
 
 def accuracy(output, target):
