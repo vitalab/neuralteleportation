@@ -228,7 +228,8 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
 
-    plt.savefig('/tmp/results/contour_{}.png'.format(fig.number), format='png')
+    plt.savefig("contour_{}".format(fig.number), format='png')
+
     # plt.show()
 
 
