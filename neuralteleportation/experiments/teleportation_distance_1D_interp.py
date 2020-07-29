@@ -8,7 +8,6 @@ from neuralteleportation.training.training import train
 from neuralteleportation.training.experiment_setup import get_dataset_subsets, get_model, get_model_names
 from neuralteleportation.training.config import TrainingMetrics
 from neuralteleportation.losslandscape.losslandscape import LandscapeConfig, generate_1D_linear_interp, plot_interp
-from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.metrics import accuracy
 
 
@@ -43,8 +42,7 @@ if __name__ == '__main__':
 
     trainset, valset, testset = get_dataset_subsets("cifar10")
 
-    back_model = get_model("cifar10", args.model, num_classes=10, input_channels=3)
-    model = NeuralTeleportationModel(back_model, input_shape=(args.batch_size, 3, 32, 32)).to(device)
+    model = get_model("cifar10", args.model, device=device)
     metric = TrainingMetrics(
         criterion=nn.CrossEntropyLoss(),
         metrics=[accuracy]
