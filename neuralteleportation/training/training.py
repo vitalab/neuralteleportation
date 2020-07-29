@@ -126,9 +126,12 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
                     config.exp_logger.add_scalar(f"train_{metric_name}", value, epoch)
 
 
-def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig) -> Dict[str, Any]:
+def test(model: nn.Module, dataset: Dataset,
+         metrics: TrainingMetrics, config: TrainingConfig,
+         eval_mode: bool = True) -> Dict[str, Any]:
     test_loader = DataLoader(dataset, batch_size=config.batch_size)
-    model.eval()
+    if eval_mode:
+        model.eval()
     results = defaultdict(list)
     pbar = tqdm(enumerate(test_loader))
     with torch.no_grad():
