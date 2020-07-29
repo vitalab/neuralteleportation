@@ -215,7 +215,7 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
                   teleport_idx: Union[int, List[int]] = None,
                   vmin: int = 0.1, vmax: int = 10, levels: int = 0.5):
     loss = loss.reshape((len(x), len(y)))
-    plt.figure()
+    fig = plt.figure()
     plt.contourf(x, y, loss, cmap='coolwarm', levels=np.arange(vmin, vmax, levels))
     plt.colorbar()
     cs = plt.contour(x, y, loss, colors='black', levels=np.arange(vmin, vmax, levels))
@@ -228,6 +228,7 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
 
+    plt.savefig('/tmp/results/contour_{}.png'.format(fig.number), format='png')
     # plt.show()
 
 
