@@ -1,4 +1,5 @@
 from collections import defaultdict
+from statistics import mean
 from typing import Sequence, Callable, Any, Dict
 
 import numpy as np
@@ -56,6 +57,10 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 
 def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
                 device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None) -> None:
+    # Init data structures to keep track of the metrics at each batch
+    metrics_by_batch = {metric.__name__: [] for metric in metrics.metrics}
+    metrics_by_batch.update(loss=[])
+
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
@@ -63,8 +68,9 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
         optimizer.zero_grad()
         output = model(data)
         loss = metrics.criterion(output, target)
-        evaluated_metrics = {metric.__name__: metric(output, target) for metric in metrics.metrics}
-        evaluated_metrics["loss"] = loss.item()
+        metrics_by_batch["loss"].append(loss.item())
+        for metric in metrics.metrics:
+            metrics_by_batch[metric.__name__].append(metric(output, target))
         loss.backward()
         optimizer.step()
         if progress_bar:
@@ -76,17 +82,19 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
                                                                               len(train_loader),
                                                                               loss.item())
             pbar.set_postfix_str(output)
-        step = (len(train_loader.dataset) * epoch) + batch_idx * len(data)
-        if config is not None:
-            if (not config.log_every_n_batch) or batch_idx % config.log_every_n_batch == 0:
-                if config.comet_logger:
-                    config.comet_logger.log_metrics(evaluated_metrics)
-                if config.exp_logger:
-                    if config.exp_logger:
-                        for metric_name, value in evaluated_metrics.items():
-                            config.exp_logger.add_scalar(f"train_{metric_name}", value, step)
+
     pbar.update()
     pbar.close()
+
+    # Log the mean of each metric at the end of the epoch
+    if config is not None:
+        reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
+        if config.comet_logger:
+            config.comet_logger.log_metrics(reduced_metrics, epoch=epoch)
+        if config.exp_logger:
+            if config.exp_logger:
+                for metric_name, value in reduced_metrics.items():
+                    config.exp_logger.add_scalar(f"train_{metric_name}", value, epoch)
 
 
 def test(model: nn.Module, dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig) -> Dict[str, Any]:
