@@ -1,0 +1,14 @@
+scikit-image
+scikit-learn
+h5py
+PyYAML
+tqdm
+torch
+torchvision
+packaging
+seaborn
+torchsummary
+networkx
+tensorboard
+visdom
+comet_ml

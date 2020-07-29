@@ -150,4 +150,4 @@ def init_comet_experiment(comet_config: Path) -> Experiment:
     # Builds an `Experiment` using the content of the `comet` section of the configuration file
     config = configparser.ConfigParser()
     config.read(str(comet_config))
-    return Experiment(**dict(config["comet"]))
+    return Experiment(**dict(config["comet"]), auto_metric_logging=False)

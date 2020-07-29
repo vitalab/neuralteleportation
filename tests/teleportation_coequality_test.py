@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 
 from neuralteleportation.training.training import test, train
-from neuralteleportation.training.experiment_setup import get_cifar10_datasets, get_cifar10_models
+from neuralteleportation.training.experiment_setup import get_dataset_subsets, get_model
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 from neuralteleportation.metrics import accuracy
 
@@ -85,7 +85,7 @@ def test_model_without_set_get_weights(model: nn.Module, testset: Dataset,
 
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    trainset, _, testset = get_cifar10_datasets()
+    trainset, _, testset = get_dataset_subsets("cifar10")
 
     args = argument_parser()
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         device=device
     )
 
-    model = get_cifar10_models()[0]
+    model = get_model("cifar10", "resnet18COB")
 
     print("==========================================")
     print()
