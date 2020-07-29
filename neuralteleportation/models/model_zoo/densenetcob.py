@@ -155,13 +155,12 @@ class DenseNetCOB(nn.Module):
 
     def __init__(self, growth_rate, block_config, num_init_features,
                  num_classes, bn_size=4, drop_rate=0, input_channels=3,
-                 memory_efficient=False, for_dataset=None):
+                 memory_efficient=False):
 
-        super(DenseNetCOB, self).__init__()
-                        
+        super(DenseNetCOB, self).__init__()                     
         # First convolution
         self.features = nn.Sequential(OrderedDict([
-            ('conv0', Conv2dCOB(input_channels, num_init_features, kernel_size=7, stride=2, 
+            ('conv0', Conv2dCOB(input_channels, num_init_features, kernel_size=7, stride=2,
                                 padding=3, bias=False)),
             ('norm0', BatchNorm2dCOB(num_init_features)),
             ('relu0', ReLUCOB(inplace=True)),
