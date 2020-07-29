@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1               # Number of GPUs (per node)
 #SBATCH --cpus-per-task=8          # Number of cores (not cpus)
 #SBATCH --mem=32000M               # memory (per node)
-#SBATCH --time=00-00:60            # time (DD-HH:MM)
+#SBATCH --time=00-00:90            # time (DD-HH:MM)
 
 usage()
 {
