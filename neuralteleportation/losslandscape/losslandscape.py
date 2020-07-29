@@ -16,8 +16,8 @@ from neuralteleportation.training.experiment_setup import get_optimizer_from_mod
 
 @dataclass
 class LandscapeConfig(TrainingConfig):
-    teleport_at: List[int] = 0,
-    cob_range: float = 0.5,
+    teleport_at: List[int] = 0
+    cob_range: float = 0.5
     cob_sampling: str = 'usual'
 
 
