@@ -127,10 +127,11 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
     acc_v = []
     w_o, cob_o = param_o
     w_t, cob_t = param_t
-    for coord in a:
+    for i, coord in enumerate(a):
         # Interpolate the weight from W to T(W),
         # then interpolate the cob for the activation
         # and batchnorm layers only.
+        print("step {} of {}".format(i+1, len(a)))
         w = (1 - coord) * w_o + coord * w_t
         cob = (1 - coord) * cob_o + coord * cob_t
         model.set_params(w, cob)
@@ -230,8 +231,6 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
 
     plt.savefig("contour_{}.png".format(fig.number), format='png')
 
-    # plt.show()
-
 
 def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torch.Tensor,
                 acc_val: List[torch.Tensor] = None):
@@ -254,6 +253,9 @@ def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torc
         ax2.plot(a, acc_val, 'go', markersize=5)
         ax2.plot(a[idx_o], acc_val[idx_o], 'kx', markersize=3, label='val_W')
         ax2.plot(a[idx_t], acc_val[idx_t], 'yx', markersize=3, label="val_T(W)")
+
+    plt.legend()
+    plt.savefig("lininterp_{}.png".format(fig.number), format='png')
     plt.show()
 
 

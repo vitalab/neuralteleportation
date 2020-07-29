@@ -26,7 +26,7 @@ def argument_parser():
     parser.add_argument("--cob_sampling", type=str, default="within_landscape",
                         choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
-    parser.add_argument("--x", nargs=3, type=float, default=[-0.5, 1.5, 100],
+    parser.add_argument("--x", nargs=3, type=float, default=[-0.5, 1.5, 101],
                         help="Defines the precision of the alpha")
     parser.add_argument("--train", action="store_true", default=False,
                         help="Whether or not the model should train before teleportation.")
