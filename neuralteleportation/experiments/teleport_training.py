@@ -10,7 +10,7 @@ import torch.optim as optim
 import yaml
 from torch import nn
 
-from neuralteleportation.metrics import accuracy
+from neuralteleportation.metrics import accuracy, accuracy_top5
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.experiment_run import run_model
 from neuralteleportation.training.experiment_setup import get_model, get_dataset_subsets
@@ -30,7 +30,7 @@ def run_experiment(config_path: Path, comet_config: Path) -> None:
         config = yaml.safe_load(stream)
 
     # Setup metrics to compute
-    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy])
+    metrics = TrainingMetrics(nn.CrossEntropyLoss(), [accuracy, accuracy_top5])
 
     # Common training hyperparameters
     training_params = config["training_params"]

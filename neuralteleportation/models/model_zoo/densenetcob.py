@@ -158,17 +158,11 @@ class DenseNetCOB(nn.Module):
                  memory_efficient=False, for_dataset=None):
 
         super(DenseNetCOB, self).__init__()
-
-        first_conv = ('conv0', Conv2dCOB(input_channels, num_init_features, kernel_size=7, stride=2, 
-                        padding=3, bias=False))
-        if for_dataset == "cifar":
-            # CIFAR-10: kernel_size 7 ->3, stride 2->1, padding 3->1
-            first_conv = ('conv0', Conv2dCOB(input_channels, num_init_features, kernel_size=3, stride=1, 
-                        padding=1, bias=False))
                         
         # First convolution
         self.features = nn.Sequential(OrderedDict([
-            first_conv,
+            ('conv0', Conv2dCOB(input_channels, num_init_features, kernel_size=7, stride=2, 
+                                padding=3, bias=False)),
             ('norm0', BatchNorm2dCOB(num_init_features)),
             ('relu0', ReLUCOB(inplace=True)),
             ('pool0', MaxPool2dCOB(kernel_size=3, stride=2, padding=1)),

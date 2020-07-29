@@ -123,9 +123,15 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
 
     def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
+        # This helps avoid a crash due to self.w not being a leaf variable,
+        # meaning it is not at the begining of the graph and 
+        # was created from an operation on other tensors (self.weight here).
+        self.w = self.w.clone().detach().requires_grad_()
         self.weight = nn.Parameter(self.w, requires_grad=True)
         if self.bias is not None:
             self.b = self.bias * next_cob.type_as(self.bias)
+            # Same as self.w
+            self.b = self.b.clone().detach().requires_grad_()
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):

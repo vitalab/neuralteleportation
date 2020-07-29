@@ -86,7 +86,7 @@ def get_model(dataset_name: str, model_name: str, device: str = 'cpu', **model_k
     else:
         model_kwargs.update(get_dataset_info(dataset_name, "input_channels"))
 
-    if "cifar" in dataset_name and ("resnet" in model_name or "densenet" in model_name):
+    if "cifar" in dataset_name and ("resnet" in model_name):
         model_kwargs.update({"for_dataset": "cifar"})
     # Instantiate the model
     model_factory = model_factories[model_name]
