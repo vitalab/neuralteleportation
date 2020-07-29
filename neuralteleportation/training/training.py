@@ -12,15 +12,24 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, TeleportationTrainingConfig
-from neuralteleportation.training.experiment_setup import get_optimizer_from_model_and_config
+from neuralteleportation.training.experiment_setup import (
+    get_optimizer_from_model_and_config,
+    get_lr_scheduler_from_optimizer_and_config,
+)
+from neuralteleportation.utils.optimtools import get_optimizer_lr, update_optimizer_params
 
 
 def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, config: TrainingConfig,
-          val_dataset: Dataset = None, optimizer: Optimizer = None) -> nn.Module:
+          val_dataset: Dataset = None, optimizer: Optimizer = None, lr_scheduler=None) -> nn.Module:
     if optimizer is None:
         optimizer = get_optimizer_from_model_and_config(model, config)
 
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches)
+    lr_scheduler_interval = None
+    if config.lr_scheduler is not None:
+        lr_scheduler_interval = config.lr_scheduler[1]
+
+    train_loader = DataLoader(
+        train_dataset, batch_size=config.batch_size, shuffle=config.shuffle_batches, drop_last=config.drop_last_batch)
 
     for epoch in range(config.epochs):
         if (isinstance(config, TeleportationTrainingConfig)
@@ -28,9 +37,22 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                 and epoch > 0):
             model = config.teleport_fn(model=model, train_dataset=train_dataset, metrics=metrics, config=config)
             # Force a new optimizer in case the model was swapped as a result of the teleportations
+            # We need to recreate the optimizer with the new model's parameters and update it
+            # with the previous optimizer's parameters otherwise any changes to the old optimizer will be lost
+            old_optimizer_state = optimizer.state_dict()
             optimizer = get_optimizer_from_model_and_config(model, config)
-
-        train_epoch(model, metrics, optimizer, train_loader, epoch, device=config.device, config=config)
+            if lr_scheduler:
+                # Similar to the optimizer, the lr scheduler needs to be updated after its recreation.
+                old_scheduler_state = lr_scheduler.state_dict()
+                lr_scheduler = get_lr_scheduler_from_optimizer_and_config(optimizer, config)
+                lr_scheduler.load_state_dict(old_scheduler_state)
+            # update the optimizer, because for certain LrSchedulers, when they are recreated,
+            # they overwrite the previous parameters set in the optimizer (c.f OneCycleLR)
+            optimizer = update_optimizer_params(optimizer, old_optimizer_state)
+        if lr_scheduler:
+            print("Current LR: ", get_optimizer_lr(optimizer))
+        train_epoch(model, metrics, optimizer, train_loader, epoch,
+                    device=config.device, config=config, lr_scheduler=lr_scheduler)
 
         if val_dataset:
             if config.comet_logger:
@@ -51,16 +73,22 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                     "val_loss", val_res["loss"], epoch)
                 config.exp_logger.add_scalar(
                     "val_accuracy", val_res["accuracy"], epoch)
+        if lr_scheduler and lr_scheduler_interval == "epoch":
+            lr_scheduler.step()
 
     return model
 
 
 def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer, train_loader: DataLoader, epoch: int,
-                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None) -> None:
+                device: str = 'cpu', progress_bar: bool = True, config: TrainingConfig = None, lr_scheduler=None) -> None:
+    lr_scheduler_interval = None
+    if config.lr_scheduler is not None:
+        lr_scheduler_interval = config.lr_scheduler[1]
+    
     # Init data structures to keep track of the metrics at each batch
     metrics_by_batch = {metric.__name__: [] for metric in metrics.metrics}
     metrics_by_batch.update(loss=[])
-
+    
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
@@ -82,7 +110,8 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
                                                                               len(train_loader),
                                                                               loss.item())
             pbar.set_postfix_str(output)
-
+        if lr_scheduler and lr_scheduler_interval == "step":
+            lr_scheduler.step()
     pbar.update()
     pbar.close()
 
