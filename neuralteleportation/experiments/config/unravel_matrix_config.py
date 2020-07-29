@@ -64,6 +64,7 @@ def unravel_matrix_config(config_path: Path, output_dir: Path) -> int:
                             "datasets": [dataset_name],
                             "models": [model_name],
                             "optimizers": [optimizer_config],
+                            "training_params": config["training_params"],
                             "teleportations": {teleport: None}
                         }
                         if teleport != "no_teleport":
