@@ -7,9 +7,25 @@
 #SBATCH --mem=32000M               # memory (per node)
 #SBATCH --time=00-00:90            # time (DD-HH:MM)
 
+__usage="
+Usage: submit_teleport_training.sh --project_root_dir PROJECT_ROOT_DIR
+                                   --experiment_config_file EXPERIMENT_CONFIG_FILE
+
+required arguments:
+  --project_root_dir PROJECT_ROOT_DIR, -d PROJECT_ROOT_DIR
+                        Root directory of the project's code
+                        (typically where you cloned the repository)
+  --experiment_config_file EXPERIMENT_CONFIG_FILE, -c EXPERIMENT_CONFIG_FILE
+                        Path of the YAML configuration file to run as a single,
+                        sequential job
+                        This file must not be deleted until the job has left
+                        pending status!!! (the config file is only loaded once
+                        the job is active)
+"
+
 usage()
 {
-  echo "Usage: submit_teleport_training [ -d | --project_root_dir ] [ -c | --experiment_config_file ]"
+  echo "$__usage"
   exit 2
 }
 

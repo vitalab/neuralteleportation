@@ -1,8 +1,28 @@
 #!/bin/bash
 
+__usage="
+Usage: submit_teleport_training_batch.sh --project_root_dir PROJECT_ROOT_DIR
+                                         --experiment_config_dir EXPERIMENT_CONFIG_DIR
+                                         --email EMAIL
+
+required arguments:
+  --project_root_dir PROJECT_ROOT_DIR, -d PROJECT_ROOT_DIR
+                        Root directory of the project's code
+                        (typically where you cloned the repository)
+  --experiment_config_dir EXPERIMENT_CONFIG_DIR, -c EXPERIMENT_CONFIG_DIR
+                        Directory of the YAML configuration files to run as individual,
+                        parallel jobs
+                        This directory must not be deleted until all jobs have left
+                        pending status!!! (the config files are only loaded once the
+                        jobs are active)
+  --email EMAIL, -m EMAIL
+                        Email address at which SLURM will send notifications
+                        regarding the states of the submitted jobs
+"
+
 usage()
 {
-  echo "Usage: submit_teleport_training_batch [ -d | --project_root_dir ] [ -c | --experiment_config_dir ] [ -m | --email ]"
+  echo "$__usage"
   exit 2
 }
 
@@ -42,8 +62,16 @@ cd "$project_root_dir" || {
   exit 1
 }
 
-# Submit individual jobs for all the configuration files in``experiment_config_dir``
-for experiment_config_file in "$experiment_config_dir"/*.yml; do
-  sbatch --mail-user="$email" --mail-type=ALL \
-    neuralteleportation/experiments/submit_teleport_training.sh -d "$project_root_dir" -c "$experiment_config_file"
-done
+submit_config_dir() {
+  # Submit individual jobs for all the configuration files in``experiment_config_dir``
+  for experiment_config_file in "$experiment_config_dir"/*.yml; do
+    sbatch --mail-user="$email" --mail-type=ALL \
+      neuralteleportation/experiments/submit_teleport_training.sh -d "$project_root_dir" -c "$experiment_config_file"
+  done
+}
+
+submit_config_file() {
+  echo
+}
+
+submit_config_dir
