@@ -7,6 +7,6 @@ setup(name='neuralteleportation',
       description='Neural network teleportation',
       author='',
       author_email='',
-      url='https://bitbucket.org/vitalab/neuralteleportation',
+      url='https://github.com/vitalab/neuralteleportation',
       packages=find_packages()
       )
