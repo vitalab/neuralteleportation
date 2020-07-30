@@ -2,7 +2,7 @@
  
 ## Description   
 
-Neural network teleportation using mathematical magic. 
+Neural network teleportation using representation theory of quivers. 
 
 ## How to run   
 First, install dependencies   
