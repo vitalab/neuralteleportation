@@ -229,6 +229,8 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
         if teleport_idx is not None:
             plt.plot(weight_traj[0][teleport_idx], weight_traj[1][teleport_idx], 'x', c='yellow')
 
+    plt.legend()
+    plt.tight_layout()
     plt.savefig("contour_{}.png".format(fig.number), format='png')
 
 
@@ -255,6 +257,7 @@ def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torc
         ax2.plot(a[idx_t], acc_val[idx_t], 'yx', markersize=3, label="val_T(W)")
 
     plt.legend()
+    plt.tight_layout()
     plt.savefig("lininterp_{}.png".format(fig.number), format='png')
     plt.show()
 
