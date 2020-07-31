@@ -69,7 +69,10 @@ if __name__ == '__main__':
 
     model = get_model("cifar10", args.model, device=device)
     if args.load_model:
-        model.load_state_dict(torch.load(args.load_path))
+        load_dict = torch.load(args.load_path)
+        if not model.state_dict().keys() == load_dict.keys():
+            raise Exception("Model that was loaded does not match the model type used in the experiment.")
+        model.load_state_dict(load_dict)
         res = test(model, trainset, metric, config)
         print("Scored {:.4f} acc on trainset".format(res['accuracy']))
         res = test(model, valset, metric, config)
