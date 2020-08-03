@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Request resources --------------
-#SBATCH --account def-pmjodoin
 #SBATCH --gres=gpu:1               # Number of GPUs (per node)
 #SBATCH --cpus-per-task=8          # Number of cores (not cpus)
 #SBATCH --mem=32000M               # memory (per node)
@@ -9,12 +8,15 @@
 
 __usage="
 Usage: submit_teleport_training.sh --project_root_dir PROJECT_ROOT_DIR
+                                   --dataset_dir DATASET_DIR
                                    --experiment_config_file EXPERIMENT_CONFIG_FILE
 
 required arguments:
-  --project_root_dir PROJECT_ROOT_DIR, -d PROJECT_ROOT_DIR
+  --project_root_dir PROJECT_ROOT_DIR, -p PROJECT_ROOT_DIR
                         Root directory of the project's code
                         (typically where you cloned the repository)
+  --dataset_dir DATASET_DIR, -d DATASET_DIR
+                        Directory where pre-downloaded datasets are stored
   --experiment_config_file EXPERIMENT_CONFIG_FILE, -c EXPERIMENT_CONFIG_FILE
                         Path of the YAML configuration file to run as a single,
                         sequential job
@@ -29,7 +31,7 @@ usage()
   exit 2
 }
 
-PARSED_ARGUMENTS=$(getopt -n submit_teleport_training -o d:c: --long project_root_dir:,experiment_config_file: -- "$@")
+PARSED_ARGUMENTS=$(getopt -n submit_teleport_training -o p:d:c: --long project_root_dir:,dataset_dir:,experiment_config_file: -- "$@")
 VALID_ARGUMENTS=$?
 if [ "$VALID_ARGUMENTS" != "0" ]; then
   usage
@@ -39,7 +41,8 @@ eval set -- "$PARSED_ARGUMENTS"
 while :
 do
   case "$1" in
-    -d | --project_root_dir) project_root_dir="$2"; shift 2 ;;
+    -p | --project_root_dir) project_root_dir="$2"; shift 2 ;;
+    -d | --dataset_dir) dataset_dir="$2"; shift 2 ;;
     -c | --experiment_config_file) experiment_config_file="$2"; shift 2 ;;
     # -- means the end of the arguments; drop this, and break out of the while loop
     --) shift; break ;;
@@ -51,7 +54,7 @@ do
 done
 
 # Additional manual checks on arguments
-required_args=("$project_root_dir" "$experiment_config_file")
+required_args=("$project_root_dir" "$dataset_dir" "$experiment_config_file")
 for required_arg in "${required_args[@]}"; do
   if [ -z "$required_arg" ]
     then
@@ -74,9 +77,8 @@ pip install --no-index -r "$project_root_dir"/requirements/computecanada_wheel.t
 pip install "$project_root_dir"/.
 
 # Copy any dataset we might use to the compute node
-dataset_shared_dir="$HOME"/projects/def-pmjodoin/vitalab/datasets/neuralteleportation/
 compute_node_data_dir="$SLURM_TMPDIR"/data
-rsync -a "$dataset_shared_dir" "$compute_node_data_dir"
+rsync -a "$dataset_dir" "$compute_node_data_dir"
 
 # Run task
 python "$project_root_dir"/neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
