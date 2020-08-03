@@ -39,8 +39,8 @@ eval set -- "$PARSED_ARGUMENTS"
 while :
 do
   case "$1" in
-    -d | --project_root_dir)        project_root_dir="$2"       ; shift 2 ;;
-    -c | --experiment_config_file)  experiment_config_file="$2"  ; shift 2 ;;
+    -d | --project_root_dir) project_root_dir="$2"; shift 2 ;;
+    -c | --experiment_config_file) experiment_config_file="$2"; shift 2 ;;
     # -- means the end of the arguments; drop this, and break out of the while loop
     --) shift; break ;;
     # If invalid options were passed, then getopt should have reported an error,
@@ -50,6 +50,7 @@ do
   esac
 done
 
+# Additional manual checks on arguments
 required_args=("$project_root_dir" "$experiment_config_file")
 for required_arg in "${required_args[@]}"; do
   if [ -z "$required_arg" ]
@@ -58,11 +59,10 @@ for required_arg in "${required_args[@]}"; do
   fi
 done
 
-# Navigate to the project's root directory
-cd "$project_root_dir" || {
-  echo "Could not cd to directory: $project_root_dir. Verify that it exists."
-  exit 1
-}
+# Ensure the project's root directory exists
+if [ ! -d "$project_root_dir" ]; then
+  echo "Provided project root directory does not exit: $project_root_dir."; exit 1
+fi
 
 # Install and activate a virtual environment directly on the compute node
 module load httpproxy # To allow connections to Comet server
@@ -70,8 +70,8 @@ module load python/3.7
 module load scipy-stack # For scipy, matplotlib and pandas
 virtualenv --no-download "$SLURM_TMPDIR"/env
 source "$SLURM_TMPDIR"/env/bin/activate
-pip install --no-index -r requirements/computecanada_wheel.txt
-pip install .
+pip install --no-index -r "$project_root_dir"/requirements/computecanada_wheel.txt
+pip install "$project_root_dir"/.
 
 # Copy any dataset we might use to the compute node
 dataset_shared_dir="$HOME"/projects/def-pmjodoin/vitalab/datasets/neuralteleportation/
@@ -79,5 +79,5 @@ compute_node_data_dir="$SLURM_TMPDIR"/data
 rsync -a "$dataset_shared_dir" "$compute_node_data_dir"
 
 # Run task
-python neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
+python "$project_root_dir"/neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
   --data_root_dir "$compute_node_data_dir"
