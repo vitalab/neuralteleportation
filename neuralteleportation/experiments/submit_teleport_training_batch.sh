@@ -76,6 +76,7 @@ fi
 
 if [ -n "$experiment_config_file" ]; then
   source "$HOME"/projects/def-pmjodoin/vitalab/virtualenv/neuralteleportation/bin/activate
+  export PYTHONPATH=$PYTHONPATH:"$project_root_dir"
   # Create temp directory where to save individual run config files
   experiment_config_dir=$(mktemp -d -t run-config-XXXXXXXXXX --tmpdir="$HOME"/scratch)
   # Split file of matrix configurations into files for each individual configuration in the matrix
