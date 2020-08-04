@@ -102,5 +102,5 @@ fi
 for experiment_config_file in "$experiment_config_dir"/*.yml; do
   sbatch --mail-user="$email" --mail-type=ALL \
     "$project_root_dir"/neuralteleportation/experiments/submit_teleport_training.sh \
-      -p "$project_root_dir" -d "$dataset_dir" -c "$experiment_config_dir"
+      -p "$project_root_dir" -d "$dataset_dir" -c "$experiment_config_file"
 done
