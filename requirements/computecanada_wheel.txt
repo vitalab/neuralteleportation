@@ -3,7 +3,7 @@ scikit-learn
 h5py
 PyYAML
 tqdm
-torch
+torch==1.5
 torchvision
 packaging
 seaborn
