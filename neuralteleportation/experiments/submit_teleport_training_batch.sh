@@ -91,8 +91,7 @@ if [ -n "$experiment_config_file" ]; then
   source "$virtualenv"/bin/activate
   export PYTHONPATH=$PYTHONPATH:"$project_root_dir"
   # Create temp directory where to save individual run config files
-  TMPDIR="$HOME"/scratch
-  experiment_config_dir=$(mktemp -d -t run-config-XXXXXXXXXX)
+  experiment_config_dir=$(TMPDIR="$HOME"/scratch mktemp -d -t run-config-XXXXXXXXXX)
   # Split file of matrix configurations into files for each individual configuration in the matrix
   python "$project_root_dir"/neuralteleportation/experiments/config/unravel_matrix_config.py "$experiment_config_file" \
     --output_dir "$experiment_config_dir"
