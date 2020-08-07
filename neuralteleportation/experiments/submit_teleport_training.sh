@@ -82,4 +82,4 @@ rsync -a "$dataset_dir" "$compute_node_data_dir"
 
 # Run task
 python "$project_root_dir"/neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
-  --data_root_dir "$compute_node_data_dir"
+  --data_root_dir "$compute_node_data_dir" --comet_config "$project_root_dir"/.comet.config
