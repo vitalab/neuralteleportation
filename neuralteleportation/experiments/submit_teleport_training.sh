@@ -64,7 +64,7 @@ done
 
 # Ensure the project's root directory exists
 if [ ! -d "$project_root_dir" ]; then
-  echo "Provided project root directory does not exit: $project_root_dir."; exit 1
+  echo "Provided project root directory does not exist: $project_root_dir."; exit 1
 fi
 
 # Install and activate a virtual environment directly on the compute node
