@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Union
 
+import sys, os
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -19,6 +21,10 @@ class LandscapeConfig(TrainingConfig):
     teleport_at: List[int] = 0
     cob_range: float = 0.5
     cob_sampling: str = 'usual'
+
+
+linterp_checkpoint_file = '/tmp/linterp_save_checkpoint.pth'
+contour_checkpoint_file = '/tmp/contour_save_checkpoint.pth'
 
 
 def generate_random_2d_vector(weights: List[torch.Tensor], ignore_biasbn: bool = False,
@@ -116,8 +122,8 @@ def generate_teleportation_training_weights(model: NeuralTeleportationModel,
 def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[torch.Tensor, torch.Tensor],
                               param_t: Tuple[torch.Tensor, torch.Tensor], a: torch.Tensor,
                               trainset: Dataset, valset: Dataset,
-                              metric: TrainingMetrics, config: TrainingConfig
-                              ) -> Tuple[list, list, list]:
+                              metric: TrainingMetrics, config: TrainingConfig,
+                              checkpoint: dict = None) -> Tuple[list, list, list]:
     """
         This is 1-Dimensional Linear Interpolaiton
         θ(α) = (1−α)θ + αθ′
@@ -127,36 +133,59 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
     acc_v = []
     w_o, cob_o = param_o
     w_t, cob_t = param_t
-    for i, coord in enumerate(a):
-        # Interpolate the weight from W to T(W),
-        # then interpolate the cob for the activation
-        # and batchnorm layers only.
-        print("step {} of {}".format(i+1, len(a)))
-        w = (1 - coord) * w_o + coord * w_t
-        cob = (1 - coord) * cob_o + coord * cob_t
-        model.set_params(w, cob)
-        res = test(model, trainset, metric, config)
-        loss.append(res['loss'])
-        acc_t.append(res['accuracy'])
-        res = test(model, valset, metric, config)
-        acc_v.append(res['accuracy'])
+    try:
+        for step, coord in enumerate(a):
+            # Interpolate the weight from W to T(W),
+            # then interpolate the cob for the activation
+            # and batchnorm layers only.
+            print("step {} of {}".format(step + 1, len(a)))
+            w = (1 - coord) * w_o + coord * w_t
+            cob = (1 - coord) * cob_o + coord * cob_t
+            model.set_params(w, cob)
+            res = test(model, trainset, metric, config)
+            loss.append(res['loss'])
+            acc_t.append(res['accuracy'])
+            res = test(model, valset, metric, config)
+            acc_v.append(res['accuracy'])
+            if step == 5:
+                raise KeyboardInterrupt
+    except:
+        if not checkpoint:
+            checkpoint = {
+                'step': step,
+                'alpha': a,
+                'original_model': param_o,
+                'teleported_model': param_t,
+                'losses': loss,
+                'acc_t': acc_t,
+                'acc_v': acc_v,
+            }
+        else:
+            checkpoint['step'] = step
+            checkpoint['losses'] = checkpoint['losses'].append(loss)
+            checkpoint['acc_t'] = checkpoint['acc_t'].append(acc_t)
+            checkpoint['acc_v'] = checkpoint['acc_v'].append(loss)
+        torch.save(checkpoint, '/tmp/linterp_save_checkpoint.pth')
+        print("A checkpoint was made on step {} of {}".format(step, len(a)))
+        exit()
 
     return loss, acc_t, acc_v
 
 
 def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tuple[torch.Tensor, torch.Tensor],
                                  weights: torch.Tensor, surface: torch.Tensor, trainset: Dataset,
-                                 metric: TrainingMetrics, config: TrainingConfig) -> Tuple[np.ndarray, np.ndarray]:
+                                 metric: TrainingMetrics, config: TrainingConfig,
+                                 checkpoint: dict = None) -> Tuple[np.ndarray, np.ndarray]:
     """
         Generate a tensor containing the loss values from a given model.
     """
     loss = []
     acc = []
     delta, eta = directions
-    for _, x in enumerate(surface[0]):
-        for _, y in enumerate(surface[1]):
-            print("Evaluating [{:.3f}, {:.3f}]".format(x.item(), y.item()))
-            x, y = x.to(config.device, ), y.to(config.device, )
+    try:
+        for step, (x, y) in enumerate(surface):
+            print("Evaluating step {}: [{:.3f}, {:.3f}]".format(step, x, y))
+            x, y = x.to(config.device), y.to(config.device)
 
             # L (w + alpha*delta + beta*eta)
             changes = (delta * x + eta * y).to(config.device)
@@ -166,6 +195,17 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
 
             loss.append(results['loss'])
             acc.append(results['accuracy'])
+    except KeyboardInterrupt:
+        if not checkpoint:
+            checkpoint = {'step': step,
+                          'surface': surface,
+                          'loss': loss}
+        else:
+            checkpoint['step'] = step
+            checkpoint['loss'] = checkpoint['loss'].append(loss)
+        torch.save(checkpoint, contour_checkpoint_file)
+        print("A checkpoint was made at coord {} of {}".format(x, y))
+        raise KeyboardInterrupt
 
     return np.array(loss), np.array(acc)
 
@@ -214,7 +254,7 @@ def generate_weight_trajectory(checkpoints: List[torch.Tensor],
 def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
                   weight_traj: Tuple[torch.Tensor, torch.Tensor] = None,
                   teleport_idx: Union[int, List[int]] = None,
-                  vmin: int = 0.1, vmax: int = 10, levels: int = 0.5):
+                  vmin: int = 0.0, vmax: int = 10, levels: int = 0.5):
     loss = loss.reshape((len(x), len(y)))
     fig = plt.figure()
     plt.contourf(x, y, loss, cmap='coolwarm', levels=np.arange(vmin, vmax, levels))

@@ -1,12 +1,16 @@
+import pathlib
+import argparse
+
 import torch
 import torch.nn as nn
-import argparse
 
 from neuralteleportation.training.experiment_setup import get_dataset_subsets, get_model, get_model_names
 from neuralteleportation.training.training import train, test
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
 from neuralteleportation.metrics import accuracy
 from neuralteleportation.losslandscape import generate_random_2d_vector, generate_contour_loss_values, plot_contours
+
+from neuralteleportation.losslandscape import contour_checkpoint_file as checkpoint_file
 
 
 def argument_parser():
@@ -31,14 +35,16 @@ def argument_parser():
     """Experiment Configuration"""
     parser.add_argument("--train", "-t", action="store_true", default=False,
                         help="if the model should be train before teleportation")
-    parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 31],
+    parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 41],
                         help="Defines the precision of the x")
-    parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 31],
+    parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 41],
                         help="Defines the precision of the y")
     parser.add_argument("--use_biasbn", action="store_true", default=False,
                         help="Wether or not to consider bias in layer and BatchNorm Layers in the direction vectors")
     parser.add_argument("--plot_before", action="store_true", default=False,
                         help="Draw a surface of the original network.")
+    parser.add_argument("--use_checkpoint", action="store_true", default=False,
+                        help="Specify to use a checkpoint. If there is one, all Experiement Configuration are ignored")
 
     """Model Configuration"""
     parser.add_argument("--model", "-m", type=str, default="resnet18COB", choices=get_model_names())
@@ -72,13 +78,15 @@ def generate_new_direction_vectors(net, use_biasbn):
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
 
     args = argument_parser()
 
-    x = torch.linspace(args.x[0], args.x[1], int(args.x[2]))
-    y = torch.linspace(args.y[0], args.y[1], int(args.y[2]))
-    surface = torch.stack((x, y))
+    checkpoint_exist = pathlib.Path(checkpoint_file).exists() and args.use_checkpoint
+
+    xs = torch.linspace(args.x[0], args.x[1], int(args.x[2]))
+    ys = torch.linspace(args.y[0], args.y[1], int(args.y[2]))
+    surface = [(x, y) for x in xs for y in ys]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -97,11 +105,11 @@ if __name__ == "__main__":
         load_dict = torch.load(args.load_path)
         if not net.state_dict().keys() == load_dict.keys():
             raise Exception("Model that was loaded does not match the model type used in the experiment.")
-        net.load_state_dict(load_dict)
-        res = test(net, trainset, metric, config)
-        print("Scored {:.4f} acc on trainset".format(res['accuracy']))
-        res = test(net, valset, metric, config)
-        print("Scored {:.4f} acc on valset".format(res['accuracy']))
+        # net.load_state_dict(load_dict)
+        # res = test(net, trainset, metric, config)
+        # print("Scored {:.4f} acc on trainset".format(res['accuracy']))
+        # res = test(net, valset, metric, config)
+        # print("Scored {:.4f} acc on valset".format(res['accuracy']))
 
     else:
         if args.train:
@@ -110,11 +118,26 @@ if __name__ == "__main__":
         if args.save_model:
             torch.save(net.state_dict(), args.save_path)
 
-    if args.plot_before:
+    checkpoint = None
+    if checkpoint_exist:
+        print("A checkpoint existe and is requested to use, overriding all Experiment configuration!")
+        checkpoint = torch.load(checkpoint_file)
+        step = checkpoint['step']
+        surface = checkpoint['surface'][step:]
+        section = checkpoint['section']
+
+    plot_before = args.plot_before if not checkpoint else section == "before"
+    if plot_before:
         direction, w_o = generate_new_direction_vectors(net, args.use_biasbn)
-        loss_surf_before, _ = generate_contour_loss_values(net, direction, w_o,
-                                                           surface, trainset, metric, config)
-        plot_contours(x, y, loss_surf_before)
+        try:
+            loss_surf_before, _ = generate_contour_loss_values(net, direction, w_o, surface,
+                                                               trainset, metric, config, checkpoint)
+            plot_contours(xs, ys, loss_surf_before)
+        except KeyboardInterrupt:
+            checkpoint = torch.load(checkpoint_file)
+            checkpoint['section'] = "before"
+            torch.save(checkpoint, checkpoint_file)
+            exit()
 
         # this is to force the model to get to the original state
         # since the contour generator modified the weights of the net.
@@ -122,7 +145,16 @@ if __name__ == "__main__":
 
     net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
     direction, w_t = generate_new_direction_vectors(net, args.use_biasbn)
-    loss_surf_after, acc = generate_contour_loss_values(net, direction, w_t, surface, trainset, metric, config)
-    plot_contours(x, y, loss_surf_after)
-
+    try:
+        loss_surf_after, acc = generate_contour_loss_values(net, direction, w_t, surface,
+                                                            trainset, metric, config, checkpoint)
+        plot_contours(xs, ys, loss_surf_after)
+    except KeyboardInterrupt:
+        checkpoint = torch.load(checkpoint_file)
+        checkpoint['section'] = "after"
+        torch.save(checkpoint, checkpoint_file)
+        exit()
     plt.show()
+
+    if checkpoint_exist:
+        pathlib.Path(checkpoint_file).unlink()
