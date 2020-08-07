@@ -6,7 +6,7 @@ Usage: submit_teleport_training_batch.sh --project_root_dir PROJECT_ROOT_DIR
                                          {--experiment_config_dir EXPERIMENT_CONFIG_DIR |
                                          --experiment_config_file EXPERIMENT_CONFIG_FILE
                                          --virtualenv VIRTUALENV}
-                                         --email EMAIL
+                                         [--email EMAIL]
 
 required arguments:
   --project_root_dir PROJECT_ROOT_DIR, -p PROJECT_ROOT_DIR
@@ -14,6 +14,8 @@ required arguments:
                         (typically where you cloned the repository)
   --dataset_dir DATASET_DIR, -d DATASET_DIR
                         Directory where pre-downloaded datasets are stored
+
+optional arguments:
   --email EMAIL, -m EMAIL
                         Email address at which SLURM will send notifications
                         regarding the states of the submitted jobs
@@ -66,7 +68,7 @@ do
 done
 
 # Additional manual checks on arguments
-required_args=("$project_root_dir" "$dataset_dir" "$email")
+required_args=("$project_root_dir" "$dataset_dir")
 for required_arg in "${required_args[@]}"; do
   if [ -z "$required_arg" ]; then
     echo "Missing one or more required argument(s)"; usage
@@ -97,9 +99,13 @@ if [ -n "$experiment_config_file" ]; then
     --output_dir "$experiment_config_dir"
 fi
 
+if [ -n "$email" ]; then
+  arg_mail="--mail-user=$email --mail-type=ALL"
+fi
+
 # Submit individual jobs for all the configuration files in``experiment_config_dir``
 for experiment_config_file in "$experiment_config_dir"/*.yml; do
-  sbatch --mail-user="$email" --mail-type=ALL \
+  sbatch $arg_mail \
     "$project_root_dir"/neuralteleportation/experiments/submit_teleport_training.sh \
       -p "$project_root_dir" -d "$dataset_dir" -c "$experiment_config_file"
 done
