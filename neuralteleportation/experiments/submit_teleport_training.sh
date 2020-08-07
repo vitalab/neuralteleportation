@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1               # Number of GPUs (per node)
 #SBATCH --cpus-per-task=8          # Number of cores (not cpus)
 #SBATCH --mem=32000M               # memory (per node)
-#SBATCH --time=00-00:90            # time (DD-HH:MM)
+#SBATCH --time=00-02:00            # time (DD-HH:MM)
 
 __usage="
 Usage: submit_teleport_training.sh --project_root_dir PROJECT_ROOT_DIR
