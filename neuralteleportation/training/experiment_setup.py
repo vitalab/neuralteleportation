@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, List, Callable, Dict, Union, Any
+from typing import Tuple, List, Callable, Dict, Union, Any, Sequence
 
 import torchvision.transforms as transforms
 from torch import nn, optim
@@ -12,6 +12,7 @@ from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
 from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 from neuralteleportation.models.model_zoo.vggcob import vgg16COB, vgg16_bnCOB
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
+from neuralteleportation.training.config import TrainingConfig, TeleportationTrainingConfig
 
 __dataset_config__ = {"mnist": {"cls": MNIST, "input_channels": 1, "image_size": (28, 28), "num_classes": 10},
                       "cifar10": {"cls": CIFAR10, "input_channels": 3, "image_size": (32, 32), "num_classes": 10,
@@ -41,8 +42,6 @@ __dataset_config__ = {"mnist": {"cls": MNIST, "input_channels": 1, "image_size":
                                                             (0.2023, 0.1994, 0.2010)),
                                    ])}}
 __models__ = [MLPCOB, vgg16COB, resnet18COB, densenet121COB, vgg16_bnCOB]
-
-from neuralteleportation.training.config import TrainingConfig
 
 
 def get_dataset_info(dataset_name: str, *tags: str) -> Dict[str, Any]:
@@ -115,3 +114,11 @@ def get_optimizer_from_model_and_config(model: nn.Module, config: TrainingConfig
 def get_lr_scheduler_from_optimizer_and_config(optimizer: Optimizer, config: TrainingConfig):
     lr_scheduler_name, _, lr_scheduler_kwargs = config.lr_scheduler
     return getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
+
+
+def get_teleportation_epochs(config: TeleportationTrainingConfig) -> Sequence[int]:
+    if config.teleport_only_once:
+        epochs = [config.every_n_epochs]
+    else:
+        epochs = range(config.every_n_epochs, config.epochs + 1, config.every_n_epochs)
+    return epochs
