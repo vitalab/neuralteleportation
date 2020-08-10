@@ -40,7 +40,7 @@ def argument_parser():
     parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 41],
                         help="Defines the precision of the y")
     parser.add_argument("--use_biasbn", action="store_true", default=False,
-                        help="Wether or not to consider bias in layer and BatchNorm Layers in the direction vectors")
+                        help="Whether or not to consider bias in layer and BatchNorm Layers in the direction vectors")
     parser.add_argument("--plot_before", action="store_true", default=False,
                         help="Draw a surface of the original network.")
     parser.add_argument("--use_checkpoint", action="store_true", default=False,
@@ -105,11 +105,7 @@ if __name__ == "__main__":
         load_dict = torch.load(args.load_path)
         if not net.state_dict().keys() == load_dict.keys():
             raise Exception("Model that was loaded does not match the model type used in the experiment.")
-        # net.load_state_dict(load_dict)
-        # res = test(net, trainset, metric, config)
-        # print("Scored {:.4f} acc on trainset".format(res['accuracy']))
-        # res = test(net, valset, metric, config)
-        # print("Scored {:.4f} acc on valset".format(res['accuracy']))
+        net.load_state_dict(load_dict)
 
     else:
         if args.train:
@@ -120,7 +116,7 @@ if __name__ == "__main__":
 
     checkpoint = None
     if checkpoint_exist:
-        print("A checkpoint existe and is requested to use, overriding all Experiment configuration!")
+        print("A checkpoint exists and is requested to use, overriding all Experiment configuration!")
         checkpoint = torch.load(checkpoint_file)
         step = checkpoint['step']
         surface = checkpoint['surface'][step:]
@@ -132,6 +128,8 @@ if __name__ == "__main__":
         try:
             loss_surf_before, _ = generate_contour_loss_values(net, direction, w_o, surface,
                                                                trainset, metric, config, checkpoint)
+            torch.save({"before_loss_surface": loss_surf_before},
+                       '/tmp/' + args.model + '_' + args.cob_range + '_before_loss_surface.pth')
             plot_contours(xs, ys, loss_surf_before)
         except KeyboardInterrupt:
             checkpoint = torch.load(checkpoint_file)
@@ -145,9 +143,13 @@ if __name__ == "__main__":
 
     net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
     direction, w_t = generate_new_direction_vectors(net, args.use_biasbn)
+    if checkpoint and plot_before:
+        surface = [(x, y) for x in xs for y in ys]
     try:
         loss_surf_after, acc = generate_contour_loss_values(net, direction, w_t, surface,
                                                             trainset, metric, config, checkpoint)
+        torch.save({"after_loss_surface":loss_surf_after},
+                   '/tmp/' + args.model + '_' + args.cob_range + '_after_loss_surface.pth')
         plot_contours(xs, ys, loss_surf_after)
     except KeyboardInterrupt:
         checkpoint = torch.load(checkpoint_file)

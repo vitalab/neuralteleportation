@@ -79,10 +79,6 @@ if __name__ == '__main__':
         if not model.state_dict().keys() == load_dict.keys():
             raise Exception("Model that was loaded does not match the model type used in the experiment.")
         model.load_state_dict(load_dict)
-        # res = test(model, trainset, metric, config)
-        # print("Scored {:.4f} acc on trainset".format(res['accuracy']))
-        # res = test(model, valset, metric, config)
-        # print("Scored {:.4f} acc on valset".format(res['accuracy']))
     else:
         if args.train:
             train(model, trainset, metric, config)
@@ -94,7 +90,7 @@ if __name__ == '__main__':
     param_o, param_t = None, None
     checkpoint = None
     if checkpoint_exist:
-        print("A checkpoint existe and is requested to use, overriding all Experiment configuration!")
+        print("A checkpoint exists and is requested to use, overriding all Experiment configuration!")
         checkpoint = torch.load(checkpoint_file)
         step = checkpoint['step']
         a = checkpoint['alpha'][step:]
@@ -106,7 +102,7 @@ if __name__ == '__main__':
         param_t = model.get_params()
 
     loss, acc_t, acc_v = generate_1D_linear_interp(model, param_o, param_t, a, metric=metric, config=config,
-                                                   trainset=trainset, valset=valset)
+                                                   trainset=trainset, valset=valset, checkpoint=checkpoint)
 
     torch.save(checkpoint, '/tmp/linterp_save_checkpoint.pth')
     if checkpoint:

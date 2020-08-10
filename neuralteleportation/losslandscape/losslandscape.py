@@ -125,7 +125,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
                               metric: TrainingMetrics, config: TrainingConfig,
                               checkpoint: dict = None) -> Tuple[list, list, list]:
     """
-        This is 1-Dimensional Linear Interpolaiton
+        This is 1-Dimensional Linear Interpolation
         θ(α) = (1−α)θ + αθ′
     """
     loss = []
@@ -133,11 +133,12 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
     acc_v = []
     w_o, cob_o = param_o
     w_t, cob_t = param_t
+    start_at = checkpoint["step"] if checkpoint else 0
     try:
-        for step, coord in enumerate(a):
+        for step, coord in enumerate(a, start_at):
             # Interpolate the weight from W to T(W),
             # then interpolate the cob for the activation
-            # and batchnorm layers only.
+            # and batchNorm layers only.
             print("step {} of {}".format(step + 1, len(a)))
             w = (1 - coord) * w_o + coord * w_t
             cob = (1 - coord) * cob_o + coord * cob_t
@@ -182,8 +183,11 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
     loss = []
     acc = []
     delta, eta = directions
+    start_at = 0
+    if checkpoint:
+        start_at = checkpoint['step']
     try:
-        for step, (x, y) in enumerate(surface):
+        for step, (x, y) in enumerate(surface, start_at):
             print("Evaluating step {}: [{:.3f}, {:.3f}]".format(step, x, y))
             x, y = x.to(config.device), y.to(config.device)
 
@@ -202,7 +206,7 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
                           'loss': loss}
         else:
             checkpoint['step'] = step
-            checkpoint['loss'] = checkpoint['loss'].append(loss)
+            [checkpoint['loss'].append(l) for l in loss]
         torch.save(checkpoint, contour_checkpoint_file)
         print("A checkpoint was made at coord {} of {}".format(x, y))
         raise KeyboardInterrupt
