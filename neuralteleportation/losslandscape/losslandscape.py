@@ -166,7 +166,9 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             checkpoint['acc_v'] = checkpoint['acc_v'].append(loss)
         torch.save(checkpoint, linterp_checkpoint_file)
         print("A checkpoint was made on step {} of {}".format(step, len(a)))
-        exit()
+        # This is to notify the upper level of try/except
+        # Since there is no way to know if this is from before teleportation or after teleportation.
+        raise
 
     return loss, acc_t, acc_v
 
@@ -211,7 +213,7 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
 
         # This is to notify the upper level of try/except
         # Since there is no way to know if this is from before teleportation or after teleportation.
-        raise Exception
+        raise
 
     return np.array(loss), np.array(acc)
 
