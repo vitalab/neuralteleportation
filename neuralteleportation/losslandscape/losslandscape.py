@@ -148,9 +148,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             acc_t.append(res['accuracy'])
             res = test(model, valset, metric, config)
             acc_v.append(res['accuracy'])
-            if step == 5:
-                raise KeyboardInterrupt
-    except:
+    except Exception:
         if not checkpoint:
             checkpoint = {
                 'step': step,
@@ -166,7 +164,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             checkpoint['losses'] = checkpoint['losses'].append(loss)
             checkpoint['acc_t'] = checkpoint['acc_t'].append(acc_t)
             checkpoint['acc_v'] = checkpoint['acc_v'].append(loss)
-        torch.save(checkpoint, '/tmp/linterp_save_checkpoint.pth')
+        torch.save(checkpoint, linterp_checkpoint_file)
         print("A checkpoint was made on step {} of {}".format(step, len(a)))
         exit()
 
@@ -199,7 +197,8 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
 
             loss.append(results['loss'])
             acc.append(results['accuracy'])
-    except KeyboardInterrupt:
+    except Exception:
+        # The reason is that, no matter what, make a checkpoint of the current surface generation.
         if not checkpoint:
             checkpoint = {'step': step,
                           'surface': surface,
@@ -209,7 +208,10 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
             [checkpoint['loss'].append(l) for l in loss]
         torch.save(checkpoint, contour_checkpoint_file)
         print("A checkpoint was made at coord {} of {}".format(x, y))
-        raise KeyboardInterrupt
+
+        # This is to notify the upper level of try/except
+        # Since there is no way to know if this is from before teleportation or after teleportation.
+        raise Exception
 
     return np.array(loss), np.array(acc)
 
@@ -233,7 +235,7 @@ def generate_weights_direction(origin_weight, M: List[torch.Tensor]) -> Tuple[to
 
     print("Angle between pc1 and pc2 is {:.3f}".format(angle))
     assert torch.isclose(angle, torch.tensor(1.0, dtype=torch.float), atol=1), "The PCA component " \
-                                                                               "are not indenpendent "
+                                                                               "are not independent "
     return torch.mul(pc1, origin_weight.cpu()), torch.mul(pc2, origin_weight.cpu())
 
 
@@ -302,7 +304,7 @@ def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torc
 
     plt.legend()
     plt.tight_layout()
-    plt.savefig("lininterp_{}.png".format(fig.number), format='png')
+    plt.savefig("linterp_{}.png".format(fig.number), format='png')
     plt.show()
 
 

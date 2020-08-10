@@ -128,20 +128,21 @@ if __name__ == "__main__":
             torch.save({"before_loss_surface": loss_surf_before},
                        "/tmp/{}_{}_before_loss_surface.pth".format(args.model, args.cob_range))
             plot_contours(x_coordinates, y_coordinates, loss_surf_before)
-        except KeyboardInterrupt:
+        except Exception:
             checkpoint = torch.load(checkpoint_file)
             checkpoint['section'] = "before"
             torch.save(checkpoint, checkpoint_file)
             exit()
 
-        # this is to force the model to get to the original state
+        # This is to force the model to go back to the original state
         # since the contour generator modified the weights of the net.
         net.set_weights(original_weights)
 
     net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
     direction, teleported_weights = generate_new_direction_vectors(net, args.use_biasbn)
     if checkpoint and plot_before:
-        # If a checkpoint has been loaded, the checkpoint redefine the surface length 
+        # If a checkpoint has been loaded, the checkpoint redefine the surface length.
+        # Thus we need to get the original surface.
         surface = [(x, y) for x in x_coordinates for y in y_coordinates]
     try:
         loss_surf_after, acc = generate_contour_loss_values(net, direction, teleported_weights, surface,
@@ -149,7 +150,7 @@ if __name__ == "__main__":
         torch.save({"after_loss_surface": loss_surf_after},
                    "/tmp/{}_{}_after_loss_surface.pth".format(args.model, args.cob_range))
         plot_contours(x_coordinates, y_coordinates, loss_surf_after)
-    except KeyboardInterrupt:
+    except Exception:
         checkpoint = torch.load(checkpoint_file)
         checkpoint['section'] = "after"
         torch.save(checkpoint, checkpoint_file)
