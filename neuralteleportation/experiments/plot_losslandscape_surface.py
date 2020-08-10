@@ -11,6 +11,7 @@ from neuralteleportation.metrics import accuracy
 from neuralteleportation.losslandscape import generate_random_2d_vector, generate_contour_loss_values, plot_contours
 
 from neuralteleportation.losslandscape import contour_checkpoint_file as checkpoint_file
+from neuralteleportation.utils.pathutils import get_nonexistent_path
 
 
 def argument_parser():
@@ -19,7 +20,7 @@ def argument_parser():
     """
     parser = argparse.ArgumentParser(description='Simple argument parser for the plot loss landscape experiment.')
 
-    """Hyper Parameters"""
+    # Hyper Parameters
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=10,
                         help='How many epoch to train the network if train set to true')
@@ -32,39 +33,35 @@ def argument_parser():
     parser.add_argument("--cob_range", type=float, default=0.5, help='set the CoB range for the teleportation.')
     parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
 
-    """Experiment Configuration"""
+    # Experiment Configuration
     parser.add_argument("--train", "-t", action="store_true", default=False,
                         help="if the model should be train before teleportation")
     parser.add_argument("--x", nargs=3, type=float, default=[-1, 1, 41],
                         help="Defines the precision of the x")
     parser.add_argument("--y", nargs=3, type=float, default=[-1, 1, 41],
                         help="Defines the precision of the y")
-    parser.add_argument("--use_biasbn", action="store_true", default=False,
+    parser.add_argument("--use_bias_bn", action="store_true", default=False,
                         help="Whether or not to consider bias in layer and BatchNorm Layers in the direction vectors")
     parser.add_argument("--plot_before", action="store_true", default=False,
                         help="Draw a surface of the original network.")
     parser.add_argument("--use_checkpoint", action="store_true", default=False,
-                        help="Specify to use a checkpoint. If there is one, all Experiement Configuration are ignored")
+                        help="Specify to use a checkpoint. If there is one, all Experiment Configurations are ignored")
 
-    """Model Configuration"""
+    # Model Configuration
     parser.add_argument("--model", "-m", type=str, default="resnet18COB", choices=get_model_names())
-    parser.add_argument("--save_model", "-s", action="store_true", default=False,
-                        help="Save the model after creating a new one.")
-    parser.add_argument("--save_path", type=str, default='/tmp/model.pt',
+    parser.add_argument("--save_model_path", type=str, default=None,
                         help="save path for the selected network")
-    parser.add_argument("--load_model", action="store_true", default=False,
-                        help="Use a saved model for the experiment.")
-    parser.add_argument("--load_path", type=str, default='/tmp/model.pt',
+    parser.add_argument("--load_model_path", type=str, default=None,
                         help="pt file location for the selected network")
 
     return parser.parse_args()
 
 
-def generate_new_direction_vectors(net, use_biasbn):
-    if not use_biasbn:
+def generate_new_direction_vectors(net, use_bias_bn):
+    if not use_bias_bn:
         weights = net.get_weights(flatten=False, concat=False)
-        delta = generate_random_2d_vector(weights, ignore_biasbn=True, seed=123)
-        eta = generate_random_2d_vector(weights, ignore_biasbn=True, seed=321)
+        delta = generate_random_2d_vector(weights, ignore_bias_bn=True, seed=123)
+        eta = generate_random_2d_vector(weights, ignore_bias_bn=True, seed=321)
 
         weights = torch.cat([w.flatten() for w in weights])
         delta = torch.cat([d.flatten() for d in delta])
@@ -84,9 +81,9 @@ if __name__ == "__main__":
 
     checkpoint_exist = pathlib.Path(checkpoint_file).exists() and args.use_checkpoint
 
-    xs = torch.linspace(args.x[0], args.x[1], int(args.x[2]))
-    ys = torch.linspace(args.y[0], args.y[1], int(args.y[2]))
-    surface = [(x, y) for x in xs for y in ys]
+    x_coordinates = torch.linspace(args.x[0], args.x[1], int(args.x[2]))
+    y_coordinates = torch.linspace(args.y[0], args.y[1], int(args.y[2]))
+    surface = [(x, y) for x in x_coordinates for y in y_coordinates]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -101,8 +98,8 @@ if __name__ == "__main__":
         batch_size=args.batch_size)
 
     net = get_model(args.dataset, args.model, device=device)
-    if args.load_model:
-        load_dict = torch.load(args.load_path)
+    if args.load_model_path:
+        load_dict = torch.load(args.load_model_path)
         if not net.state_dict().keys() == load_dict.keys():
             raise Exception("Model that was loaded does not match the model type used in the experiment.")
         net.load_state_dict(load_dict)
@@ -112,7 +109,7 @@ if __name__ == "__main__":
             train(net, train_dataset=trainset, metrics=metric, config=config)
             test(net, dataset=trainset, metrics=metric, config=config)
         if args.save_model:
-            torch.save(net.state_dict(), args.save_path)
+            torch.save(net.state_dict(), get_nonexistent_path(args.save_path))
 
     checkpoint = None
     if checkpoint_exist:
@@ -124,13 +121,13 @@ if __name__ == "__main__":
 
     plot_before = args.plot_before if not checkpoint else section == "before"
     if plot_before:
-        direction, w_o = generate_new_direction_vectors(net, args.use_biasbn)
+        direction, original_weights = generate_new_direction_vectors(net, args.use_bias_bn)
         try:
-            loss_surf_before, _ = generate_contour_loss_values(net, direction, w_o, surface,
+            loss_surf_before, _ = generate_contour_loss_values(net, direction, original_weights, surface,
                                                                trainset, metric, config, checkpoint)
             torch.save({"before_loss_surface": loss_surf_before},
-                       '/tmp/' + args.model + '_' + args.cob_range + '_before_loss_surface.pth')
-            plot_contours(xs, ys, loss_surf_before)
+                       "/tmp/{}_{}_before_loss_surface.pth".format(args.model, args.cob_range))
+            plot_contours(x_coordinates, y_coordinates, loss_surf_before)
         except KeyboardInterrupt:
             checkpoint = torch.load(checkpoint_file)
             checkpoint['section'] = "before"
@@ -139,18 +136,19 @@ if __name__ == "__main__":
 
         # this is to force the model to get to the original state
         # since the contour generator modified the weights of the net.
-        net.set_weights(w_o)
+        net.set_weights(original_weights)
 
     net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
-    direction, w_t = generate_new_direction_vectors(net, args.use_biasbn)
+    direction, teleported_weights = generate_new_direction_vectors(net, args.use_biasbn)
     if checkpoint and plot_before:
-        surface = [(x, y) for x in xs for y in ys]
+        # If a checkpoint has been loaded, the checkpoint redefine the surface length 
+        surface = [(x, y) for x in x_coordinates for y in y_coordinates]
     try:
-        loss_surf_after, acc = generate_contour_loss_values(net, direction, w_t, surface,
+        loss_surf_after, acc = generate_contour_loss_values(net, direction, teleported_weights, surface,
                                                             trainset, metric, config, checkpoint)
-        torch.save({"after_loss_surface":loss_surf_after},
-                   '/tmp/' + args.model + '_' + args.cob_range + '_after_loss_surface.pth')
-        plot_contours(xs, ys, loss_surf_after)
+        torch.save({"after_loss_surface": loss_surf_after},
+                   "/tmp/{}_{}_after_loss_surface.pth".format(args.model, args.cob_range))
+        plot_contours(x_coordinates, y_coordinates, loss_surf_after)
     except KeyboardInterrupt:
         checkpoint = torch.load(checkpoint_file)
         checkpoint['section'] = "after"

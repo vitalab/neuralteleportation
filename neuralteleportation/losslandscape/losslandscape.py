@@ -27,19 +27,19 @@ linterp_checkpoint_file = '/tmp/linterp_save_checkpoint.pth'
 contour_checkpoint_file = '/tmp/contour_save_checkpoint.pth'
 
 
-def generate_random_2d_vector(weights: List[torch.Tensor], ignore_biasbn: bool = False,
+def generate_random_2d_vector(weights: List[torch.Tensor], ignore_bias_bn: bool = False,
                               normalize: bool = True, seed: int = None) -> List[torch.Tensor]:
     """
         Generates a random vector of size equals to the weights of the model.
     """
     if seed:
         torch.manual_seed(seed)
-    if ignore_biasbn:
+    if ignore_bias_bn:
         direction = [torch.randn(w.size()) for w in weights]
     else:
         direction = torch.randn(weights.size())
     if normalize:
-        normalize_direction(direction, weights, ignore_biasbn)
+        normalize_direction(direction, weights, ignore_bias_bn)
     return direction
 
 

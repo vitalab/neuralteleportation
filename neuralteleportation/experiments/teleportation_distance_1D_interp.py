@@ -17,7 +17,7 @@ from neuralteleportation.losslandscape import linterp_checkpoint_file as checkpo
 def argument_parser():
     parser = argparse.ArgumentParser()
 
-    """Hyper Parameters"""
+    # Hyper Parameters
     parser.add_argument("--epochs", "-e", type=int, default=10,
                         help="How many epochs should the network train in total")
     parser.add_argument("--lr", type=float, default=1e-3,
@@ -32,22 +32,19 @@ def argument_parser():
                         choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
 
-    """Experiment Config"""
+    # Experiment Config
     parser.add_argument("--x", nargs=3, type=float, default=[-0.5, 1.5, 101],
                         help="Defines the precision of the alpha")
     parser.add_argument("--use_checkpoint", action="store_true", default=False,
                         help="Specify to use a checkpoint if there is one")
 
-    """Models Configuration"""
+    # Models Configuration
     parser.add_argument("--train", action="store_true", default=False,
                         help="Whether or not the model should train before teleportation.")
     parser.add_argument("--model", type=str, default="resnet18COB", choices=get_model_names())
-    parser.add_argument("--save_model", action="store_true", default=False,
-                        help="Enable saving the model after training")
-    parser.add_argument("--save_path", type=str, default='/tmp/model.pt',
+    parser.add_argument("--save_model_path", type=str, default=None,
                         help="")
-    parser.add_argument("--load_model", action="store_true", default=False)
-    parser.add_argument("--load_path", type=str, default='/tmp/model.pt')
+    parser.add_argument("--load_model_path", type=str, default=None)
 
     return parser.parse_args()
 
@@ -74,8 +71,8 @@ if __name__ == '__main__':
     )
 
     model = get_model("cifar10", args.model, device=device)
-    if args.load_model:
-        load_dict = torch.load(args.load_path)
+    if args.load_model_path:
+        load_dict = torch.load(args.load_model_path)
         if not model.state_dict().keys() == load_dict.keys():
             raise Exception("Model that was loaded does not match the model type used in the experiment.")
         model.load_state_dict(load_dict)
@@ -83,8 +80,8 @@ if __name__ == '__main__':
         if args.train:
             train(model, trainset, metric, config)
             test(model, testset, metric, config)
-        if args.save_model:
-            torch.save(model.state_dict(), args.save_path)
+        if args.save_model_path:
+            torch.save(model.state_dict(), args.save_model_path)
 
     a = torch.linspace(args.x[0], args.x[1], int(args.x[2]))
     param_o, param_t = None, None
