@@ -7,7 +7,7 @@ h5py
 PyYAML
 tqdm
 torch==1.5
-torchvision
+torchvision==0.6
 packaging
 seaborn
 torchsummary
