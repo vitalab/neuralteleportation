@@ -67,13 +67,23 @@ if [ ! -d "$project_root_dir" ]; then
   echo "Provided project root directory does not exist: $project_root_dir."; exit 1
 fi
 
+check_timeout()
+{
+  if [ $? -eq 124 ]; then
+    echo "Creating/installing virtualenv timed out"; exit 124
+  fi
+}
+
 # Install and activate a virtual environment directly on the compute node
 module load httpproxy # To allow connections to Comet server
 module load python/3.7
-virtualenv --no-download "$SLURM_TMPDIR"/env
+timeout 3m virtualenv --no-download "$SLURM_TMPDIR"/env
+check_timeout
 source "$SLURM_TMPDIR"/env/bin/activate
-pip install --no-index -r "$project_root_dir"/requirements/computecanada_wheel.txt
-pip install "$project_root_dir"/.
+timeout 4m pip install --no-index -r "$project_root_dir"/requirements/computecanada_wheel.txt
+check_timeout
+timeout 3m pip install "$project_root_dir"/.
+check_timeout
 
 # Copy any dataset we might use to the compute node
 compute_node_data_dir="$SLURM_TMPDIR"/data
