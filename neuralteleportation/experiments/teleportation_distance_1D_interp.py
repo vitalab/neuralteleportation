@@ -101,11 +101,17 @@ if __name__ == '__main__':
     loss, acc_t, acc_v = generate_1D_linear_interp(model, param_o, param_t, a, metric=metric, config=config,
                                                    trainset=trainset, valset=valset, checkpoint=checkpoint)
 
-    torch.save(checkpoint, '/tmp/linterp_save_checkpoint.pth')
     if checkpoint:
         loss = checkpoint['losses'].append(loss)
         acc_t = checkpoint['acc_t'].append(acc_t)
         acc_v = checkpoint['acc_v'].append(acc_v)
+
+    # Save the generated linear interpolation.
+    torch.save({
+        "loss": loss,
+        "acc_t": acc_t,
+        "acc_v": acc_v
+    }, "/tmp/{}_{}_linterp.pth".format(args.model, args.cob_range))
     plot_interp(loss, acc_t, a, acc_val=acc_v)
 
     if checkpoint_exist:
