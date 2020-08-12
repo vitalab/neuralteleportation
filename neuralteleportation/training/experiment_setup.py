@@ -117,6 +117,18 @@ def get_lr_scheduler_from_optimizer_and_config(optimizer: Optimizer, config: Tra
 
 
 def get_teleportation_epochs(config: TeleportationTrainingConfig) -> Sequence[int]:
+    """Determines the epochs at the start of which to teleport the model, based on the configuration.
+
+    If the ``teleport_only_once`` flag is active, the ``every_n_epochs`` parameter indicates the ONLY epoch at which to
+    teleport. Otherwise, ``every_n_epochs`` is the period of the teleportations, and is used to determine at which
+    epochs (between 0 and ``epochs``) to teleport.
+
+    Args:
+        config: Collection of hyperparameters regarding the training, and the teleportations to apply.
+
+    Returns:
+        Indices of the epochs at the start of which to teleport the model during training.
+    """
     if config.teleport_only_once:
         epochs = [config.every_n_epochs]
     else:
