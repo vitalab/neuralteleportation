@@ -148,7 +148,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             acc_t.append(res['accuracy'])
             res = test(model, valset, metric, config)
             acc_v.append(res['accuracy'])
-    except Exception:
+    except BaseException:
         if not checkpoint:
             checkpoint = {
                 'step': step,
@@ -199,7 +199,7 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
 
             loss.append(results['loss'])
             acc.append(results['accuracy'])
-    except Exception:
+    except BaseException:
         # The reason is that, no matter what, make a checkpoint of the current surface generation.
         if not checkpoint:
             checkpoint = {'step': step,
