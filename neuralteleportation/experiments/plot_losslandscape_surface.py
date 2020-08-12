@@ -139,7 +139,7 @@ if __name__ == "__main__":
         net.set_weights(original_weights)
 
     net = net.random_teleport(cob_range=args.cob_range, sampling_type=args.cob_sampling)
-    direction, teleported_weights = generate_new_direction_vectors(net, args.use_biasbn)
+    direction, teleported_weights = generate_new_direction_vectors(net, args.use_bias_bn)
     if checkpoint and plot_before:
         # If a checkpoint has been loaded, the checkpoint redefine the surface length.
         # Thus we need to get the original surface.

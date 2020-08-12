@@ -61,7 +61,7 @@ def generate_direction_vector(checkpoints: List[torch.Tensor], teleport_at: List
 
 def normalize_direction(direction: Union[List[torch.Tensor], torch.Tensor],
                         weights: Union[List[torch.Tensor], torch.Tensor],
-                        ignore_biasbn: bool = False):
+                        ignore_bias_bn: bool = False):
     """
         Apply a filter normalization to the direction vector.
         d <- d/||d|| * ||w||
@@ -74,9 +74,9 @@ def normalize_direction(direction: Union[List[torch.Tensor], torch.Tensor],
         This process is a inplace operation.
     """
     assert len(direction) == len(weights), "Direction must have the same size as model weights"
-    if ignore_biasbn:
+    if ignore_bias_bn:
         for d, w in zip(direction, weights):
-            if ignore_biasbn and d.dim() <= 1:
+            if ignore_bias_bn and d.dim() <= 1:
                 d.fill_(0)
             else:
                 d.mul_(w.norm() / (d.norm() + 1e-10))
@@ -148,7 +148,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             acc_t.append(res['accuracy'])
             res = test(model, valset, metric, config)
             acc_v.append(res['accuracy'])
-    except Exception:
+    except:
         if not checkpoint:
             checkpoint = {
                 'step': step,
@@ -199,7 +199,7 @@ def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tu
 
             loss.append(results['loss'])
             acc.append(results['accuracy'])
-    except Exception:
+    except:
         # The reason is that, no matter what, make a checkpoint of the current surface generation.
         if not checkpoint:
             checkpoint = {'step': step,
