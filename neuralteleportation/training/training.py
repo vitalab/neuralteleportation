@@ -14,7 +14,7 @@ from tqdm import tqdm
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, TeleportationTrainingConfig
 from neuralteleportation.training.experiment_setup import (
     get_optimizer_from_model_and_config,
-    get_lr_scheduler_from_optimizer_and_config,
+    get_lr_scheduler_from_optimizer_and_config, get_teleportation_epochs,
 )
 from neuralteleportation.utils.optimtools import get_optimizer_lr, update_optimizer_params
 
@@ -33,8 +33,7 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
 
     for epoch in range(config.epochs):
         if (isinstance(config, TeleportationTrainingConfig)
-                and (epoch % config.every_n_epochs) == 0
-                and epoch > 0):
+                and epoch in get_teleportation_epochs(config)):
             model = config.teleport_fn(model=model, train_dataset=train_dataset, metrics=metrics, config=config)
             # Force a new optimizer in case the model was swapped as a result of the teleportations
             # We need to recreate the optimizer with the new model's parameters and update it
