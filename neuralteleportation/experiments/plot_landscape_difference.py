@@ -1,5 +1,11 @@
+"""
+Train a model W. Then teleport it to TW with within_landscape sampling.
+Then teleport W again but now with change_landscape sampling and save the cob with W.get_cob(),
+lets call this teleportation W'.
+Then teleport TW with W.get_cob() to get another model W''. Now interpolate between W' and W''
+"""
+
 import argparse
-from copy import deepcopy
 
 import torch
 import matplotlib.pyplot as plt

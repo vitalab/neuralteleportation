@@ -81,17 +81,20 @@ class NeuralTeleportationModel(nn.Module):
         self.initialize_cob()
 
     def random_teleport(self, cob_range: float = 0.5, sampling_type: str = 'within_landscape',
-                        reset_teleportation: bool = True, center: float = 1):
+                        reset_teleportation: bool = True, center: float = 1, inline: bool = True):
+        from copy import deepcopy
         """
           Applies random change of basis to each of the network layers.
 
         Returns:
             nn.Module of the network after teleportation
         """
-        return self.teleport(self.generate_random_cob(cob_range, sampling_type, center=center),
-                             reset_teleportation=reset_teleportation)
+        modelcopy = self if inline else deepcopy(self)
+        return modelcopy.teleport(self.generate_random_cob(cob_range, sampling_type, center=center),
+                                  reset_teleportation=reset_teleportation)
 
-    def teleport(self, cob: torch.Tensor, reset_teleportation: bool = True):
+    def teleport(self, cob: torch.Tensor, reset_teleportation: bool = True, inline: bool = True):
+        from copy import deepcopy
         """
             Teleport the network.
 
@@ -102,18 +105,19 @@ class NeuralTeleportationModel(nn.Module):
         Returns:
             neural teleportation model after teleportation
         """
+        modelcopy = self if inline else deepcopy(self)
         if reset_teleportation:
-            self.undo_teleportation()
-            self.teleport_weights(cob)
-            self.teleport_activations(cob)
+            modelcopy.undo_teleportation()
+            modelcopy.teleport_weights(cob)
+            modelcopy.teleport_activations(cob)
         else:
-            previous_cob = self.get_cob()
+            previous_cob = modelcopy.get_cob()
             # Teleport weights
-            self.teleport_weights(cob)
+            modelcopy.teleport_weights(cob)
             # Set activation cob to product of previous cobs and new cob
-            self.teleport_activations(previous_cob * cob)
+            modelcopy.teleport_activations(previous_cob * cob)
 
-        return self
+        return modelcopy
 
     def teleport_weights(self, cob: torch.Tensor):
         """

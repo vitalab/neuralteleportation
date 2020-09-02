@@ -1,5 +1,7 @@
 from neuralteleportation.losslandscape.losslandscape import generate_random_2d_vector
+from neuralteleportation.losslandscape.losslandscape import generate_1D_linear_interp
 from neuralteleportation.losslandscape.losslandscape import generate_contour_loss_values
 from neuralteleportation.losslandscape.losslandscape import plot_contours
+from neuralteleportation.losslandscape.losslandscape import plot_interp
 from neuralteleportation.losslandscape.losslandscape import contour_checkpoint_file
 from neuralteleportation.losslandscape.losslandscape import linterp_checkpoint_file
