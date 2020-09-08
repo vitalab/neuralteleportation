@@ -3,6 +3,7 @@
 # https://www.comet.ml/marcoarmenta/neuralteleportation when logged in to your Comet account).
 
 [comet]
+online=True
 api_key=<YOUR_API_KEY>
 workspace=marcoarmenta
 project_name=neuralteleportation

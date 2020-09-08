@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import visdom
-from comet_ml import Experiment
+from comet_ml import Experiment, OfflineExperiment
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -150,4 +150,11 @@ def init_comet_experiment(comet_config: Path) -> Experiment:
     # Builds an `Experiment` using the content of the `comet` section of the configuration file
     config = configparser.ConfigParser()
     config.read(str(comet_config))
-    return Experiment(**dict(config["comet"]), auto_metric_logging=False)
+    comet_kwargs = config["comet"]
+    is_experiment_online = comet_kwargs.getboolean("online", fallback=True)
+    del comet_kwargs["online"]
+    if is_experiment_online:
+        experiment_cls = Experiment
+    else:
+        experiment_cls = OfflineExperiment
+    return experiment_cls(**comet_kwargs, auto_metric_logging=False)
