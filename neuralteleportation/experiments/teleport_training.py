@@ -18,9 +18,9 @@ from neuralteleportation.training.teleport import optim as teleport_optim
 from neuralteleportation.training.teleport.optim import OptimalTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
-from neuralteleportation.utils.logger import init_comet_experiment
+from neuralteleportation.utils.logger import init_comet_experiment, CsvLogger
 
-__training_configs__ = {"no_teleport": TrainingConfig,
+__training_configs__: TrainingConfig = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig}
 
@@ -100,11 +100,14 @@ def run_experiment(config_path: Path, comet_config: Path, data_root_dir: Path = 
 
                     # Iterate over different possible training configurations
                     for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
+                        comet_experiment = init_comet_experiment(comet_config)
+                        experiment_path = Path('out') / comet_experiment.get_key()
                         training_config = training_config_cls(
                             optimizer=(optimizer_name, optimizer_kwargs),
                             lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                             device='cuda',
-                            comet_logger=init_comet_experiment(comet_config),
+                            comet_logger=comet_experiment,
+                            exp_logger=CsvLogger(experiment_path),
                             **training_params,
                             **teleport_config_kwargs,
                             **teleport_mode_config_kwargs,

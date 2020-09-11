@@ -1,7 +1,10 @@
 import configparser
+from collections import defaultdict
 from pathlib import Path
+from time import time
 
 import numpy as np
+import pandas as pd
 import visdom
 from comet_ml import Experiment
 from torch.utils.tensorboard import SummaryWriter
@@ -9,9 +12,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 class BaseLogger:
     """Base class for the loggers."""
-
-    def __init__(self):
-        super(BaseLogger, self).__init__()
 
     def add_scalar(self, name, value, step):
         pass
@@ -30,6 +30,39 @@ class BaseLogger:
 
     def add_histogram(self, model, step):
         pass
+
+    def flush(self):
+        pass
+
+
+class CsvLogger(BaseLogger):
+    """Logger for storing offline on disk and manipulate directly and produce matplotlib plots"""
+    def __init__(self, experiment_dir, interval_secs=60):
+        self.data_dict = defaultdict(list)
+        self.last_log_time = 0
+        self.log_interval = interval_secs
+        self.exp_path = Path(experiment_dir)
+
+    def _update(self):
+        if time() - self.last_log_time > self.log_interval:
+            self.write()
+            self.last_log_time = time()
+
+    def flush(self):
+        """Write all the data to disk"""
+        # TODO write incrementally (append)
+        for metric_name, data in self.data_dict.items():
+            df = pd.DataFrame(data, columns=['step', 'value'])
+            metric_filepath = self.exp_path / f'{metric_name}.csv'
+            df.to_csv(metric_filepath)
+
+    def add_scalar(self, name, value, step):
+        """Save the data in memory
+
+        Will not write to disk instantly. Call flush() to do it. Otherwise, it will be called after a time interval.
+        """
+        self.data_dict[name] += (step, value)
+        self._update()
 
 
 class VisdomLogger(BaseLogger):
