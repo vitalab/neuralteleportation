@@ -152,7 +152,8 @@ def init_comet_experiment(comet_config: Path) -> Experiment:
     config.read(str(comet_config))
     comet_kwargs = config["comet"]
     is_experiment_online = comet_kwargs.getboolean("online", fallback=True)
-    del comet_kwargs["online"]
+    if "online" in comet_kwargs:
+        del comet_kwargs["online"]
     if is_experiment_online:
         experiment_cls = Experiment
     else:
