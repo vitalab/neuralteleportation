@@ -20,7 +20,7 @@ from neuralteleportation.training.teleport.random import RandomTeleportationTrai
 from neuralteleportation.utils.itertools import dict_values_product
 from neuralteleportation.utils.logger import init_comet_experiment, CsvLogger
 
-__training_configs__: TrainingConfig = {"no_teleport": TrainingConfig,
+__training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig}
 
