@@ -89,6 +89,8 @@ check_timeout
 compute_node_data_dir="$SLURM_TMPDIR"/data
 rsync -a "$dataset_dir" "$compute_node_data_dir"
 
+out_root_dir=~/projects/def-pmjodoin/vitalab/neuraltelep/output
+
 # Run task
 python "$project_root_dir"/neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
-  --data_root_dir "$compute_node_data_dir" --comet_config "$project_root_dir"/.comet.config
+  --data_root_dir "$compute_node_data_dir" --comet_config "$project_root_dir"/.comet.config --out_root_dir=$out_root_dir
