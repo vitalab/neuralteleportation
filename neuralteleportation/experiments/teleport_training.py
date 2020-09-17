@@ -25,7 +25,7 @@ __training_configs__ = {"no_teleport": TrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig}
 
 
-def run_experiment(config_path: Path, comet_config: Path, data_root_dir: Path = None) -> None:
+def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_root_dir: Path = None) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
 
@@ -101,7 +101,7 @@ def run_experiment(config_path: Path, comet_config: Path, data_root_dir: Path = 
                     # Iterate over different possible training configurations
                     for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                         comet_experiment = init_comet_experiment(comet_config)
-                        experiment_path = Path('out') / comet_experiment.get_key()
+                        experiment_path = out_root / comet_experiment.get_key()
                         training_config = training_config_cls(
                             optimizer=(optimizer_name, optimizer_kwargs),
                             lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
@@ -125,6 +125,8 @@ def run_experiment(config_path: Path, comet_config: Path, data_root_dir: Path = 
 
 
 def main():
+    default_out_root = Path('./out')
+
     from argparse import ArgumentParser
     parser = ArgumentParser(
         description="Run an arbitrary series of experiments training neural networks using teleportations")
@@ -136,9 +138,18 @@ def main():
                         help="Root directory of data inside which each dataset creates its own directory. "
                              "This option is useful in case the datasets must be pre-downloaded to a known location "
                              "(e.g. when working on a cluster with no internet access).")
+    parser.add_argument("--out_root_dir", type=Path, default=default_out_root,
+                        help="Root directory where the outputs of the training will be stored (e.g. metrics).")
     args = parser.parse_args()
 
-    run_experiment(args.config, args.comet_config, data_root_dir=args.data_root_dir)
+    # Manage output directory (for metrics)
+    if args.out_root_dir == default_out_root:
+        print(f'WARNING: Writing outputs (metrics) in {default_out_root}. You should probably set --out_root_dir.')
+    if not args.out_root_dir.exists():
+        print(f'INFO: Creating output root at: {args.out_root_dir}')
+        args.out_root_dir.mkdir(parents=True)
+
+    run_experiment(args.config, args.comet_config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir)
 
 
 if __name__ == '__main__':
