@@ -75,6 +75,9 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
         if lr_scheduler and lr_scheduler_interval == "epoch":
             lr_scheduler.step()
 
+    if config.exp_logger is not None:
+        config.exp_logger.flush()
+
     return model
 
 
