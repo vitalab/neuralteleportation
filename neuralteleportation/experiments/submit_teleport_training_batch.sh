@@ -112,7 +112,7 @@ if [ -n "$email" ]; then
 fi
 
 if [ -n "$out_root_dir" ]; then
-  arg_out_root_dir="-o $out_root_dir"
+  arg_out_root_dir="--out_root_dir $out_root_dir"
 fi
 
 # Submit individual jobs for all the configuration files in``experiment_config_dir``
