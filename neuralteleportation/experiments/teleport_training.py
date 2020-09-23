@@ -145,9 +145,8 @@ def main():
     # Manage output directory (for metrics)
     if args.out_root_dir == default_out_root:
         print(f'WARNING: Writing outputs (metrics) in {default_out_root}. You should probably set --out_root_dir.')
-    if not args.out_root_dir.exists():
-        print(f'INFO: Creating output root at: {args.out_root_dir}')
-        args.out_root_dir.mkdir(parents=True)
+    print(f'INFO: Using output root dir: {args.out_root_dir}')
+    args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
     run_experiment(args.config, args.comet_config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir)
 
