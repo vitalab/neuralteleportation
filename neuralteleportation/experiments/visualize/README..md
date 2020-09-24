@@ -3,7 +3,7 @@
 First of all make sure you have the .comet.config properly setup, 
 then you can run the script from the directory containing the .comet.config as such:
 ```shell script
-python generate_mean_graphs.py --metrics <list of metrics as seen on Comet.ml> --group_by <hyperparameter to group runs by> --experiment_ids <list of Comet.ml experiment ids> --out_dir <path to directory where to write the plots>
+python generate_mean_graphs.py --metrics <list of metrics as seen on Comet.ml> --group_by <hyperparameter to group runs by> [--experiment_ids <list of Comet.ml experiment ids>|--experiment_dir <folder containing subfolders with the structure {experiment_id}/metrics.csv> ] --out_dir <path to directory where to write the plots>
 ```
 A working example of the above command would be :
 ```shell script
