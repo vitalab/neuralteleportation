@@ -63,7 +63,7 @@ if __name__ == '__main__':
     model.random_teleport(args.cob_range, args.cob_sampling)
     param_t = model.get_params()
 
-    loss, acc_t, acc_v = generate_1D_linear_interp(model, param_o, param_t, a,
+    loss, acc_t, loss_v, acc_v = generate_1D_linear_interp(model, param_o, param_t, a,
                                                    metric=metric, config=config,
                                                    trainset=trainset, valset=valset)
-    plot_interp(loss, acc_t, a, acc_val=acc_v)
+    plot_interp(loss, acc_t, a, "W", "T(W)", acc_val=acc_v, title="Linear Interpolation between W and T(W)")

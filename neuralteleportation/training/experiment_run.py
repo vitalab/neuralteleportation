@@ -20,10 +20,15 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
     print(f"Training {model_cls.__name__}")
 
     # Always log parameters (to enable useful filtering options in the web interface)
-    config.comet_logger.log_parameters(config_to_dict(config))
-    config.comet_logger.log_parameters({"model_name": model_cls.__name__.lower(),
-                                        "dataset_name": train_set.__class__.__name__.lower()})
-    with config.comet_logger.train():
+    if config.comet_logger:
+        config.comet_logger.log_parameters(config_to_dict(config))
+        config.comet_logger.log_parameters({"model_name": model_cls.__name__.lower(),
+                                            "dataset_name": train_set.__class__.__name__.lower()})
+    if config.comet_logger:
+        with config.comet_logger.train():
+            trained_model = train(model, train_set, metrics, config,
+                                  val_dataset=val_set, optimizer=optimizer, lr_scheduler=lr_scheduler)
+    else:
         trained_model = train(model, train_set, metrics, config,
                               val_dataset=val_set, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
@@ -31,7 +36,12 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
     # This avoids problem in case models are shuffled between CPU and GPU during training
     trained_model.to(config.device)
 
-    with config.comet_logger.test():
+    if config.comet_logger:
+        with config.comet_logger.test():
+            print("Testing {}: {} \n".format(model.__class__.__name__,
+                                             test(trained_model, test_set, metrics, config)))
+            print()
+    else:
         print("Testing {}: {} \n".format(model.__class__.__name__,
                                          test(trained_model, test_set, metrics, config)))
         print()

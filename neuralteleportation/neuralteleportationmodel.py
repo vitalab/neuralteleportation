@@ -298,6 +298,49 @@ class NeuralTeleportationModel(nn.Module):
         else:
             return grad
 
+    def get_hessian(self, data: torch.Tensor, target: torch.Tensor, loss_fn: Callable, zero_grad: bool = True):
+        if zero_grad:
+            self.network.zero_grad()
+
+        output = self.network(data)
+        loss = loss_fn(output, target)
+        grads = torch.autograd.grad(loss, self.network.parameters(), create_graph=True)
+        grads = torch.cat([grad.flatten() for grad in grads])
+
+        nb_params = len(grads)
+        hessian = torch.empty((nb_params, nb_params))
+        print(hessian.shape)
+
+        # hessian = []
+        for i, grad in enumerate(grads):
+            h = torch.autograd.grad(grad, self.network.parameters(), create_graph=True)
+            h = torch.cat([grad.flatten() for grad in h])
+            hessian[i, :] = h
+
+        # hessian = torch.cat(hessian)
+
+        return hessian
+
+    def get_hessian_trace(self, data: torch.Tensor, target: torch.Tensor, loss_fn: Callable, zero_grad: bool = True):
+        if zero_grad:
+            self.network.zero_grad()
+
+        output = self.network(data)
+        loss = loss_fn(output, target)
+        grads = torch.autograd.grad(loss, self.network.parameters(), create_graph=True)
+        grads = torch.cat([grad.flatten() for grad in grads])
+
+        trace = 0
+
+        for i, grad in enumerate(grads):
+            h = torch.autograd.grad(grad, self.network.parameters(), create_graph=True)
+            h = torch.cat([grad.flatten() for grad in h])
+            trace += h[i]
+
+        # hessian = torch.cat(hessian)
+
+        return trace
+
     def get_cob(self, concat=True, contain_ones=False):
         """
             Get change of basis for network.
@@ -376,6 +419,50 @@ class NeuralTeleportationModel(nn.Module):
     def set_params(self, weights, cob):
         self.teleport_activations(cob)
         self.set_weights(weights)
+
+    def get_layer_hessians(self, data: torch.Tensor, target: torch.Tensor, loss_fn: Callable,
+                           zero_grad: bool = True):
+        if zero_grad:
+            self.network.zero_grad()
+
+        output = self.network(data)
+        loss = loss_fn(output, target)
+        grads = torch.autograd.grad(loss, self.network.parameters(), create_graph=True)
+        grads = [grad.flatten() for grad in grads]
+
+        hessians = []
+        for i, grad in enumerate(grads):
+            hessian = torch.empty((len(grad), len(grad)))
+            for j, g in enumerate(grad):
+                h = torch.autograd.grad(g, list(self.network.parameters())[i], create_graph=True)
+                h = torch.cat([grad.flatten() for grad in h])
+                hessian[j, :] = h
+            print(grad.shape)
+            print(list(self.network.parameters())[i].shape)
+            hessians.append(hessian)
+
+        return hessians
+
+    def get_layer_hessian_traces(self, data: torch.Tensor, target: torch.Tensor, loss_fn: Callable,
+                                 zero_grad: bool = True):
+        if zero_grad:
+            self.network.zero_grad()
+
+        output = self.network(data)
+        loss = loss_fn(output, target)
+        grads = torch.autograd.grad(loss, self.network.parameters(), create_graph=True)
+        grads = [grad.flatten() for grad in grads]
+
+        traces = []
+        for i, grad in enumerate(grads):
+            trace = 0
+            for j, g in enumerate(grad):
+                h = torch.autograd.grad(g, list(self.network.parameters())[i], create_graph=True)
+                h = torch.cat([grad.flatten() for grad in h])
+                trace += h[j]
+            traces.append(trace)
+
+        return traces
 
 
 if __name__ == '__main__':
