@@ -28,6 +28,9 @@ optimizers:
   - cls: Adam
     lr: 0.0001
 
+initializers:
+  - type: none # Uses PyTorch's default initializer
+
 training_params:
   epochs: 100
   batch_size: 256

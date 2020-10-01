@@ -13,6 +13,7 @@ from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 from neuralteleportation.models.model_zoo.vggcob import vgg16COB, vgg16_bnCOB
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TeleportationTrainingConfig
+from neuralteleportation.utils.optimtools import initialize_model
 
 __dataset_config__ = {"mnist": {"cls": MNIST, "input_channels": 1, "image_size": (28, 28), "num_classes": 10},
                       "cifar10": {"cls": CIFAR10, "input_channels": 3, "image_size": (32, 32), "num_classes": 10,
@@ -73,7 +74,8 @@ def get_model_names() -> List[str]:
     return list(_get_model_factories().keys())
 
 
-def get_model(dataset_name: str, model_name: str, device: str = 'cpu', **model_kwargs) -> NeuralTeleportationModel:
+def get_model(dataset_name: str, model_name: str, device: str = 'cpu',
+              initializer: Dict[str, Union[str, float]] = None, **model_kwargs) -> NeuralTeleportationModel:
     # Look up if the requested model is available in the model zoo
     model_factories = _get_model_factories()
     if model_name not in model_factories:
@@ -92,6 +94,11 @@ def get_model(dataset_name: str, model_name: str, device: str = 'cpu', **model_k
     # Instantiate the model
     model_factory = model_factories[model_name]
     model = model_factory(**model_kwargs)
+    # Initialize the model
+    if initializer is not None:
+        init_gain = None if "gain" not in initializer.keys() and initializer["type"] == "none" else initializer["gain"]
+        init_non_linearity = None if "non_linearity" not in initializer.keys() else initializer["non_linearity"]
+        model = initialize_model(model, init_type=initializer["type"], init_gain=init_gain, non_linearity=init_non_linearity)
 
     # Transform the base ``nn.Module`` to a ``NeuralTeleportationModel``
     input_channels, image_size = get_dataset_info(dataset_name, "input_channels", "image_size").values()

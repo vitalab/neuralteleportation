@@ -44,84 +44,87 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
 
         # models
         for model_name in config["models"]:
+            # initalizers
+            for initializer in config["initializers"]:
+                # optimizers
+                for optimizer_kwargs in config["optimizers"]:
+                    optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
+                    optimizer_name = optimizer_kwargs.pop("cls")
+                    lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
+                    has_scheduler = False
+                    if lr_scheduler_kwargs:
+                        lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
+                        lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
+                        if "lr_lambda" in lr_scheduler_kwargs.keys():
+                            # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
+                            # This is needed to transform lambda functions defined as strings to a python callable
+                            lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
+                        has_scheduler = True
 
-            # optimizers
-            for optimizer_kwargs in config["optimizers"]:
-                optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
-                optimizer_name = optimizer_kwargs.pop("cls")
-                lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
-                has_scheduler = False
-                if lr_scheduler_kwargs:
-                    lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
-                    lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
-                    if "lr_lambda" in lr_scheduler_kwargs.keys():
-                        # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
-                        # This is needed to transform lambda functions defined as strings to a python callable
-                        lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
-                    has_scheduler = True
+                    # teleport configuration
+                    for teleport, teleport_config_kwargs in config["teleportations"].items():
 
-                # teleport configuration
-                for teleport, teleport_config_kwargs in config["teleportations"].items():
-
-                    # w/o teleport configuration
-                    if teleport == "no_teleport":
-                        training_config_cls = __training_configs__["no_teleport"]
-                        # Ensure config collections are iterable, even if no config was defined
-                        # This is done to simplify the generation of the configuration matrix
-                        teleport_config_kwargs, teleport_mode_configs = {}, [(training_config_cls, {})]
-
-                    # w/ teleport configuration
-                    else:  # teleport == "teleport"
-                        # Copy the config to play around with its content without affecting the config loaded in memory
-                        teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
-
-                        teleport_mode_obj = teleport_config_kwargs.pop("mode")
-                        teleport_mode_configs = []
-                        for teleport_mode, teleport_mode_config_kwargs in teleport_mode_obj.items():
-                            training_config_cls = __training_configs__[teleport_mode]
-                            if teleport_mode == "optim":
-                                teleport_mode_config_kwargs["optim_metric"] = [
-                                    getattr(teleport_optim, metric) for metric
-                                    in teleport_mode_config_kwargs.pop("metric")
-                                ]
-
+                        # w/o teleport configuration
+                        if teleport == "no_teleport":
+                            training_config_cls = __training_configs__["no_teleport"]
                             # Ensure config collections are iterable, even if no config was defined
                             # This is done to simplify the generation of the configuration matrix
-                            if teleport_mode_config_kwargs is None:
-                                teleport_mode_config_kwargs = {}
+                            teleport_config_kwargs, teleport_mode_configs = {}, [(training_config_cls, {})]
 
-                            for teleport_mode_single_config_kwargs in dict_values_product(teleport_mode_config_kwargs):
-                                teleport_mode_configs.append((training_config_cls, teleport_mode_single_config_kwargs))
+                        # w/ teleport configuration
+                        else:  # teleport == "teleport"
+                            # Copy the config to play around with its content without affecting the config loaded in memory
+                            teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
 
-                    # generate matrix of training configuration
-                    # (cartesian product of values for each training config kwarg)
-                    teleport_configs = dict_values_product(teleport_config_kwargs)
-                    config_matrix = itertools.product(teleport_configs, teleport_mode_configs)
+                            teleport_mode_obj = teleport_config_kwargs.pop("mode")
+                            teleport_mode_configs = []
+                            for teleport_mode, teleport_mode_config_kwargs in teleport_mode_obj.items():
+                                training_config_cls = __training_configs__[teleport_mode]
+                                if teleport_mode == "optim":
+                                    teleport_mode_config_kwargs["optim_metric"] = [
+                                        getattr(teleport_optim, metric) for metric
+                                        in teleport_mode_config_kwargs.pop("metric")
+                                    ]
 
-                    # Iterate over different possible training configurations
-                    for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
-                        comet_experiment = init_comet_experiment(comet_config)
-                        experiment_path = out_root / comet_experiment.get_key()
-                        training_config = training_config_cls(
-                            optimizer=(optimizer_name, optimizer_kwargs),
-                            lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
-                            device='cuda',
-                            comet_logger=comet_experiment,
-                            exp_logger=CsvLogger(experiment_path),
-                            **training_params,
-                            **teleport_config_kwargs,
-                            **teleport_mode_config_kwargs,
-                        )
+                                # Ensure config collections are iterable, even if no config was defined
+                                # This is done to simplify the generation of the configuration matrix
+                                if teleport_mode_config_kwargs is None:
+                                    teleport_mode_config_kwargs = {}
 
-                        # Run experiment (setting up a new model and optimizer for each experiment)
-                        model = get_model(dataset_name, model_name, device=training_config.device)
-                        optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
-                        lr_scheduler = None
-                        if has_scheduler:
-                            lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
-                        run_model(model, training_config, metrics,
-                                  train_set, test_set, val_set=val_set,
-                                  optimizer=optimizer, lr_scheduler=lr_scheduler)
+                                for teleport_mode_single_config_kwargs in dict_values_product(teleport_mode_config_kwargs):
+                                    teleport_mode_configs.append((training_config_cls, teleport_mode_single_config_kwargs))
+
+                        # generate matrix of training configuration
+                        # (cartesian product of values for each training config kwarg)
+                        teleport_configs = dict_values_product(teleport_config_kwargs)
+                        config_matrix = itertools.product(teleport_configs, teleport_mode_configs)
+
+                        # Iterate over different possible training configurations
+                        for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
+                            comet_experiment = init_comet_experiment(comet_config)
+                            experiment_path = out_root / comet_experiment.get_key()
+                            training_config = training_config_cls(
+                                optimizer=(optimizer_name, optimizer_kwargs),
+                                lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
+                                device='cuda',
+                                comet_logger=comet_experiment,
+                                exp_logger=CsvLogger(experiment_path),
+                                **training_params,
+                                **teleport_config_kwargs,
+                                **teleport_mode_config_kwargs,
+                            )
+
+                            # Run experiment (setting up a new model and optimizer for each experiment)
+                            model = get_model(dataset_name, model_name, device=training_config.device,
+                                              initializer=initializer)
+                            comet_experiment.log_parameter(name="initializer", value=[initializer])
+                            optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
+                            lr_scheduler = None
+                            if has_scheduler:
+                                lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
+                            run_model(model, training_config, metrics,
+                                      train_set, test_set, val_set=val_set,
+                                      optimizer=optimizer, lr_scheduler=lr_scheduler)
 
 
 def main():
