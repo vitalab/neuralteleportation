@@ -109,7 +109,7 @@ def find_best_legend_pos(metric_name):
     return "best"
 
 
-def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir):
+def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, legend_pos="best"):
     # Upper bound on epochs, will be trimmed to max epochs
     n_epochs = 1000
     grouped_plots = {}
@@ -136,7 +136,7 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir):
         group_by_str = "_".join(group_by)
         output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}.png")
         clrs = sns.color_palette("husl", len(list(grouped_plots.keys())))
-        for i, g_name in enumerate(list(grouped_plots.keys())):
+        for i, g_name in enumerate(sorted(list(grouped_plots.keys()))):
             epochs = range(grouped_plots[g_name]["max_epochs"])
             g_mean = grouped_plots[g_name]["mean"]
             g_std = grouped_plots[g_name]["std"]
@@ -144,7 +144,8 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir):
             ax.fill_between(epochs, g_mean - g_std, g_mean + g_std, alpha=0.3, facecolor=clrs[i])
             ax.set_ylabel(f"{metric_name}")
             ax.set_xlabel("epoch")
-        ax.legend(loc=find_best_legend_pos(metric_name))
+        leg_pos = find_best_legend_pos(metric_name) if legend_pos == "infer" else legend_pos
+        ax.legend(loc=leg_pos)
         plt.savefig(output_filename)
         print(f"Saved plot at : {output_filename}")
 
@@ -197,6 +198,12 @@ if __name__ == '__main__':
         help="Output directory to save figures in.",
         required=True
     )
+    parser.add_argument(
+        "--legend_pos",
+        type=str,
+        help="Position of the legend on the plots, (by default uses 'best' option of matplotlib)",
+        default="best",
+    )
     args = parser.parse_args()
 
     experiments_csv_dict = None
@@ -218,4 +225,4 @@ if __name__ == '__main__':
     all_metrics_grouped = fetch_comet_data(experiments_ids, args.metrics, args.group_by, args.group_by,
                                            experiments_csv_dict=experiments_csv_dict)
     for metric in args.metrics:
-        plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir)
+        plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir, args.legend_pos)
