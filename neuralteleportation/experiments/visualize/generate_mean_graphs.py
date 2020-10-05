@@ -136,16 +136,24 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, lege
         group_by_str = "_".join(group_by)
         output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}.png")
         clrs = sns.color_palette("husl", len(list(grouped_plots.keys())))
+        sort_labels = []
         for i, g_name in enumerate(sorted(list(grouped_plots.keys()))):
             epochs = range(grouped_plots[g_name]["max_epochs"])
             g_mean = grouped_plots[g_name]["mean"]
             g_std = grouped_plots[g_name]["std"]
+            # save the last valid val to sort the labels later
+            sort_labels.append({"last_val": g_mean[(~np.isnan(g_mean)).cumsum(0).argmax(0)], "label": g_name})
             ax.plot(epochs, g_mean, label=g_name, c=clrs[i])
             ax.fill_between(epochs, g_mean - g_std, g_mean + g_std, alpha=0.3, facecolor=clrs[i])
             ax.set_ylabel(f"{metric_name}")
             ax.set_xlabel("epoch")
         leg_pos = find_best_legend_pos(metric_name) if legend_pos == "infer" else legend_pos
-        ax.legend(loc=leg_pos)
+        sort_labels = sorted(sort_labels, key=lambda dk: dk["last_val"], reverse=True)
+        handles, labels = ax.get_legend_handles_labels()
+        # Sort pyplot's legend with the sorted values
+        handles = [handles[labels.index(dict_lbl["label"])] for dict_lbl in sort_labels]
+        labels = [labels[labels.index(dict_lbl["label"])] for dict_lbl in sort_labels]
+        ax.legend(handles, labels, loc=leg_pos)
         plt.savefig(output_filename)
         print(f"Saved plot at : {output_filename}")
 
