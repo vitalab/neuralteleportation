@@ -138,11 +138,18 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, lege
         clrs = sns.color_palette("husl", len(list(grouped_plots.keys())))
         sort_labels = []
         for i, g_name in enumerate(sorted(list(grouped_plots.keys()))):
-            epochs = range(grouped_plots[g_name]["max_epochs"])
             g_mean = grouped_plots[g_name]["mean"]
+            # Find first nan in the mean array
+            not_nan_idx = np.argwhere(np.isnan(g_mean))
+            not_nan_idx = not_nan_idx[0, 0] if not_nan_idx.size > 0 else -1
+            # truncate the mean and std at the first nan found
+            g_mean = g_mean[:not_nan_idx]
             g_std = grouped_plots[g_name]["std"]
+            g_std = g_std[:not_nan_idx]
+            epochs = range(min(grouped_plots[g_name]["max_epochs"], g_mean.shape[0]))
             # save the last valid val to sort the labels later
-            sort_labels.append({"last_val": g_mean[(~np.isnan(g_mean)).cumsum(0).argmax(0)], "label": g_name})
+            sort_labels.append({"last_val": g_mean[-1], "label": g_name})
+            print(g_name, g_mean.shape)
             ax.plot(epochs, g_mean, label=g_name, c=clrs[i])
             ax.fill_between(epochs, g_mean - g_std, g_mean + g_std, alpha=0.3, facecolor=clrs[i])
             ax.set_ylabel(f"{metric_name}")
