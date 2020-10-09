@@ -19,6 +19,8 @@ def update_optimizer_params(optimizer: Optimizer, new_state) -> Optimizer:
 
 def initialize_model(model, init_type: str, init_gain: float, non_linearity: str = None) -> nn.Module:
     def init_func(m):
+        if init_type == 'none': # use the default initialization
+            return
         classname = m.__class__.__name__
         if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
             if init_type == 'normal':
@@ -32,8 +34,6 @@ def initialize_model(model, init_type: str, init_gain: float, non_linearity: str
                                      nonlinearity=non_linearity if non_linearity is not None else "leaky_relu")
             elif init_type == 'orthogonal':
                 init.orthogonal_(m.weight.data, gain=init_gain)
-            elif init_type == 'none':  # uses pytorch's default init method
-                m.reset_parameters()
             else:
                 raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
             if hasattr(m, 'bias') and m.bias is not None:
