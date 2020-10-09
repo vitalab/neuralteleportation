@@ -67,7 +67,8 @@ def unravel_matrix_config(config_path: Path, output_dir: Path) -> int:
                                 "optimizers": [optimizer_config],
                                 "initializers": [initializer],
                                 "training_params": config["training_params"],
-                                "teleportations": {teleport: None}
+                                "teleportations": {teleport: None},
+                                "runs_per_config": int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
                             }
                             if teleport != "no_teleport":
                                 top_level_dict["teleportations"][teleport] = {

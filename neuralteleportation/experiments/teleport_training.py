@@ -101,30 +101,32 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
 
                         # Iterate over different possible training configurations
                         for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
-                            comet_experiment = init_comet_experiment(comet_config)
-                            experiment_path = out_root / comet_experiment.get_key()
-                            training_config = training_config_cls(
-                                optimizer=(optimizer_name, optimizer_kwargs),
-                                lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
-                                device='cuda',
-                                comet_logger=comet_experiment,
-                                exp_logger=CsvLogger(experiment_path),
-                                **training_params,
-                                **teleport_config_kwargs,
-                                **teleport_mode_config_kwargs,
-                            )
+                            num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
+                            for _ in range(num_runs):
+                                comet_experiment = init_comet_experiment(comet_config)
+                                experiment_path = out_root / comet_experiment.get_key()
+                                training_config = training_config_cls(
+                                    optimizer=(optimizer_name, optimizer_kwargs),
+                                    lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
+                                    device='cuda',
+                                    comet_logger=comet_experiment,
+                                    exp_logger=CsvLogger(experiment_path),
+                                    **training_params,
+                                    **teleport_config_kwargs,
+                                    **teleport_mode_config_kwargs,
+                                )
 
-                            # Run experiment (setting up a new model and optimizer for each experiment)
-                            model = get_model(dataset_name, model_name, device=training_config.device,
-                                              initializer=initializer)
-                            comet_experiment.log_parameter(name="initializer", value=[initializer])
-                            optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
-                            lr_scheduler = None
-                            if has_scheduler:
-                                lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
-                            run_model(model, training_config, metrics,
-                                      train_set, test_set, val_set=val_set,
-                                      optimizer=optimizer, lr_scheduler=lr_scheduler)
+                                # Run experiment (setting up a new model and optimizer for each experiment)
+                                model = get_model(dataset_name, model_name, device=training_config.device,
+                                                initializer=initializer)
+                                comet_experiment.log_parameter(name="initializer", value=[initializer])
+                                optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
+                                lr_scheduler = None
+                                if has_scheduler:
+                                    lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
+                                run_model(model, training_config, metrics,
+                                        train_set, test_set, val_set=val_set,
+                                        optimizer=optimizer, lr_scheduler=lr_scheduler)
 
 
 def main():
