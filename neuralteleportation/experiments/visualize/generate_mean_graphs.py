@@ -9,6 +9,8 @@ from tqdm import tqdm
 from glob import glob
 from pathlib import Path
 
+def is_non_zero_file(fpath):  
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
 def shim_metric_name(metric_name):
     # This is used to normalize the metrics names between Comet and CSV
@@ -19,19 +21,23 @@ def shim_metric_name(metric_name):
     }
     return name_map[metric_name] if metric_name in name_map.keys() else metric_name
 
+def get_csv_from_comet(exp):
+    asset_id = [asset["assetId"] for asset in exp.get_asset_list() if asset["fileName"] == "metrics.csv"]
+    if len(asset_id) == 0:
+        return None
+    asset_content = exp.get_asset(asset_id, return_type="text")
+    buff = StringIO(asset_content)
+    return buff
 
 def get_metrics(exp, csv_file_path=None):
     # Fetches CSV file from comet and generates cometAPI style metrics list,
     # if no csv file is found on comet, fallsback on the comet metrics.
-    if csv_file_path is None:
-        asset_id = [asset["assetId"] for asset in exp.get_asset_list() if asset["fileName"] == "metrics.csv"]
-        if len(asset_id) == 0:
-            print("WARN: metrics.csv not found as a comet asset, falling back on comet metrics.")
+    buff = csv_file_path
+    if buff is None or not is_non_zero_file(buff):
+        buff = get_csv_from_comet(exp)
+        if buff is None:
+            print(f"WARN: metrics.csv not found as a comet asset in {exp.id}, falling back on comet metrics.")
             return exp.get_metrics()
-        asset_content = exp.get_asset(asset_id, return_type="text")
-        buff = StringIO(asset_content)
-    else:
-        buff = csv_file_path
     df = pd.read_csv(buff)
     metrics = []
     for _, row in df.iterrows():
@@ -149,7 +155,6 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, lege
             epochs = range(min(grouped_plots[g_name]["max_epochs"], g_mean.shape[0]))
             # save the last valid val to sort the labels later
             sort_labels.append({"last_val": g_mean[-1], "label": g_name})
-            print(g_name, g_mean.shape)
             ax.plot(epochs, g_mean, label=g_name, c=clrs[i])
             ax.fill_between(epochs, g_mean - g_std, g_mean + g_std, alpha=0.3, facecolor=clrs[i])
             ax.set_ylabel(f"{metric_name}")
