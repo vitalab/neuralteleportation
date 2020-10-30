@@ -31,18 +31,23 @@ def argument_parser() -> argparse.Namespace:
     parser.add_argument("--xlim", type=float, default=1.,
                         help="Bound (on either side of 0) between which to display the histogram. "
                              "Only used for the histogram of teleported weights")
+    parser.add_argument("--ylim_max", type=float, default=16_000,
+                        help="Upper bound to use when displaying the histogram bars. Any values above this threshold "
+                             "will be cropped")
 
     return parser.parse_args()
 
 
-def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, title: str = None, xlim: float = None) \
-        -> None:
+def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, title: str,
+                                 xlim: float = None, ylim_max: float = None) -> None:
 
     def _plot_1d_array_histogram(array: np.ndarray, title: str):
         axes = sns.histplot(array, kde=True)
         axes.set_title(title)
         if xlim:
             axes.set(xlim=(-xlim, xlim))
+        if ylim_max:
+            axes.set(ylim=(0, ylim_max))
         axes.set_xlabel("weights_value")
         axes.set_ylabel("count")
         plt.show()
@@ -73,11 +78,12 @@ def main():
     net = get_model(args.dataset, args.model, **model_kwargs)
 
     # Plot an histogram of its weights
-    plot_model_weights_histogram(net, args.plot_mode, title="xavier_init")
+    plot_model_weights_histogram(net, args.plot_mode, title="xavier_init", xlim=args.xlim, ylim_max=args.ylim_max)
 
     # Teleport the model and plot an histogram of its teleported weights
     net.random_teleport(args.cob_range, args.cob_sampling)
-    plot_model_weights_histogram(net, args.plot_mode, title=f"{args.cob_range}_{args.cob_sampling}_cob", xlim=args.xlim)
+    plot_model_weights_histogram(net, args.plot_mode, title=f"{args.cob_range}_{args.cob_sampling}_cob",
+                                 xlim=args.xlim, ylim_max=args.ylim_max)
 
 
 if __name__ == '__main__':
