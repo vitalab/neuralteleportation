@@ -16,11 +16,11 @@ def argument_parser() -> argparse.Namespace:
 
     # Model Parameters
     parser.add_argument("--model", "-m", type=str, default="MLPCOB", choices=get_model_names())
-    parser.add_argument("--dataset", type=str, default="mnist", choices=["cifar10", "mnist"],
+    parser.add_argument("--dataset", type=str, default="cifar10", choices=["cifar10", "mnist"],
                         help="Dataset used to initialize the shape of the network")
 
     # Hyper Parameters
-    parser.add_argument("--cob_range", type=float, default=0.99, help='set the CoB range for the teleportation.')
+    parser.add_argument("--cob_range", type=float, default=0.9, help='set the CoB range for the teleportation.')
     parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
 
     # Plotting Parameters
@@ -28,10 +28,10 @@ def argument_parser() -> argparse.Namespace:
                         help="Mode that determines how many histograms to produce: \n"
                              "- layerwise: Plot an histogram of the weights for each layer \n"
                              "- modelwise: Plot a single histogram of the weights that groups the whole network")
-    parser.add_argument("--xlim", type=float, default=1.,
+    parser.add_argument("--xlim", type=float, default=0.25,
                         help="Bound (on either side of 0) between which to display the histogram. "
                              "Only used for the histogram of teleported weights")
-    parser.add_argument("--ylim_max", type=float, default=16_000,
+    parser.add_argument("--ylim_max", type=float, default=30,
                         help="Upper bound to use when displaying the histogram bars. Any values above this threshold "
                              "will be cropped")
 
@@ -42,14 +42,13 @@ def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, tit
                                  xlim: float = None, ylim_max: float = None) -> None:
 
     def _plot_1d_array_histogram(array: np.ndarray, title: str):
-        axes = sns.histplot(array, kde=True)
-        axes.set_title(title)
+        axes = sns.histplot(array, kde=True, stat='density')
+        # axes.set_title(title)
         if xlim:
             axes.set(xlim=(-xlim, xlim))
         if ylim_max:
             axes.set(ylim=(0, ylim_max))
-        axes.set_xlabel("weights_value")
-        axes.set_ylabel("count")
+        axes.set_ylabel("")
         plt.show()
 
     print(f"Plotting {title} histogram ...")
@@ -74,7 +73,7 @@ def main():
     # Initialize the model
     model_kwargs = {}
     if args.model == "MLPCOB":
-        model_kwargs["hidden_layers"] = (128,128,128,128)
+        model_kwargs["hidden_layers"] = (500,500,500,500,500)
     net = get_model(args.dataset, args.model, **model_kwargs)
 
     # Plot an histogram of its weights
