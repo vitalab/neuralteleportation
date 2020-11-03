@@ -10,6 +10,7 @@ mpl.rcParams['figure.dpi'] = 200
 ap = argparse.ArgumentParser()
 ap.add_argument('path', help='Path to <model_dataset> folder')
 ap.add_argument('title', help='Figure title')
+ap.add_argument('--violin', action='store_true')
 args = ap.parse_args()
 
 epochs_sample = [5, 10, 20, 95]
@@ -38,6 +39,12 @@ for exp_def in experiments_def:
         runs.append(run_df.copy())
 df = pd.concat(runs, ignore_index=True)
 
+# Configure box or violin plot
+if args.violin:
+    kwargs = dict(kind="violin", split=True, inner="stick", bw=0.5)
+else:
+    kwargs = dict(kind="box")
+
 # Make and save the plot
 g = seaborn.catplot(
     x="Optimizer",
@@ -46,13 +53,10 @@ g = seaborn.catplot(
     hue_order=['Standard', 'Teleported'],
     col="Epoch",
     data=df,
-    kind="violin",
-    split=True,
     height=6,
     aspect=.4,
-    inner="stick",
     palette={"Standard": "0.8", "Teleported": "orange"},
-    bw=0.5  # bandwith, affects the smoothness
+    **kwargs
 )
 g.fig.suptitle(args.title)
 plt.tight_layout(pad=3.0)
