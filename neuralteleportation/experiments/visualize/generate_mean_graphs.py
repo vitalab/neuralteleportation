@@ -140,7 +140,7 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, lege
         fig, ax = plt.subplots()
         fig.suptitle(f"{metric_name}")
         group_by_str = "_".join(group_by)
-        output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}.png")
+        output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}.pdf")
         clrs = sns.color_palette("husl", len(list(grouped_plots.keys())))
         sort_labels = []
         for i, g_name in enumerate(sorted(list(grouped_plots.keys()))):
@@ -168,6 +168,66 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, lege
         ax.legend(handles, labels, loc=leg_pos)
         plt.savefig(output_filename)
         print(f"Saved plot at : {output_filename}")
+
+
+def prettify_param_name(param):
+    name_map = {
+        "sgd & no_teleport": "Standard SGD",
+        "sgd & teleport": "Teleported SGD",
+        "sgd with momentum & no_teleport": "Standard SGD with momentum",
+        "sgd with momentum & teleport": "Teleported SGD with momentum",
+    }
+    if param in name_map.keys():
+        return name_map[param]
+    return param
+
+
+def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, legend_pos="best"):
+    # Upper bound on epochs, will be trimmed to max epochs
+    n_epochs = 1000
+    group_runs = []
+    for g_name in metrics_grouped.keys():
+        g_metrics = metrics_grouped[g_name]
+        nb_runs = len(g_metrics)
+        # Parses all runs
+        for i in range(nb_runs):
+            g_data = np.zeros((n_epochs,), dtype=np.float32)
+            run_metric = g_metrics[i][metric_name]
+            # Flatten metric data for this run
+            for k in run_metric.keys():
+                g_data[k] = float(run_metric[k])
+            # DataFrame for plotting
+            df = pd.DataFrame.from_dict({
+                metric_name: g_data,
+                "epoch": np.array(range(g_data.shape[0])),
+                "hparam": prettify_param_name(g_name.lower()),
+                "metric": metric_name,
+            })
+            # Subsample the dataframe
+            df = df.iloc[epochs_sample]
+            group_runs.append(df.copy())
+    group_df = pd.concat(group_runs, ignore_index=True)
+    with sns.axes_style("darkgrid"):
+        group_by_str = "_".join(group_by)
+        output_filename = os.path.join(output_dir, f"box_{metric_name}_{group_by_str}.pdf")
+        g = sns.catplot(
+            x="epoch",
+            y=metric_name,
+            hue="hparam",
+            # Hard Coded hue order for now
+            hue_order=["Standard SGD", "Teleported SGD", "Standard SGD with momentum", "Teleported SGD with momentum"],
+            data=group_df,
+            height=6,
+            aspect=1.4,
+            palette="Paired",
+            kind="box",
+            legend=False
+        )
+        plt.legend(loc=legend_pos)
+        g.fig.suptitle(f"{metric_name}")
+        g.fig.tight_layout(pad=3.0)
+        plt.savefig(output_filename)
+        print(f"Saved box plot at : {output_filename}")
 
 
 def parse_experiments_dir(experiment_dir):
@@ -224,6 +284,18 @@ if __name__ == '__main__':
         help="Position of the legend on the plots, (by default uses 'best' option of matplotlib)",
         default="best",
     )
+    parser.add_argument(
+        "--boxplot",
+        action="store_true",
+        help="Whether to plot the Boxplot.",
+    )
+    parser.add_argument(
+        "--box_epochs",
+        type=int,
+        nargs="+",
+        help="Epochs to subsample the box plot X axis with.",
+        default=None
+    )
     args = parser.parse_args()
 
     experiments_csv_dict = None
@@ -246,3 +318,6 @@ if __name__ == '__main__':
                                            experiments_csv_dict=experiments_csv_dict)
     for metric in args.metrics:
         plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir, args.legend_pos)
+        if args.boxplot:
+            epochs_subsample = [5, 10, 20, 95] if args.box_epochs is None else args.box_epochs
+            plot_box(all_metrics_grouped, metric, epochs_subsample, args.group_by, args.out_dir, args.legend_pos)
