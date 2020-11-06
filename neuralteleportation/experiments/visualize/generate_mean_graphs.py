@@ -8,6 +8,42 @@ from io import StringIO
 from tqdm import tqdm
 from glob import glob
 from pathlib import Path
+from matplotlib.patches import PathPatch
+
+
+def adjust_box_widths(g, fac):
+    """
+    Adjust the widths of a seaborn-generated boxplot.
+    Used to add spacing between box groups.
+    """
+    # iterating through Axes instances
+    for ax in g.axes:
+        # iterating through axes artists:
+        for i, c in enumerate(ax.get_children()):
+            # searching for PathPatches
+            if isinstance(c, PathPatch):
+                if i%2 != 0:
+                    # getting current width of box:
+                    p = c.get_path()
+                    verts = p.vertices
+                    verts_sub = verts[:-1]
+                    xmin = np.min(verts_sub[:, 0])
+                    xmax = np.max(verts_sub[:, 0])
+                    xmid = 0.5*(xmin+xmax)
+                    xhalf = 0.5*(xmax - xmin)
+
+                    # setting new width of box
+                    # xmin_new = xmid-fac*xhalf
+                    xmin_new = xmin
+                    xmax_new = xmid+fac*xhalf
+                    # xmax_new = xmax
+                    verts_sub[verts_sub[:, 0] == xmin, 0] = xmin_new
+                    verts_sub[verts_sub[:, 0] == xmax, 0] = xmax_new
+
+                    # setting new width of median line
+                    for l in ax.lines:
+                        if np.all(l.get_xdata() == [xmin, xmax]):
+                            l.set_xdata([xmin_new, xmax_new])
 
 def is_non_zero_file(fpath):  
     return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
@@ -181,9 +217,18 @@ def prettify_param_name(param):
         return name_map[param]
     return param
 
+def prettify_metric_name(metric):
+    name_map = {
+        "validate_accuracy": "Validation Accuracy",
+        "train_loss": "Training Loss",
+    }
+    if metric in name_map.keys():
+        return name_map[metric]
+    return metric
 
 def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, legend_pos="best"):
     # Upper bound on epochs, will be trimmed to max epochs
+    metric_human_name = prettify_metric_name(metric_name)
     n_epochs = 1000
     group_runs = []
     for g_name in metrics_grouped.keys():
@@ -198,7 +243,7 @@ def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, 
                 g_data[k] = float(run_metric[k])
             # DataFrame for plotting
             df = pd.DataFrame.from_dict({
-                metric_name: g_data,
+                metric_human_name: g_data,
                 "epoch": np.array(range(g_data.shape[0])),
                 "hparam": prettify_param_name(g_name.lower()),
                 "metric": metric_name,
@@ -210,22 +255,31 @@ def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, 
     with sns.axes_style("darkgrid"):
         group_by_str = "_".join(group_by)
         output_filename = os.path.join(output_dir, f"box_{metric_name}_{group_by_str}.pdf")
+        clrs = sns.color_palette("Paired", 6)
         g = sns.catplot(
             x="epoch",
-            y=metric_name,
+            y=metric_human_name,
             hue="hparam",
             # Hard Coded hue order for now
             hue_order=["Standard SGD", "Teleported SGD", "Standard SGD with momentum", "Teleported SGD with momentum"],
             data=group_df,
             height=6,
             aspect=1.4,
-            palette="Paired",
+            palette={
+                "Standard SGD": clrs[4],
+                "Teleported SGD": clrs[5],
+                "Standard SGD with momentum": clrs[2],
+                "Teleported SGD with momentum": clrs[3]
+            },
             kind="box",
             legend=False
         )
         plt.legend(loc=legend_pos)
-        g.fig.suptitle(f"{metric_name}")
+        g.fig.suptitle(f"{metric_human_name}")
+        g.set_xlabels("Epoch", fontsize=20)
+        g.set_ylabels(metric_human_name, fontsize=20)
         g.fig.tight_layout(pad=3.0)
+        adjust_box_widths(g.fig, 0.7)
         plt.savefig(output_filename)
         print(f"Saved box plot at : {output_filename}")
 
