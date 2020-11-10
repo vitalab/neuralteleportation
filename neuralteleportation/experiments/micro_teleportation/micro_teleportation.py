@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, Tuple, Union
 
-import torch.optim as optim
-from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
