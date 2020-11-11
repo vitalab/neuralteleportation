@@ -45,7 +45,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                                     batch_sizes=[8, 16, 32, 64],
                                     criterion=None,
                                     device='cpu',
-                                    verbose=False) -> None:
+                                    verbose=False,
+                                    random_data=False) -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
     vector and the gradient for nullity. It then displays the histograms of the calculated scalar products. The
@@ -109,6 +110,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
         for batch_size in batch_sizes:
             dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
             data, target = next(iter(dataloader))
+            if random_data:
+                data, target = torch.rand(data.shape), torch.rand(target.shape)
 
             # save the initial weights for further reset
             model = NeuralTeleportationModel(network=network, input_shape=data.shape)
@@ -288,33 +291,33 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                     print(aggregator.iloc[aggregator.last_valid_index()])
                     print(reset)
 
-    for sampling_type in sampling_types:
-        for cob in cobs:
-            plt.scatter(x=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)]['batch size'],
-                         y=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)][
-                             'Micro-teleportation vs Gradient'],
-                        c='red',
-                        marker='o')
-            plt.errorbar(x=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)]['batch size'],
-                         y=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)][
-                             'Micro-teleportation vs Gradient'],
-                         yerr=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                             (aggregator['COB range'] == cob)][
-                                  'Micro-teleportation vs Gradient std'] * 3,
-                         linestyle='None')
-
-            plt.xlabel('Batch size')
-            plt.ylabel('Theta')
-            plt.title(f'{network_descriptor} - Sampling type: {sampling_type}, C.O.B.: {cob}')
-
-            Path(series_dir).mkdir(parents=True, exist_ok=True)
-            plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_{sampling_type}'
-                        f'_cob_{cob}.png')
-            plt.show()
+    # for sampling_type in sampling_types:
+    #     for cob in cobs:
+    #         plt.scatter(x=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
+    #                                       (aggregator['COB range'] == cob)]['batch size'],
+    #                      y=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
+    #                                       (aggregator['COB range'] == cob)][
+    #                          'Micro-teleportation vs Gradient'],
+    #                     c='red',
+    #                     marker='o')
+    #         plt.errorbar(x=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
+    #                                       (aggregator['COB range'] == cob)]['batch size'],
+    #                      y=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
+    #                                       (aggregator['COB range'] == cob)][
+    #                          'Micro-teleportation vs Gradient'],
+    #                      yerr=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
+    #                                          (aggregator['COB range'] == cob)][
+    #                               'Micro-teleportation vs Gradient std'] * 3,
+    #                      linestyle='None')
+    #
+    #         plt.xlabel('Batch size')
+    #         plt.ylabel('Theta')
+    #         plt.title(f'{network_descriptor} - Sampling type: {sampling_type}, C.O.B.: {cob}')
+    #
+    #         Path(series_dir).mkdir(parents=True, exist_ok=True)
+    #         plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_{sampling_type}'
+    #                     f'_cob_{cob}.png')
+    #         plt.show()
 
 
 def dot_product_between_teleportation(network, dataset,

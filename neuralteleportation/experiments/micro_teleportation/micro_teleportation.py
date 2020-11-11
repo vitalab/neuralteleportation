@@ -103,12 +103,12 @@ if __name__ == '__main__':
         print(f'Performing micro teleportation experiment with model: {model_name}')
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
                                         network_descriptor=f'{model_name} on CIFAR10',
-                                        device=device, nb_teleport=3)
+                                        device=device, nb_teleport=3, random_data=True)
 
-        print(f'Performing scaler product experiment with model: {model_name}')
-        dot_product_between_teleportation(network=model, dataset=cifar10_test,
-                                          network_descriptor=f'{model_name} on CIFAR10',
-                                          device=device, nb_teleport=3)
+        # print(f'Performing scaler product experiment with model: {model_name}')
+        # dot_product_between_teleportation(network=model, dataset=cifar10_test,
+        #                                   network_descriptor=f'{model_name} on CIFAR10',
+        #                                   device=device, nb_teleport=3)
         model_index += 1
 
 
@@ -144,9 +144,10 @@ if __name__ == '__main__':
         print(f'Performing micro teleportation experiment with model: {model_name}')
         micro_teleportation_dot_product(network=model, dataset=cifar100_test,
                                         network_descriptor=f'{model_name} on CIFAR100',
-                                        device=device, nb_teleport=3)
+                                        device=device, nb_teleport=3, random_data=True)
 
-        print(f'Performing scaler product experiment with model: {model_name}')
-        dot_product_between_teleportation(network=model, dataset=cifar100_test,
-                                          network_descriptor=f'{model_name} on CIFAR100', device=device, nb_teleport=3)
+        # print(f'Performing scaler product experiment with model: {model_name}')
+        # dot_product_between_teleportation(network=model, dataset=cifar100_test,
+        #                                   network_descriptor=f'{model_name} on CIFAR100',
+        #                                   device=device, nb_teleport=3)
         model_index += 1
