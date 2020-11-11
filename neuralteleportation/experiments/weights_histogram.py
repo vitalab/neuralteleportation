@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,22 +35,32 @@ def argument_parser() -> argparse.Namespace:
     parser.add_argument("--ylim_max", type=float, default=30,
                         help="Upper bound to use when displaying the histogram bars. Any values above this threshold "
                              "will be cropped")
+    parser.add_argument("--output_dir", type=Path, default=Path.cwd(),
+                        help="Root directory where to save the generated plots. "
+                             "Only used if `save_format` is specified.")
+    parser.add_argument("--save_format", type=str, choices=["png", "pdf"], default=None,
+                        help="Format to use to save the generated plots. "
+                             "If none is provided, plots will be displayed interactively rather than saved.")
 
     return parser.parse_args()
 
 
-def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, title: str,
-                                 xlim: float = None, ylim_max: float = None) -> None:
+def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, title: str, output_dir: Path = None,
+                                 save_format: str = None, xlim: float = None, ylim_max: float = None) -> None:
 
     def _plot_1d_array_histogram(array: np.ndarray, title: str):
-        axes = sns.histplot(array, kde=True, stat='density')
-        # axes.set_title(title)
-        if xlim:
-            axes.set(xlim=(-xlim, xlim))
-        if ylim_max:
-            axes.set(ylim=(0, ylim_max))
-        axes.set_ylabel("")
-        plt.show()
+        with sns.axes_style("darkgrid"):
+            axes = sns.kdeplot(array, fill=True)
+            if xlim:
+                axes.set(xlim=(-xlim, xlim))
+            if ylim_max:
+                axes.set(ylim=(0, ylim_max))
+            axes.set_ylabel("")
+            if save_format:
+                plt.savefig(output_dir / f"{title}.{save_format}")
+                plt.close()
+            else:
+                plt.show()
 
     print(f"Plotting {title} histogram ...")
     if mode == "modelwise":
@@ -70,6 +81,9 @@ def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, tit
 def main():
     args = argument_parser()
 
+    if args.save_format:    # Make sure the output directory exists, if we are to save the plots
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+
     # Initialize the model
     model_kwargs = {}
     if args.model == "MLPCOB":
@@ -77,11 +91,14 @@ def main():
     net = get_model(args.dataset, args.model, **model_kwargs)
 
     # Plot an histogram of its weights
-    plot_model_weights_histogram(net, args.plot_mode, title="xavier_init", xlim=args.xlim, ylim_max=args.ylim_max)
+    plot_model_weights_histogram(net, args.plot_mode, title="xavier_init",
+                                 output_dir=args.output_dir, save_format=args.save_format,
+                                 xlim=args.xlim, ylim_max=args.ylim_max)
 
     # Teleport the model and plot an histogram of its teleported weights
     net.random_teleport(args.cob_range, args.cob_sampling)
     plot_model_weights_histogram(net, args.plot_mode, title=f"{args.cob_range}_{args.cob_sampling}_cob",
+                                 output_dir=args.output_dir, save_format=args.save_format,
                                  xlim=args.xlim, ylim_max=args.ylim_max)
 
 
