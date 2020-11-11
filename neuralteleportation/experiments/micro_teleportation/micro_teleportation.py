@@ -38,7 +38,7 @@ def train(model: Union[NeuralTeleportationModel, Tuple[str, NeuralTeleportationM
     stopping_epoch = max(config.starting_epoch, config.epochs + 1)
     for epoch in range(config.starting_epoch, stopping_epoch):
         print(f'Training epoch {epoch} for {model_name} ...')
-        train_epoch(model, metrics, optimizer, train_loader, epoch, device=config.device)
+        train_epoch(model, metrics, optimizer, train_loader, epoch, config=config, device=config.device)
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))
@@ -60,6 +60,11 @@ if __name__ == '__main__':
 
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_dataset_subsets("cifar10")
+
+    #TODO take off
+    cifar10_test.data = cifar10_test.data[0:50, :, :, :]
+    cifar10_train.data = cifar10_train.data[0:50, :, :, :]
+    cifar10_val.data = cifar10_val.data[0:50, :, :, :]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -96,6 +101,11 @@ if __name__ == '__main__':
 
     # Run on CIFAR100
     cifar100_train, cifar100_val, cifar100_test = get_dataset_subsets("cifar100")
+
+    #TODO take off
+    cifar100_test.data = cifar100_test.data[0:50, :, :, :]
+    cifar100_train.data = cifar100_train.data[0:50, :, :, :]
+    cifar100_val.data = cifar100_val.data[0:50, :, :, :]
 
     models = get_models_for_dataset("cifar100")
 
