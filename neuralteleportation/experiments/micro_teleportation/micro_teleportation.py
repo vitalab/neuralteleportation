@@ -102,11 +102,11 @@ if __name__ == '__main__':
 
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
                                         network_descriptor=f'{model_name} on CIFAR10',
-                                        device=device)
+                                        device=device, nb_teleport=3)
 
         dot_product_between_teleportation(network=model, dataset=cifar10_test,
                                           network_descriptor=f'{model_name} on CIFAR10',
-                                          device=device)
+                                          device=device, nb_teleport=3)
         model_index += 1
 
 
@@ -141,8 +141,8 @@ if __name__ == '__main__':
 
         micro_teleportation_dot_product(network=model, dataset=cifar100_test,
                                         network_descriptor=f'{model_name} on CIFAR100',
-                                        device=device)
+                                        device=device, nb_teleport=3)
 
         dot_product_between_teleportation(network=model, dataset=cifar100_test,
-                                          network_descriptor=f'{model_name} on CIFAR100', device=device)
+                                          network_descriptor=f'{model_name} on CIFAR100', device=device, nb_teleport=3)
         model_index += 1
