@@ -1,17 +1,17 @@
 import configparser
+from collections import defaultdict
 from pathlib import Path
+from time import time, sleep
 
 import numpy as np
+import pandas as pd
 import visdom
-from comet_ml import Experiment
+from comet_ml import Experiment, OfflineExperiment
 from torch.utils.tensorboard import SummaryWriter
 
 
 class BaseLogger:
     """Base class for the loggers."""
-
-    def __init__(self):
-        super(BaseLogger, self).__init__()
 
     def add_scalar(self, name, value, step):
         pass
@@ -30,6 +30,40 @@ class BaseLogger:
 
     def add_histogram(self, model, step):
         pass
+
+    def flush(self):
+        pass
+
+
+class CsvLogger(BaseLogger):
+    """Logger for storing offline on disk and manipulate directly and produce matplotlib plots"""
+    def __init__(self, experiment_dir, interval_secs=60):
+        self.data_dict = defaultdict(dict)
+        self.last_log_time = 0
+        self.log_interval = interval_secs
+        experiment_path = Path(experiment_dir)
+        experiment_path.mkdir()
+        self.log_file_path: Path = experiment_path / 'metrics.csv'
+
+    def _update(self):
+        if time() - self.last_log_time > self.log_interval:
+            self.flush()
+            self.last_log_time = time()
+
+    def flush(self):
+        """Write all the data to disk"""
+        # TODO write incrementally (append)
+        df = pd.DataFrame.from_dict(self.data_dict)
+        df.index.name = 'step'
+        df.to_csv(self.log_file_path)
+
+    def add_scalar(self, name, value, step):
+        """Save the data in memory
+
+        Will not write to disk instantly. Call flush() to do it. Otherwise, it will be called after a time interval.
+        """
+        self.data_dict[name][step] = value
+        self._update()
 
 
 class VisdomLogger(BaseLogger):
@@ -150,4 +184,47 @@ def init_comet_experiment(comet_config: Path) -> Experiment:
     # Builds an `Experiment` using the content of the `comet` section of the configuration file
     config = configparser.ConfigParser()
     config.read(str(comet_config))
-    return Experiment(**dict(config["comet"]))
+    comet_kwargs = config["comet"]
+    is_experiment_online = comet_kwargs.getboolean("online", fallback=True)
+    if "online" in comet_kwargs:
+        del comet_kwargs["online"]
+    if is_experiment_online:
+        experiment_cls = Experiment
+    else:
+        experiment_cls = OfflineExperiment
+    return experiment_cls(**comet_kwargs, auto_metric_logging=False)
+
+
+def test_csv_logger():
+    expected_dict = defaultdict(dict, {
+        'train_loss': {0: 3.1416, 1: 3.1416, 2: 3.1416},
+        'valid_loss': {0: 3.1416, 1: 3.1416, 2: 3.1416},
+        'test_loss': {0: 3.1416}
+    })
+
+    if Path('test').exists():
+        Path('test/metrics.csv').unlink()
+        Path('test').rmdir()
+    csv_logger = CsvLogger('test', interval_secs=2)
+    csv_logger.add_scalar('train_loss', 3.1416, 0)
+    assert csv_logger.log_file_path.exists()
+    contents = csv_logger.log_file_path.read_text()
+    csv_logger.add_scalar('valid_loss', 3.1416, 0)
+    assert csv_logger.log_file_path.read_text() == contents  # 2nd write has been "buffered"
+    sleep(2)
+    for epoch in range(1, 3):
+        csv_logger.add_scalar('train_loss', 3.1416, epoch)
+        csv_logger.add_scalar('valid_loss', 3.1416, epoch)
+    assert csv_logger.log_file_path.read_text() != contents
+    csv_logger.add_scalar('test_loss', 3.1416, 0)
+    csv_logger.flush()
+
+    assert csv_logger.data_dict == expected_dict
+    Path('test/metrics.csv').unlink()
+    Path('test').rmdir()
+
+
+if __name__ == '__main__':
+    """Unit tests"""
+
+    test_csv_logger()

@@ -12,12 +12,13 @@ from neuralteleportation.utils.logger import BaseLogger
 @dataclass
 class TrainingConfig:
     optimizer: Tuple[str, Dict[str, Any]] = ("Adam", {"lr": 1e-3})
+    lr_scheduler: Tuple[str, str, Dict[str, Any]] = None
     epochs: int = 10
     batch_size: int = 32
+    drop_last_batch: bool = False
     device: str = 'cpu'
     comet_logger: Experiment = None
     exp_logger: BaseLogger = None
-    log_every_n_batch: int = None
     shuffle_batches: bool = False
 
 
@@ -26,6 +27,7 @@ class TeleportationTrainingConfig(TrainingConfig):
     cob_range: float = 0.5
     cob_sampling: str = 'within_landscape'
     every_n_epochs: int = 1
+    teleport_only_once: bool = False
     # The ``teleport_fn`` field is required to use the pipeline from the ``training`` module,
     # but it must be declared and initialized by the config classes inheriting from ``TeleportationTrainingConfig``
     # NOTE: Default functions should be set using ``field(default=<function_name>)`` to avoid binding the function
@@ -35,7 +37,7 @@ class TeleportationTrainingConfig(TrainingConfig):
 @dataclass
 class TrainingMetrics:
     criterion: _Loss
-    metrics: Sequence[Callable[[Tensor, Tensor], Tensor]]
+    metrics: Sequence[Callable[[Tensor, Tensor], float]]
 
 
 _SERIALIZATION_EXCLUDED_FIELDS = ['comet_logger', 'exp_logger']

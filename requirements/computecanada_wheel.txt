@@ -1,0 +1,17 @@
+scipy
+pandas
+matplotlib
+scikit-image
+scikit-learn
+h5py
+PyYAML
+tqdm
+torch==1.5
+torchvision==0.6
+packaging
+seaborn
+torchsummary
+networkx
+tensorboard
+visdom
+comet_ml

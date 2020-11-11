@@ -2,13 +2,13 @@
  
 ## Description   
 
-Neural network teleportation using mathematical magic. 
+Neural network teleportation using representation theory of quivers. 
 
 ## How to run   
 First, install dependencies   
 ```bash
 # clone project
-git clone  https://bitbucket.org/vitalab/neuralteleportation.git
+git clone  https://github.com/vitalab/neuralteleportation.git
 
 # set-up project's environment
 cd neuralteleportation

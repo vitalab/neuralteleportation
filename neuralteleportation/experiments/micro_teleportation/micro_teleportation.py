@@ -8,12 +8,10 @@ sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuraltelepor
 sys.path.append('/content/drive/My Drive/repos/neuralteleportation/training')
 sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/experiments')
 
-import torch.optim as optim
-from torch import nn
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
-from utils.micro_tp_utils import *
+from neuralteleportation.utils.micro_tp_utils import *
 from neuralteleportation.training.config import TrainingMetrics, TrainingConfig
 from neuralteleportation.training.training import test, train_epoch
 
@@ -47,7 +45,7 @@ def train(model: Union[NeuralTeleportationModel, Tuple[str, NeuralTeleportationM
     stopping_epoch = max(config.starting_epoch, config.epochs + 1)
     for epoch in range(config.starting_epoch, stopping_epoch):
         print(f'Training epoch {epoch} for {model_name} ...')
-        train_epoch(model, metrics, optimizer, train_loader, epoch, device=config.device)
+        train_epoch(model, metrics, optimizer, train_loader, epoch, config=config, device=config.device)
         if val_dataset:
             val_res = test(model, val_dataset, metrics, config)
             print("Validation: {}".format(val_res))

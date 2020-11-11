@@ -12,19 +12,16 @@ dependencies:
   - scikit-learn
   - pandas
   - h5py
+  - pyyaml
   - tqdm
-  - pytorch
-  - torchvision
+  - pytorch==1.5
+  - torchvision==0.6
   - cudatoolkit
-  - pandas
-  - structlog
   - packaging
   - seaborn
-  - h5py
   - pip:
     - comet-ml
     - torchsummary
     - networkx
     - tensorboard
     - visdom
-    - jsonpatch

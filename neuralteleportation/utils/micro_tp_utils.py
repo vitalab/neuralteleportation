@@ -378,7 +378,7 @@ def dot_product_between_teleportation(network, dataset,
 
             # cos(theta) = (w1 w2)/(||w1|| ||w2||)
             dot_product_result += normalized_dot_product(w1, w2)
-            angle += np.degrees(torch.atan(normalized_dot_product(w1, w2)).cpu())
+            angle += np.degrees(torch.acos(normalized_dot_product(w1, w2)).cpu())
 
         dot_product_result /= nb_teleport
         angle /= nb_teleport
