@@ -102,7 +102,7 @@ if __name__ == '__main__':
         print(f'Performing micro teleportation experiment with model: {model_name}')
         micro_teleportation_dot_product(network=model, dataset=cifar10_test,
                                         network_descriptor=f'{model_name} on CIFAR10',
-                                        device=device, random_data=True)
+                                        device=device, nb_teleport=2, random_data=True)
 
         model_index += 1
 
@@ -139,6 +139,6 @@ if __name__ == '__main__':
         print(f'Performing micro teleportation experiment with model: {model_name}')
         micro_teleportation_dot_product(network=model, dataset=cifar100_test,
                                         network_descriptor=f'{model_name} on CIFAR100',
-                                        device=device, random_data=True)
+                                        device=device, nb_teleport=2, random_data=True)
 
         model_index += 1
