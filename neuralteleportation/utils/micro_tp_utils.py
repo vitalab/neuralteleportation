@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
 import pandas as pd
 
@@ -77,6 +78,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
     tol = 1e-2
     cob = 0.001
     hist_dir = f'images/histograms/{network_descriptor}'
+    marker_cover = Rectangle((0, 0), 0, 0, alpha=0.0)
 
     if torch.cuda.is_available():
         print(f'{green}Using CUDA{reset}')
@@ -248,7 +250,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             bin_height = bin_height / float(max(bin_height))
             ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01),
                     label='Micro-teleportation\n vs \n Gradient')
-            ax0.legend(loc='upper right', shadow=False, frameon=False)
+            ax0.legend(handles=marker_cover, loc='upper right', shadow=False, frameon=False)
             ax0.set_xlim(x_min, x_max)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
@@ -257,7 +259,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
                     label='Micro-teleportation\n vs \n Random Vector')
             ax1.set_xlim(x_min, x_max)
-            ax1.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
+            ax1.legend(loc='upper right', shadow=False, frameon=False, handlelength=0.0)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
