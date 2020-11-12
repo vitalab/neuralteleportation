@@ -246,33 +246,29 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             bin_height, bin_boundary = np.histogram(np.array(angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01),
-                    label='Micro-teleportation\n vs \n Gradient')
-            ax0.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
+            ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01))
+            ax0.legend(['Micro-teleportation\n vs \n Gradient'])
             ax0.set_xlim(x_min, x_max)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
-                    label='Micro-teleportation\n vs \n Random Vector')
-            ax1.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
+            ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            ax1.legend(['Micro-teleportation\n vs \n Random Vector'])
             ax1.set_xlim(x_min, x_max)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
-                    label='Gradient\n vs \n Random Vector')
-            ax2.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
+            ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            ax2.legend(['Gradient\n vs \n Random Vector'])
             ax2.set_xlim(x_min, x_max)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
-                    label='Random Vector\n vs \n Random Vector')
-            ax3.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
+            ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            ax3.legend(['Random Vector\n vs \n Random Vector'])
             ax3.set_xlim(x_min, x_max)
 
             plt.xlabel('Angle in degrees')
