@@ -282,11 +282,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             plt.xlabel('Angle in degrees')
 
             Path(hist_dir).mkdir(parents=True, exist_ok=True)
-            fig_name = f'{hist_dir}/{network_descriptor}'\
-                       f'_cob_{cob}'\
-                       f'_iter_{iterations}'\
-                       f'_random_data' * random_data,\
-                       f'_batch_size_{batch_size}.pdf'
+            fig_name = f'{hist_dir}/{network_descriptor}_cob_{cob}_iter_{iterations}' + \
+                       f'_random_data' * random_data + f'_batch_size_{batch_size}.pdf'
             plt.savefig(fig_name)
             plt.show()
         else:
