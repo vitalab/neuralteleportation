@@ -240,57 +240,47 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             figsize = (10.0, 10.0)
 
             fig, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, figsize=figsize)
-            fig.suptitle(f'{network_descriptor}: cob range: {cob}\n'
-                         f'{iterations:} iter, batch size: {batch_size}')
+            fig.suptitle(f'{hist_dir}/{network_descriptor}_cob_{cob}_iter_{iterations}'
+                         f'_random_data' * random_data + f'_batch_size_{batch_size}')
 
             bin_height, bin_boundary = np.histogram(np.array(angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01))
-            ax0.legend(['Micro-teleportation\n vs \n Gradient'])
-            leg = ax0.legend()
-            leg.get_frame().set_linewidth(0.0)
-            leg(property={'size': 6})
+            ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01),
+                    label = 'Micro-teleportation\n vs \n Gradient')
+            ax0.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
             ax0.set_xlim(x_min, x_max)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
+                    label = 'Micro-teleportation\n vs \n Random Vector')
+            ax1.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
             ax1.set_xlim(x_min, x_max)
-            ax1.legend(['Micro-teleportation\n vs \n Random Vector'])
-            leg = ax1.legend()
-            leg.get_frame().set_linewidth(0.0)
-            leg(property={'size': 6})
 
             bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
+                    label = 'Micro-teleportation\n vs \n Random Vector')
+            ax2.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
             ax2.set_xlim(x_min, x_max)
-            ax2.legend(['Gradient\n vs \n Random Vector'])
-            leg = ax2.legend()
-            leg.get_frame().set_linewidth(0.0)
-            leg(property={'size': 6})
 
             bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
-            ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
+            ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
+                    label = 'Micro-teleportation\n vs \n Random Vector')
+            ax3.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
             ax3.set_xlim(x_min, x_max)
-            ax3.legend(['Random Vector\n vs \n Random Vector'])
-            leg = ax3.legend()
-            leg.get_frame().set_linewidth(0.0)
-            leg(property={'size': 6})
 
             plt.xlabel('Angle in degrees')
 
             Path(hist_dir).mkdir(parents=True, exist_ok=True)
-            plt.savefig(f'{hist_dir}/{network_descriptor}'
-                        f'_cob_{cob}'
-                        f'_iter_{iterations}'
-                        f'_random_data' * random_data,
-                        f'_batch_size_{batch_size}.pdf')
+            fig_name = f'{hist_dir}/{network_descriptor}_cob_{cob}_iter_{iterations}'\
+                       f'_random_data' * random_data + f'_batch_size_{batch_size}.pdf'
+            plt.savefig(fig_name)
             plt.show()
         else:
             print(red)
