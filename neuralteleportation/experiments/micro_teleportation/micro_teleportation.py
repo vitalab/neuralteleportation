@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 from typing import Dict, Tuple, Union
 
+import sys
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/training')
+sys.path.append('/content/drive/My Drive/repos/neuralteleportation/neuralteleportation/experiments')
+
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 
@@ -61,6 +67,11 @@ if __name__ == '__main__':
     # Run on CIFAR10
     cifar10_train, cifar10_val, cifar10_test = get_dataset_subsets("cifar10")
 
+    #TODO remove
+    cifar10_train.data = cifar10_train.data[0:10, :, :, :]
+    cifar10_test.data = cifar10_test.data[0:10, :, :, :]
+    cifar10_val.data = cifar10_val.data[0:10, :, :, :]
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     config = MicroTeleportationTrainingConfig(input_shape=(3, 32, 32), device=device, batch_size=10,
@@ -98,6 +109,11 @@ if __name__ == '__main__':
 
     # Run on CIFAR100
     cifar100_train, cifar100_val, cifar100_test = get_dataset_subsets("cifar100")
+
+    # TODO remove
+    cifar100_train.data = cifar100_train.data[0:10, :, :, :]
+    cifar100_test.data = cifar100_test.data[0:10, :, :, :]
+    cifar100_val.data = cifar100_val.data[0:10, :, :, :]
 
     models = get_models_for_dataset("cifar100")
 
