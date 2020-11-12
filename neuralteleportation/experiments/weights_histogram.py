@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,7 +47,30 @@ def argument_parser() -> argparse.Namespace:
 
 
 def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, title: str, output_dir: Path = None,
-                                 save_format: str = None, xlim: float = None, ylim_max: float = None) -> None:
+                                 save_format: str = None, xlim: float = None, ylim_max: float = None,
+                                 zoom_plot: bool = False) -> None:
+
+    def _format_ticklabels(ticklabels) -> List[str]:
+        return [f"{ticklabel:.1f}" for ticklabel in ticklabels]
+
+    def _zoom_plot(ax, data, inset, lims):
+        with sns.axes_style({'axes.linewidth': 1, 'axes.edgecolor': 'black'}):
+            axins = ax.inset_axes(inset)
+            sns.kdeplot(data, fill=True, ax=axins)
+            axins.set_xlim(lims[:2])
+            axins.set_ylim(lims[2:])
+            axins.set(xticklabels=[], ylabel=None, yticklabels=[])
+            rectangle_patch, connector_lines = ax.indicate_inset_zoom(axins)
+            # Make the indicator and connectors more easily visible
+            rectangle_patch.set_linewidth(2)
+            for connector_line in connector_lines:
+                connector_line.set_linewidth(2)
+            # Manually set the visibility of the appropriate connector lines
+            connector_lines[0].set_visible(True)  # Lower left
+            connector_lines[1].set_visible(False)  # Upper left
+            connector_lines[2].set_visible(True)  # Lower right
+            connector_lines[3].set_visible(False)  # Upper right
+            return axins
 
     def _plot_1d_array_histogram(array: np.ndarray, title: str):
         with sns.axes_style("darkgrid"):
@@ -55,9 +79,13 @@ def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, tit
                 axes.set(xlim=(-xlim, xlim))
             if ylim_max:
                 axes.set(ylim=(0, ylim_max))
-            axes.set_ylabel("")
+            axes.set(ylabel=None, yticklabels=[])
+            axes.set_xticklabels(_format_ticklabels(axes.get_xticks()), size=20)
+            if zoom_plot:
+                _zoom_plot(axes, array, inset=[0.05, 0.6, 0.35, 0.35], lims=[-0.13, -0.12, 0, 0.5])
+                _zoom_plot(axes, array, inset=[0.6, 0.6, 0.35, 0.35], lims=[0.12, 0.13, 0, 0.5])
             if save_format:
-                plt.savefig(output_dir / f"{title}.{save_format}")
+                plt.savefig(output_dir / f"{title}.{save_format}", bbox_inches='tight')
                 plt.close()
             else:
                 plt.show()
@@ -99,7 +127,7 @@ def main():
     net.random_teleport(args.cob_range, args.cob_sampling)
     plot_model_weights_histogram(net, args.plot_mode, title=f"{args.cob_range}_{args.cob_sampling}_cob",
                                  output_dir=args.output_dir, save_format=args.save_format,
-                                 xlim=args.xlim, ylim_max=args.ylim_max)
+                                 xlim=args.xlim, ylim_max=args.ylim_max, zoom_plot=True)
 
 
 if __name__ == '__main__':
