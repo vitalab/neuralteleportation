@@ -240,15 +240,15 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             figsize = (10.0, 10.0)
 
             fig, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, figsize=figsize)
-            fig.suptitle(f'{network_descriptor}: cob range: {cob}\n'
-                         f'{iterations:} iter, batch size: {batch_size}')
+            fig.suptitle(f'{hist_dir}/{network_descriptor}_cob_{cob}_iter_{iterations}' +
+                         f'_random_data' * random_data + f'_batch_size_{batch_size}')
 
             bin_height, bin_boundary = np.histogram(np.array(angle_results))
             width = bin_boundary[1] - bin_boundary[0]
             bin_height = bin_height / float(max(bin_height))
             ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01),
                     label='Micro-teleportation\n vs \n Gradient')
-            ax0.legend(loc='upper right', shadow=False, frameon=False, numpoints=0)
+            ax0.legend(loc='upper right', shadow=False, frameon=False)
             ax0.set_xlim(x_min, x_max)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
@@ -257,9 +257,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
                     label='Micro-teleportation\n vs \n Random Vector')
             ax1.set_xlim(x_min, x_max)
-            ax1.legend(loc='upper right', shadow=False, frameon=False, numpoints=0)
-            leg = ax1.legend()
-            leg.get_frame().set_linewidth(0.0)
+            ax1.legend(loc='upper right', shadow=False, frameon=False, handlelength=0)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
@@ -267,9 +265,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
                     label='Gradient\n vs \n Random Vector')
             ax2.set_xlim(x_min, x_max)
-            ax2.legend(loc='upper right', shadow=False, frameon=False, numpoints=0)
-            leg = ax2.legend()
-            leg.get_frame().set_linewidth(0.0)
+            ax2.legend(loc='upper right', shadow=False, frameon=False)
 
             bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
             width = bin_boundary[1] - bin_boundary[0]
@@ -277,7 +273,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g',
                     label='Random Vector\n vs \n Random Vector')
             ax3.set_xlim(x_min, x_max)
-            ax2.legend(loc='upper right', shadow=False, frameon=False, numpoints=0)
+            ax3.legend(loc='upper right', shadow=False, frameon=False)
 
             plt.xlabel('Angle in degrees')
 
