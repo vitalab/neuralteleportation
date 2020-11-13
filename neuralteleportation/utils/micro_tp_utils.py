@@ -240,7 +240,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
             figsize = (10.0, 10.0)
 
             fig, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, figsize=figsize)
-            fig.suptitle(f'{hist_dir}/{network_descriptor}_cob_{cob}_iter_{iterations}'
+            fig.suptitle(f'{network_descriptor}_cob_{cob}_iter_{iterations}'
                          f'_random_data' * random_data + f'_batch_size_{batch_size}')
 
             bin_height, bin_boundary = np.histogram(np.array(angle_results))
