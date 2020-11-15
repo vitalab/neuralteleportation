@@ -42,10 +42,11 @@ def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
 
 def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_descriptor='',
                                     sampling_types=['within_landscape'],
-                                    batch_sizes=[8, 16, 32, 64],
+                                    batch_sizes=[8, 64],
                                     criterion=None,
                                     device='cpu',
-                                    verbose=False) -> None:
+                                    verbose=False,
+                                    random_data=False) -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
     vector and the gradient for nullity. It then displays the histograms of the calculated scalar products. The
@@ -72,14 +73,17 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
 
         verbose:                If true, the method will output extensive details about the calculated vectors and
                                 aggregated data (mainly for debugging purposes)
+
+        random_data:            If True, random data with random labels is used for computing the gradient.
+                                If False, the dataset is used for computing the gradient.
+
     """
 
     # Arbitrary precision threshold for nullity comparison
     torch.set_printoptions(precision=10, sci_mode=True)
     tol = 1e-2
-    cobs = [0.001, 0.01, 0.1]
+    cobs = [0.001]
     hist_dir = f'images/histograms/{network_descriptor}'
-    series_dir = f'images/series/{network_descriptor}'
 
     if torch.cuda.is_available():
         print(f'{green}Using CUDA{reset}')
@@ -135,6 +139,10 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
 
                     # Get next data batch
                     data, target = next(iter(dataloader))
+
+                    if random_data:
+                        data, target = torch.rand(data.shape), torch.LongTensor(target.shape).random_(0, 10)
+
                     data, target = data.to(device), target.to(device)
                     grad = model.get_grad(data, target, loss_func, zero_grad=False)
 
@@ -240,14 +248,18 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                         sep='\n')
 
                 if not np.isnan(aggregator.loc[aggregator.last_valid_index(), 'Micro-teleportation vs Gradient']):
-                    delta = np.maximum(1.0, rand_rand_angle_results.std() * 3)
+                    delta = 0.25
                     x_min = 90 - delta
                     x_max = 90 + delta
                     figsize = (10.0, 10.0)
 
                     fig, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, figsize=figsize)
-                    fig.suptitle(f'{network_descriptor}: Sampling type: {sampling_type}, cob range: {cob}\n'
-                                 f'{iterations:} iter, batch size: {batch_size}')
+
+                    if random_data:
+                        fig.suptitle(f'{network_descriptor} on Random Data and batch size of {batch_size}')
+
+                    else:
+                        fig.suptitle(f'{network_descriptor} on CIFAR-10 and batch size of {batch_size}')
 
                     bin_height, bin_boundary = np.histogram(np.array(angle_results))
                     width = bin_boundary[1] - bin_boundary[0]
@@ -255,6 +267,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                     ax0.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.01))
                     ax0.legend(['Micro-teleportation\n vs \n Gradient'])
                     ax0.set_xlim(x_min, x_max)
+                    ax0.set_yticks([])
 
                     bin_height, bin_boundary = np.histogram(np.array(rand_micro_angle_results))
                     width = bin_boundary[1] - bin_boundary[0]
@@ -262,6 +275,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                     ax1.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
                     ax1.set_xlim(x_min, x_max)
                     ax1.legend(['Micro-teleportation\n vs \n Random Vector'])
+                    ax1.set_yticks([])
 
                     bin_height, bin_boundary = np.histogram(np.array(rand_angle_results))
                     width = bin_boundary[1] - bin_boundary[0]
@@ -269,6 +283,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                     ax2.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
                     ax2.set_xlim(x_min, x_max)
                     ax2.legend(['Gradient\n vs \n Random Vector'])
+                    ax2.set_yticks([])
 
                     bin_height, bin_boundary = np.histogram(np.array(rand_rand_angle_results))
                     width = bin_boundary[1] - bin_boundary[0]
@@ -276,45 +291,24 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                     ax3.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='g')
                     ax3.set_xlim(x_min, x_max)
                     ax3.legend(['Random Vector\n vs \n Random Vector'])
+                    ax3.set_yticks([])
 
                     plt.xlabel('Angle in degrees')
 
                     Path(hist_dir).mkdir(parents=True, exist_ok=True)
-                    plt.savefig(f'{hist_dir}/{network_descriptor}_Samp_type_{sampling_type}'
+                    plt.savefig(f'{hist_dir}/{network_descriptor}_'
                                 f'_cob_{cob}_iter_{iterations}_batch_size_{batch_size}.png')
                     plt.show()
+
+                    if random_data:
+                        fig.savefig(f"{network_descriptor}-RandomData-batchsize_{batch_size}.pdf", bbox_inches='tight')
+
+                    else:
+                        fig.savefig(f"{network_descriptor}-cifar10-batchsize_{batch_size}.pdf", bbox_inches='tight')
                 else:
                     print(red)
                     print(aggregator.iloc[aggregator.last_valid_index()])
                     print(reset)
-
-    for sampling_type in sampling_types:
-        for cob in cobs:
-            plt.scatter(x=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)]['batch size'],
-                         y=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)][
-                             'Micro-teleportation vs Gradient'],
-                        c='red',
-                        marker='o')
-            plt.errorbar(x=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)]['batch size'],
-                         y=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                          (aggregator['COB range'] == cob)][
-                             'Micro-teleportation vs Gradient'],
-                         yerr=aggregator.loc[(aggregator['sampling type'] == sampling_type) &
-                                             (aggregator['COB range'] == cob)][
-                                  'Micro-teleportation vs Gradient std'] * 3,
-                         linestyle='None')
-
-            plt.xlabel('Batch size')
-            plt.ylabel('Theta')
-            plt.title(f'{network_descriptor} - Sampling type: {sampling_type}, C.O.B.: {cob}')
-
-            Path(series_dir).mkdir(parents=True, exist_ok=True)
-            plt.savefig(f'{series_dir}/{network_descriptor}_Samp_type_{sampling_type}'
-                        f'_cob_{cob}.png')
-            plt.show()
 
 
 def dot_product_between_teleportation(network, dataset,
