@@ -46,7 +46,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                                     criterion=None,
                                     device='cpu',
                                     verbose=False,
-                                    random_data=False) -> None:
+                                    random_data=False,
+                                    number_classes=10) -> None:
     """
     This method tests the scalar product between the teleporation line and the gradient, as well as between a random
     vector and the gradient for nullity. It then displays the histograms of the calculated scalar products. The
@@ -76,6 +77,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
 
         random_data:            If True, random data with random labels is used for computing the gradient.
                                 If False, the dataset is used for computing the gradient.
+
+        number_classes:         Number of classes of the classification problem.
 
     """
 
@@ -141,7 +144,7 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                     data, target = next(iter(dataloader))
 
                     if random_data:
-                        data, target = torch.rand(data.shape), torch.LongTensor(target.shape).random_(0, 10)
+                        data, target = torch.rand(data.shape), torch.randint(0, number_classes, target.shape)
 
                     data, target = data.to(device), target.to(device)
                     grad = model.get_grad(data, target, loss_func, zero_grad=False)
@@ -207,7 +210,8 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                                                 'Random Vector vs  Random Vector': rand_rand_angle_results.mean(),
                                                 'Random Vector vs  Random Vector std': rand_rand_angle_results.std(),
                                                 'Micro-teleportation vs Random Vector': rand_micro_angle_results.mean(),
-                                                'Micro-teleportation vs Random Vector std': rand_micro_angle_results.std()},
+                                                'Micro-teleportation vs Random Vector std':
+                                                    rand_micro_angle_results.std()},
                                                ignore_index=True)
 
                 print(f'The angle between the gradient and a micro-teleporation vector is: '
@@ -237,15 +241,10 @@ def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_d
                               f'min: {torch.min(w2)}',
                               sep='\n')
                     else:
-                        print(f'w1: {w1}', f'nans: {np.sum(np.isnan(w1))}',
-                        f'max: {np.max(w1)}',
-                        f'min: {np.min(w1)}',
-                        sep='\n')
-                        print(f'w2: {w2}',
-                        f' nans: {np.sum(np.isnan(w2))}',
-                        f'max: {np.max(w2)}',
-                        f'min: {np.min(w2)}',
-                        sep='\n')
+                        print(f'w1: {w1}', f'nans: {np.sum(np.isnan(w1))}', f'max: {np.max(w1)}', f'min: {np.min(w1)}',
+                              sep='\n')
+                        print(f'w2: {w2}', f' nans: {np.sum(np.isnan(w2))}', f'max: {np.max(w2)}', f'min: {np.min(w2)}',
+                              sep='\n')
 
                 if not np.isnan(aggregator.loc[aggregator.last_valid_index(), 'Micro-teleportation vs Gradient']):
                     delta = 0.25
