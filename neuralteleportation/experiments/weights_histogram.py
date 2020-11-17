@@ -14,7 +14,8 @@ def argument_parser() -> argparse.Namespace:
     """
         Simple argument parser for the experiment.
     """
-    parser = argparse.ArgumentParser(description='Simple argument parser for the plot loss landscape experiment.')
+    parser = argparse.ArgumentParser(description='Simple argument parser for the histograms before and'
+                                                 'after teleportation of a model.')
 
     # Model Parameters
     parser.add_argument("--model", "-m", type=str, default="MLPCOB", choices=get_model_names())
@@ -26,7 +27,7 @@ def argument_parser() -> argparse.Namespace:
     parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
 
     # Plotting Parameters
-    parser.add_argument("--plot_mode", type=str, default="layerwise", choices=["layerwise", "modelwise"],
+    parser.add_argument("--plot_mode", type=str, default="modelwise", choices=["layerwise", "modelwise"],
                         help="Mode that determines how many histograms to produce: \n"
                              "- layerwise: Plot an histogram of the weights for each layer \n"
                              "- modelwise: Plot a single histogram of the weights that groups the whole network")
@@ -115,17 +116,17 @@ def main():
     # Initialize the model
     model_kwargs = {}
     if args.model == "MLPCOB":
-        model_kwargs["hidden_layers"] = (500,500,500,500,500)
+        model_kwargs["hidden_layers"] = (500, 500, 500, 500, 500)
     net = get_model(args.dataset, args.model, **model_kwargs)
 
     # Plot an histogram of its weights
-    plot_model_weights_histogram(net, args.plot_mode, title="xavier_init",
+    plot_model_weights_histogram(net, args.plot_mode, title="kaiming_init",
                                  output_dir=args.output_dir, save_format=args.save_format,
                                  xlim=args.xlim, ylim_max=args.ylim_max)
 
     # Teleport the model and plot an histogram of its teleported weights
     net.random_teleport(args.cob_range, args.cob_sampling)
-    plot_model_weights_histogram(net, args.plot_mode, title=f"{args.cob_range}_{args.cob_sampling}_cob",
+    plot_model_weights_histogram(net, args.plot_mode, title=f"CoB range = {args.cob_range}",
                                  output_dir=args.output_dir, save_format=args.save_format,
                                  xlim=args.xlim, ylim_max=args.ylim_max, zoom_plot=True)
 
