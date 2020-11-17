@@ -14,8 +14,8 @@ dependencies:
   - h5py
   - pyyaml
   - tqdm
-  - pytorch
-  - torchvision
+  - pytorch==1.5
+  - torchvision==0.6
   - cudatoolkit
   - packaging
   - seaborn

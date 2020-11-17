@@ -113,8 +113,8 @@ def plot_histogram_teleported_gradients(network, pbar, n_part=5, nb_batches=20, 
         plt.show()
 
 
-def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_part=10, network_descriptor='',
-                                         device='cpu'):
+def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_part=15, network_descriptor='',
+                                         device='cpu', limit_batches=10):
     """
     This method plots the difference of the gradient of the network and the gradient of a teleportation, by
     partitioning the cob_range from 0.1 to 0.9 in n_part parts for within_landscape cob_sampling. Each gradient
@@ -127,17 +127,15 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
 
         nb_teleportations:      Number of teleportations computed for each cob_range.
 
-        n_part:                 The number of partitions of the interval [0.1, 0.9] to sample the change of basis
+        n_part:                 The number of partitions of the interval [0.01, 0.9] to sample the change of basis
                                 range.
 
         network_descriptor:     Name of the network for distinction.
 
         device:                 Device for computations.
-    """
-    for batch_idx, (data, target) in pbar:
-        x, y = data.to(device), target.to(device)
-        break
 
+        limit_batches:          Number of batches used to compute gradients for each CoB-range.
+    """
     loss_func = torch.nn.CrossEntropyLoss()
 
     if device == 'cuda':
@@ -145,31 +143,39 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
 
     original_weights = network.get_weights().detach().cpu().numpy()
 
-    original_grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
-    original_grad = original_grad / np.linalg.norm(original_weights)
-
     differences = []
     variance = []
 
     # Grid to sample the change of basis from
-    x_axis = np.linspace(0.0, 0.999, n_part)
+    x_axis = np.linspace(0.01, 0.9, n_part)
 
     for i in range(n_part):
         to_compute_mean = []
-        for _ in range(nb_teleportations):
-            if device == 'cuda':
-                network.set_weights(original_weights_cuda)
-            else:
-                network.set_weights(original_weights)
 
-            network.random_teleport(cob_range=x_axis[i])
+        for batch_idx, (data, target) in pbar:
 
-            teleported_weights = network.get_weights().detach().cpu().numpy()
-            teleported_grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
-            teleported_grad = teleported_grad / np.linalg.norm(teleported_weights)
+            for j in range(nb_teleportations):
+                if device == 'cuda':
+                    network.set_weights(original_weights_cuda)
+                else:
+                    network.set_weights(original_weights)
 
-            diff = abs(np.linalg.norm(original_grad)-np.linalg.norm(teleported_grad))
-            to_compute_mean.append(diff)
+                x, y = data.to(device), target.to(device)
+                original_grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+                original_grad = original_grad / np.linalg.norm(original_weights)
+
+                network.random_teleport(cob_range=x_axis[i])
+
+                teleported_weights = network.get_weights().detach().cpu().numpy()
+                teleported_grad = network.get_grad(x, y, loss_func, zero_grad=False).detach().cpu().numpy()
+                teleported_grad = teleported_grad / np.linalg.norm(teleported_weights)
+
+                diff = abs(np.linalg.norm(original_grad)-np.linalg.norm(teleported_grad))
+                to_compute_mean.append(diff)
+
+            # Early stop to prevent NaNs
+            if (batch_idx+1) % limit_batches == 0:
+                break
 
         variance.append(np.std(to_compute_mean))
         differences.append(np.mean(to_compute_mean))
@@ -181,9 +187,9 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
     plt.errorbar(x_axis, differences, yerr=variance)
     plt.plot(x_axis, differences)
 
-    plt.title(f'{network_descriptor}, 'f'{nb_teleportations:} iterations. ')
-    plt.ylabel('| ||Grad||/||W|| - ||Tel.Grad||/||Tel.W|| |')
-    plt.xlabel('cob_range')
+    plt.title(f'{network_descriptor}')
+    plt.ylabel('| ||dW||/||W|| - ||d(TW)||/||TW|| |')
+    plt.xlabel('CoB range')
     plt.show()
 
 
@@ -191,21 +197,45 @@ if __name__ == '__main__':
     from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
     from neuralteleportation.training import experiment_setup
     from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
+    from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
+    from neuralteleportation.models.model_zoo.vggcob import vgg16_bnCOB
+    from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
 
     from torch.utils.data import DataLoader
     from tqdm import tqdm
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    input_shape_densenet = (32, 3, 32, 32)
+    input_shape = (32, 3, 32, 32)
     trainset, valset, testset = experiment_setup.get_dataset_subsets("cifar10")
-    train_loader = DataLoader(trainset, batch_size=input_shape_densenet[0], shuffle=True)
+    train_loader = DataLoader(trainset, batch_size=input_shape[0], shuffle=True)
 
+    # MLP
     pbar = tqdm(enumerate(train_loader))
+    mlp = MLPCOB(input_shape=(3, 32, 32), num_classes=10).to(device=device)
+    mlp = NeuralTeleportationModel(network=mlp, input_shape=input_shape)
+    plot_difference_teleported_gradients(network=mlp, pbar=pbar, network_descriptor='MLP on CIFAR-10', device=device)
+    pbar.close()
 
-    dense_model = densenet121COB(num_classes=10).to(device=device)
-    dense_model = NeuralTeleportationModel(network=dense_model, input_shape=input_shape_densenet)
+    # VGG
+    pbar = tqdm(enumerate(train_loader))
+    vgg = vgg16_bnCOB(num_classes=10).to(device=device)
+    vgg = NeuralTeleportationModel(network=vgg, input_shape=input_shape)
+    plot_difference_teleported_gradients(network=vgg, pbar=pbar, network_descriptor='VGG on CIFAR-10', device=device)
+    pbar.close()
 
-    plot_histogram_teleported_gradients(network=dense_model, pbar=pbar, network_descriptor='DenseNet', device=device)
+    # ResNet
+    pbar = tqdm(enumerate(train_loader))
+    resnet = resnet18COB(num_classes=10).to(device=device)
+    resnet = NeuralTeleportationModel(network=resnet, input_shape=input_shape)
+    plot_difference_teleported_gradients(network=resnet, pbar=pbar, network_descriptor='ResNet on CIFAR-10',
+                                         device=device)
+    pbar.close()
 
-    plot_difference_teleported_gradients(network=dense_model, pbar=pbar, network_descriptor='DenseNet', device=device)
+    # DenseNet
+    pbar = tqdm(enumerate(train_loader))
+    densenet = densenet121COB(num_classes=10).to(device=device)
+    densenet = NeuralTeleportationModel(network=densenet, input_shape=input_shape)
+    plot_difference_teleported_gradients(network=densenet, pbar=pbar, network_descriptor='DenseNet on CIFAR-10',
+                                         device=device)
+    pbar.close()

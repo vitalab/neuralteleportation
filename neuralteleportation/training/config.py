@@ -27,6 +27,7 @@ class TeleportationTrainingConfig(TrainingConfig):
     cob_range: float = 0.5
     cob_sampling: str = 'within_landscape'
     every_n_epochs: int = 1
+    teleport_only_once: bool = False
     # The ``teleport_fn`` field is required to use the pipeline from the ``training`` module,
     # but it must be declared and initialized by the config classes inheriting from ``TeleportationTrainingConfig``
     # NOTE: Default functions should be set using ``field(default=<function_name>)`` to avoid binding the function

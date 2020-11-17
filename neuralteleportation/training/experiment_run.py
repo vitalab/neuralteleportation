@@ -8,6 +8,7 @@ from torchvision.datasets import VisionDataset
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, config_to_dict
 from neuralteleportation.training.training import test, train
+from neuralteleportation.utils.logger import CsvLogger
 
 
 def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics,
@@ -45,6 +46,11 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
         print("Testing {}: {} \n".format(model.__class__.__name__,
                                          test(trained_model, test_set, metrics, config)))
         print()
+
+    if isinstance(config.exp_logger, CsvLogger):
+        config.exp_logger.flush()
+        config.comet_logger.log_asset(config.exp_logger.log_file_path)
+
 
 
 def run_multi_output_training(train_fct: Callable, models: Sequence[nn.Module],

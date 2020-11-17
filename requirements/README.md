@@ -39,13 +39,11 @@ When using virtualenv, it is necessary to first create an environment like below
 load the Python module to ensure that the virtual environment's base Python version is the appropriate one.
 ```bash
 module load python/3.7
-module load scipy-stack # For scipy, matplotlib and pandas
 virtualenv --no-download <path_to_virtual_env>
 ```
-After the virtual environment is created, it is necessary to activate it and update the base environment.
+After the virtual environment is created, it is necessary to activate it.
 ```bash
 source <path_to_virtual_env>/bin/activate
-pip install --upgrade setuptools pip wheel
 ```
 Afterwards, the environment's packages can be installed from the requirements file, like follows:
 ```bash
