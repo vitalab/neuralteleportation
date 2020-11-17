@@ -1,19 +1,17 @@
-from dataclasses import dataclass
 from typing import Tuple, List, Union
 
-import sys, os
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
+from dataclasses import dataclass
 from sklearn.decomposition import PCA
 from torch.utils.data.dataset import Dataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
-from neuralteleportation.training.training import test, train_epoch
 from neuralteleportation.training.experiment_setup import get_optimizer_from_model_and_config
+from neuralteleportation.training.training import test, train_epoch
 
 
 @dataclass
@@ -27,7 +25,7 @@ linterp_checkpoint_file = '/tmp/linterp_save_checkpoint.pth'
 contour_checkpoint_file = '/tmp/contour_save_checkpoint.pth'
 
 
-def generate_random_2d_vector(weights: List[torch.Tensor], ignore_bias_bn: bool = False,
+def generate_random_2d_vector(weights, ignore_bias_bn: bool = False,
                               normalize: bool = True, seed: int = None) -> List[torch.Tensor]:
     """
         Generates a random vector of size equals to the weights of the model.
@@ -304,20 +302,11 @@ def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torc
     ax1.plot(a, loss, c=loss_color)  # , 'bo', markersize=1)
     ax1.set_ylim(0, 15)
 
-    # ax1.plot(a[idx_o], loss[idx_o], 'ko', markersize=5, label='loss_{}'.format(model1_label))
-    # ax1.plot(a[idx_t], loss[idx_t], 'yo', markersize=5, label='loss_{}'.format(model2_label))
-    # ax1.axvline(x=a[idx_o], color='k', linestyle='--')
-    # ax1.axvline(x=a[idx_t], color='k', linestyle='--')
-
     ax2.set_ylabel('Accuracy', color=accuracy_color)
     ax2.plot(a, acc_train, c='r')  # , 'ro', markersize=1)
-    # ax2.plot(a[idx_o], acc_train[idx_o], 'kx', markersize=5, label='train_{}'.format(model1_label))
-    # ax2.plot(a[idx_t], acc_train[idx_t], 'yx', markersize=5, label="train_{}".format(model2_label))
 
     if acc_val:
         ax2.plot(a, acc_val, '--', c=accuracy_color)  # , 'go', markersize=1)
-        # ax2.plot(a[idx_o], acc_val[idx_o], 'kx', markersize=3, label='val_{}'.format(model1_label))
-        # ax2.plot(a[idx_t], acc_val[idx_t], 'yx', markersize=3, label="val_{}".format(model2_label))
 
     if loss_val:
         ax1.plot(a, loss_val, '--', c=loss_color)
@@ -326,50 +315,3 @@ def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torc
 
     # plt.legend()
     plt.show()
-
-
-if __name__ == '__main__':
-    from neuralteleportation.metrics import accuracy
-    from torch.utils.data.dataloader import DataLoader
-    from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-    from neuralteleportation.training.experiment_setup import get_dataset_subsets, resnet18COB
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    metric = TrainingMetrics(
-        criterion=nn.CrossEntropyLoss(),
-        metrics=[accuracy]
-    )
-    config = LandscapeConfig(
-        lr=5e-4,
-        epochs=10,
-        batch_size=32,
-        cob_range=1e-5,
-        teleport_at=[5],
-        device=device
-    )
-    model = resnet18COB(num_classes=10)
-    trainset, valset, testset = get_dataset_subsets("cifar10")
-    trainset.data = trainset.data[:5000]  # For the example, don't use all the data.
-    trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
-
-    x = torch.linspace(-1, 1, 5)
-    y = torch.linspace(-1, 1, 5)
-    surface = torch.stack((x, y))
-
-    model = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
-
-    w_checkpoints, final_w = generate_teleportation_training_weights(model, trainset, metric=metric, config=config)
-    delta, eta = generate_random_2d_vector(final_w), generate_random_2d_vector(final_w)
-    loss, _ = generate_contour_loss_values(model, (delta, eta), surface, trainset, metric, config)
-    original_w = w_checkpoints[0]
-
-    loss = np.array(loss)
-    loss = np.resize(loss, (len(x), len(y)))
-
-    teleport_idx = [i + 1 for i in config.teleport_at]
-    w_diff = [(w - final_w) for w in w_checkpoints]
-    w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
-    weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))
-
-    plot_contours(x, y, loss, weight_traj, teleport_idx=teleport_idx)
