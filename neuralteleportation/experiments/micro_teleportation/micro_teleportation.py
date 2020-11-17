@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     # MLP
 
-    model = MLPCOB(input_shape=(3, 32, 32), num_classes=10)
+    model = MLPCOB(input_shape=(3, 32, 32), num_classes=10, hidden_layers=(128,))
     model = NeuralTeleportationModel(network=model, input_shape=input_shape)
 
     weights_init(model)
