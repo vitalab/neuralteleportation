@@ -32,3 +32,11 @@ class SigmoidCOB(ActivationLayerMixin, nn.Sigmoid):
 
 class IdentityCOB(ActivationLayerMixin, nn.Identity):
     reshape_cob = True
+
+
+class LeakyReLUCOB(ActivationLayerMixin, nn.LeakyReLU):
+    reshape_cob = True
+
+
+class ELUCOB(ActivationLayerMixin, nn.ELU):
+    reshape_cob = True

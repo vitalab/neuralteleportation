@@ -4,7 +4,7 @@ from operator import mul
 import torch
 from torch import nn
 
-from neuralteleportation.layers.activation import ReLUCOB
+from neuralteleportation.layers.activation import ReLUCOB, ELUCOB, LeakyReLUCOB, TanhCOB
 from neuralteleportation.layers.neuralteleportation import FlattenCOB
 from neuralteleportation.layers.neuron import LinearCOB
 
@@ -21,7 +21,7 @@ class MLPCOB(nn.Module):
 
     """
 
-    def __init__(self, input_shape, num_classes, hidden_layers=(128,)):
+    def __init__(self, input_shape, num_classes, hidden_layers=(500, 500, 500, 500, 500), activation="relu"):
         super().__init__()
 
         # Create the input and hidden layers
@@ -29,7 +29,15 @@ class MLPCOB(nn.Module):
         layers = []
         for idx in range(len(hidden_layers)):
             layers.append(LinearCOB(layers_dim[idx], layers_dim[idx + 1]))
-            layers.append(ReLUCOB())
+
+            if activation == 'elu':
+                layers.append(ELUCOB())
+            elif activation == 'leakyrelu':
+                layers.append(LeakyReLUCOB())
+            elif activation == 'tanh':
+                layers.append(TanhCOB())
+            else:
+                layers.append(ReLUCOB())
 
         self.net = torch.nn.Sequential(
             FlattenCOB(),
@@ -44,5 +52,5 @@ class MLPCOB(nn.Module):
 if __name__ == '__main__':
     from tests.model_test import test_teleport
 
-    mlp = MLPCOB(input_shape=(1, 28, 28), num_classes=10)
+    mlp = MLPCOB(input_shape=(1, 28, 28), num_classes=10, activation='tanh')
     test_teleport(mlp, (1, 1, 28, 28), verbose=True)
