@@ -1,0 +1,31 @@
+datasets:
+  - cifar10
+
+models:
+  - resnet18COB
+  - vgg16_bnCOB
+
+optimizers:
+  - cls: Adam
+    lr: 0.0001
+
+training_params:
+  epochs: 100
+  batch_size: 256
+  shuffle_batches: True
+  drop_last_batch: True
+
+teleportations:
+  teleport:
+    mode:
+      pseudo:
+    every_n_epochs:
+      - 0
+    teleport_only_once:
+      - True
+    cob_sampling:
+      - within_landscape
+      - change_landscape
+    cob_range:
+      - 0.5
+      - 0.99
