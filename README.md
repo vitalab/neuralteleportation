@@ -35,6 +35,17 @@ This repository contains the code necessary to teleport a neural network.
 * [experiments](neuralteleportation/experiments): contains experiments using teleportation. 
 * [tests](tests): contains black-box tests for network teleportation. 
 
+## Running experiments
+
+* Micro-teleportations (Figure 4): Running the script *neuralteleportation/experiments/micro_teleportation/microteleportation.py* produces histograms of angles of gradient vs micro-teleportations for MLP, VGG, ResNet and DenseNet on CIFAR-10 and random data.
+* Interpolations (Figure 5): 
+* Teleportation vs SGD (Figure 6): Running the yaml file *neuralteleportation/experiments/config/SGD_vs_teleport.yml*
+* Gradient changed by teleportation (Figure 7): Running the script *neuralteleportation/utils/statistics_teleportations.py* produces one plot for each model, MLP, VGG, ResNet and DenseNet on CIFAR-10
+* Teleportation vs SGD on other activation functions (Figure 8): Running the yaml file *neuralteleportation/experiments/config/OtherActivations.yml*
+* Teleportation vs different initializations (Figure 9): Running the yaml file *neuralteleportation/experiments/config/Initializations.yml*
+* Pseudo-teleportation vs SGD (Figure 10): Running the yaml file *neuralteleportation/experiments/config/pseudoo_teleportation.yaml*
+* Histogram comparision before and after teleportation (Figure 11): Running the script *neuralteleportation/experiments/weights_histogram.py*
+
 ## Known Limitations
 
 * Can't use opperations in the foward method (only nn.Modules)

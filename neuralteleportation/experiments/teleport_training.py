@@ -1,6 +1,6 @@
+import copy
 import itertools
 from pathlib import Path
-import copy
 
 # Necessary to import Comet first to use Comet's auto logging facility and
 # to avoid "Please import comet before importing these modules" error.
@@ -16,13 +16,15 @@ from neuralteleportation.training.experiment_run import run_model
 from neuralteleportation.training.experiment_setup import get_model, get_dataset_subsets
 from neuralteleportation.training.teleport import optim as teleport_optim
 from neuralteleportation.training.teleport.optim import OptimalTeleportationTrainingConfig
+from neuralteleportation.training.teleport.pseudo import PseudoTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
 from neuralteleportation.utils.logger import init_comet_experiment, CsvLogger
 
 __training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
-                        "optim": OptimalTeleportationTrainingConfig}
+                        "optim": OptimalTeleportationTrainingConfig,
+                        "pseudo": PseudoTeleportationTrainingConfig}
 
 
 def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_root_dir: Path = None) -> None:
