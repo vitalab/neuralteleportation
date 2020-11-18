@@ -18,7 +18,7 @@ if __name__ == '__main__':
     '''
     from neuralteleportation.training.experiment_setup import *
     from neuralteleportation.metrics import accuracy
-    from neuralteleportation.models.model_zoo.vggcob import vgg16_bnCOB
+    from neuralteleportation.models.model_zoo.vggcob import vgg16COB
     from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
     from neuralteleportation.models.model_zoo.densenetcob import densenet121COB
     from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     # VGG
 
-    model = vgg16_bnCOB(num_classes=10).to(device=device)
+    model = vgg16COB(num_classes=10).to(device=device)
     model = NeuralTeleportationModel(network=model, input_shape=input_shape)
 
     weights_init(model)
@@ -64,39 +64,3 @@ if __name__ == '__main__':
     micro_teleportation_dot_product(network=model, dataset=cifar10_train,
                                     network_descriptor='VGG',
                                     device=device, random_data=True)
-
-    # ResNet
-
-    model = resnet18COB(num_classes=10).to(device=device)
-    model = NeuralTeleportationModel(network=model, input_shape=input_shape)
-
-    weights_init(model)
-
-    micro_teleportation_dot_product(network=model, dataset=cifar10_train,
-                                    network_descriptor='ResNet',
-                                    device=device, random_data=False)
-
-    weights_init(model)
-
-    micro_teleportation_dot_product(network=model, dataset=cifar10_train,
-                                    network_descriptor='ResNet',
-                                    device=device, random_data=True)
-
-    # DenseNet
-
-    model = densenet121COB(num_classes=10).to(device=device)
-    model = NeuralTeleportationModel(network=model, input_shape=input_shape)
-
-    weights_init(model)
-
-    micro_teleportation_dot_product(network=model, dataset=cifar10_train,
-                                    network_descriptor='DenseNet',
-                                    device=device, random_data=False)
-
-    weights_init(model)
-
-    micro_teleportation_dot_product(network=model, dataset=cifar10_train,
-                                    network_descriptor='DenseNet',
-                                    device=device, random_data=True)
-
-    print("All micro-teleportation experiments finished.")
