@@ -45,7 +45,13 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
         train_set, val_set, test_set = get_dataset_subsets(dataset_name, **dataset_kwargs)
 
         # models
-        for model_name in config["models"]:
+        for model_obj in config["models"]:
+            model_obj = copy.deepcopy(model_obj)
+            model_kwargs = {}
+            model_name = model_obj
+            if not isinstance(model_obj, str):
+                model_name = model_obj.pop("cls")
+                model_kwargs = model_obj
             # initalizers
             for initializer in config["initializers"]:
                 # optimizers
@@ -120,7 +126,7 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
 
                                 # Run experiment (setting up a new model and optimizer for each experiment)
                                 model = get_model(dataset_name, model_name, device=training_config.device,
-                                                initializer=initializer)
+                                                initializer=initializer, **model_kwargs)
                                 comet_experiment.log_parameter(name="initializer", value=[initializer])
                                 optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
                                 lr_scheduler = None
