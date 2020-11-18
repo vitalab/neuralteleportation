@@ -18,7 +18,7 @@ from neuralteleportation.training.training import test, train_epoch
 class LandscapeConfig(TrainingConfig):
     teleport_at: List[int] = 0
     cob_range: float = 0.5
-    cob_sampling: str = 'usual'
+    cob_sampling: str = 'within_landscape'
 
 
 linterp_checkpoint_file = '/tmp/linterp_save_checkpoint.pth'

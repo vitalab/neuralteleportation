@@ -23,7 +23,7 @@ def argument_parser():
                         help="Whether or not the models should train before interpolation.")
     parser.add_argument("--epochs", "-e", type=int, default=50,
                         help="How many epochs should the networks train in total")
-    parser.add_argument("--lr", type=float, default=1e-3, help="The learning rate for model training")
+    parser.add_argument("--lr", type=float, default=0.01, help="The learning rate for model training")
     parser.add_argument("--optimizerA", type=str, default="SGD", choices=["Adam", "SGD"],
                         help="Optimizer used by model A")
     parser.add_argument("--optimizerB", type=str, default="SGD", choices=["Adam", "SGD"],
@@ -32,13 +32,13 @@ def argument_parser():
     parser.add_argument("--batch_sizeB", type=int, default=1024, help="Defines how big the batch size is")
 
     # Teleportation params
-    parser.add_argument("--teleportA", action="store_true", default=False,
+    parser.add_argument("--teleportA", action="store_true", default=True,
                         help="Whether or not to teleport model A for second interpolation")
-    parser.add_argument("--teleportB", action="store_true", default=False,
-                        help="Whether or not to teleport model A for second interpolation")
+    parser.add_argument("--teleportB", action="store_true", default=True,
+                        help="Whether or not to teleport model B for second interpolation")
     parser.add_argument("--same_cob", action="store_true", default=False,
                         help="Whether or not to use the same cob for the teleportation A and B")
-    parser.add_argument("--cob_range", type=float, default=0.5,
+    parser.add_argument("--cob_range", type=float, default=0.9,
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
     parser.add_argument("--cob_sampling", type=str, default="within_landscape",
                         choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
@@ -46,10 +46,10 @@ def argument_parser():
 
     # Interpolation params
     parser.add_argument("--x", nargs=3, type=float, default=[-0.5, 1.5, 101], help="Defines the precision of the alpha")
-    parser.add_argument("--model", type=str, default="resnet18COB", choices=get_model_names())
-    parser.add_argument("--save_path", type=str, default='Flatness_interp', help='Path to save folder')
-    parser.add_argument("--weightsA", type=str, help="Weights for model A", default=None)
-    parser.add_argument("--weightsB", type=str, help="Weights for model B", default=None)
+    parser.add_argument("--model", type=str, default="MLPCOB", choices=get_model_names())
+    parser.add_argument("--save_path", type=str, default='Interpolation', help='Path to save folder')
+    parser.add_argument("--weightsA", type=str, help="Weights for model A", default='Flatness_MLP/modelA.pt')
+    parser.add_argument("--weightsB", type=str, help="Weights for model B", default="Flatness_MLP/modelB.pt")
     parser.add_argument("--dataset", type=str, default="cifar10", choices=['mnist', 'cifar10', 'cifar100'])
 
     return parser.parse_args()
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     if args.train:
         print("Train model A")
         train(modelA, trainset, metric, configA, val_dataset=valset)
-        print("Train model 2")
+        print("Train model B")
         train(modelB, trainset, metric, configB, val_dataset=valset)
 
         torch.save(modelA.state_dict(), pjoin(save_path, 'modelA.pt'))
@@ -175,7 +175,7 @@ if __name__ == '__main__':
                                                            valset=valset)
 
     res = {'train_loss': loss, 'train_acc': acc_t, 'val_loss': loss_v, 'val_acc': acc_v, 'alpha': a}
-    torch.save(res, pjoin(save_path, 'interTAB.pt'))
+    torch.save(res, pjoin(save_path, 'inter_TA_TB.pt'))
 
     print("After: ", loss)
 
@@ -184,6 +184,5 @@ if __name__ == '__main__':
                     'T(A)' if args.teleportA else "A",
                     'T(B)' if args.teleportB else "B",
                     args.cob_range,
-                    args.cob_sampling,
                     ", same cob" if args.same_cob else ""),
-                savepath=pjoin(save_path, 'interTAB.jpg'))
+                savepath=pjoin(save_path, 'inter_TA_TB.jpg'))
