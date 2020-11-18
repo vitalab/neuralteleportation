@@ -19,7 +19,7 @@ def argument_parser():
     parser = argparse.ArgumentParser()
 
     # Training params
-    parser.add_argument("--train", action="store_true", default=False,
+    parser.add_argument("--train", action="store_true", default=True,
                         help="Whether or not the models should train before interpolation.")
     parser.add_argument("--epochs", "-e", type=int, default=50,
                         help="How many epochs should the networks train in total")
@@ -42,14 +42,14 @@ def argument_parser():
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
     parser.add_argument("--cob_sampling", type=str, default="within_landscape",
                         choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
-                        help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
+                        help="Defines the type of sampling used for the COB. It must be a valid mix with cob_range")
 
     # Interpolation params
     parser.add_argument("--x", nargs=3, type=float, default=[-0.5, 1.5, 101], help="Defines the precision of the alpha")
     parser.add_argument("--model", type=str, default="MLPCOB", choices=get_model_names())
     parser.add_argument("--save_path", type=str, default='Interpolation', help='Path to save folder')
-    parser.add_argument("--weightsA", type=str, help="Weights for model A", default='Flatness_MLP/modelA.pt')
-    parser.add_argument("--weightsB", type=str, help="Weights for model B", default="Flatness_MLP/modelB.pt")
+    parser.add_argument("--weightsA", type=str, help="Weights for model A", default=None)
+    parser.add_argument("--weightsB", type=str, help="Weights for model B", default=None)
     parser.add_argument("--dataset", type=str, default="cifar10", choices=['mnist', 'cifar10', 'cifar100'])
 
     return parser.parse_args()
@@ -184,5 +184,6 @@ if __name__ == '__main__':
                     'T(A)' if args.teleportA else "A",
                     'T(B)' if args.teleportB else "B",
                     args.cob_range,
+                    args.cob_sampling,
                     ", same cob" if args.same_cob else ""),
                 savepath=pjoin(save_path, 'inter_TA_TB.jpg'))

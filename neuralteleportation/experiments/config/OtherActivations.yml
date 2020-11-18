@@ -1,12 +1,16 @@
+runs_per_config: 5
+
 datasets:
   - cifar10
   - cifar100
 
 models:
-  - MLPCOB
-  - vgg16_bnCOB
-  - resnet18COB
-  - densenet121COB
+  - cls: MLPCOB
+    activation: elu #default=relu
+  - cls: MLPCOB
+    activation: leakyrelu
+  - cls: MLPCOB
+    activation: tanh
 
 initializers:
   - type: none # Uses PyTorch's default initializer
@@ -53,7 +57,7 @@ optimizers:
       mode: max
 
 training_params:
-  epochs: 120
+  epochs: 100
   batch_size: 256
   shuffle_batches: True
   drop_last_batch: True

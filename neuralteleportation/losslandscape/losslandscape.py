@@ -314,4 +314,5 @@ def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torc
         plt.savefig(savepath, format='png')
 
     # plt.legend()
+    print('Figure has been saved in directory Interpolation. CLOSE figure to continue with the experiment.')
     plt.show()

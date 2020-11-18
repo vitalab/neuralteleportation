@@ -1,11 +1,13 @@
+runs_per_config: 5
+
 datasets:
   - cifar10
   - cifar100
 
 models:
   - MLPCOB
-  - vgg16_bnCOB
   - resnet18COB
+  - vgg16_bnCOB
   - densenet121COB
 
 initializers:
@@ -53,7 +55,7 @@ optimizers:
       mode: max
 
 training_params:
-  epochs: 120
+  epochs: 100
   batch_size: 256
   shuffle_batches: True
   drop_last_batch: True
@@ -62,7 +64,7 @@ teleportations:
   no_teleport:
   teleport:
     mode:
-      random:
+      pseudo:
     every_n_epochs:
       - 0
     teleport_only_once:
