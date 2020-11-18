@@ -1,33 +1,31 @@
-from dataclasses import dataclass
 from typing import Tuple, List, Union
 
-import sys, os
-
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
+from dataclasses import dataclass
 from sklearn.decomposition import PCA
 from torch.utils.data.dataset import Dataset
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics
-from neuralteleportation.training.training import test, train_epoch
 from neuralteleportation.training.experiment_setup import get_optimizer_from_model_and_config
+from neuralteleportation.training.training import test, train_epoch
 
 
 @dataclass
 class LandscapeConfig(TrainingConfig):
     teleport_at: List[int] = 0
     cob_range: float = 0.5
-    cob_sampling: str = 'usual'
+    cob_sampling: str = 'within_landscape'
 
 
 linterp_checkpoint_file = '/tmp/linterp_save_checkpoint.pth'
 contour_checkpoint_file = '/tmp/contour_save_checkpoint.pth'
 
 
-def generate_random_2d_vector(weights: List[torch.Tensor], ignore_bias_bn: bool = False,
+def generate_random_2d_vector(weights, ignore_bias_bn: bool = False,
                               normalize: bool = True, seed: int = None) -> List[torch.Tensor]:
     """
         Generates a random vector of size equals to the weights of the model.
@@ -123,12 +121,13 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
                               param_t: Tuple[torch.Tensor, torch.Tensor], a: torch.Tensor,
                               trainset: Dataset, valset: Dataset,
                               metric: TrainingMetrics, config: TrainingConfig,
-                              checkpoint: dict = None) -> Tuple[list, list, list]:
+                              checkpoint: dict = None) -> Tuple[list, list, list, list]:
     """
         This is 1-Dimensional Linear Interpolation
         θ(α) = (1−α)θ + αθ′
     """
     loss = []
+    loss_v = []
     acc_t = []
     acc_v = []
     w_o, cob_o = param_o
@@ -139,7 +138,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             # Interpolate the weight from W to T(W),
             # then interpolate the cob for the activation
             # and batchNorm layers only.
-            print("step {} of {}".format(step + 1, len(a)))
+            print("step {} of {} - alpha={}".format(step + 1, len(a), coord))
             w = (1 - coord) * w_o + coord * w_t
             cob = (1 - coord) * cob_o + coord * cob_t
             model.set_params(w, cob)
@@ -148,6 +147,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
             acc_t.append(res['accuracy'])
             res = test(model, valset, metric, config)
             acc_v.append(res['accuracy'])
+            loss_v.append(res['loss'])
     except:
         if not checkpoint:
             checkpoint = {
@@ -170,7 +170,7 @@ def generate_1D_linear_interp(model: NeuralTeleportationModel, param_o: Tuple[to
         # Since there is no way to know if this is from before teleportation or after teleportation.
         raise
 
-    return loss, acc_t, acc_v
+    return loss, acc_t, loss_v, acc_v
 
 
 def generate_contour_loss_values(model: NeuralTeleportationModel, directions: Tuple[torch.Tensor, torch.Tensor],
@@ -282,76 +282,37 @@ def plot_contours(x: torch.Tensor, y: torch.Tensor, loss: np.ndarray,
     plt.savefig("contour_{}.png".format(fig.number), format='png')
 
 
-def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torch.Tensor,
-                acc_val: List[torch.Tensor] = None):
+def plot_interp(loss: List[torch.Tensor], acc_train: List[torch.Tensor], a: torch.Tensor, model1_label="A",
+                model2_label="B",
+                acc_val: List[torch.Tensor] = None, loss_val: List[torch.Tensor] = None, title=None, savepath=None):
     # Find the nearest value of a=0 and a=1
     idx_o = torch.abs(a - 0).argmin().item()
     idx_t = torch.abs(a - 1).argmin().item()
 
+    loss_color = 'b'
+    accuracy_color = 'r'
+
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
-    ax1.set_title("Linear Interpolation between W and T(W)")
-    ax1.set_ylabel("Loss", color='b')
-    ax1.plot(a, loss, 'bo', markersize=5)
-    ax1.plot(a[idx_o], loss[idx_o], 'ko', markersize=10, label='W')
-    ax1.plot(a[idx_t], loss[idx_t], 'yo', markersize=10, label="T(W)")
-    ax2.set_ylabel('Accuracy', color='r')
-    ax2.plot(a, acc_train, 'ro', markersize=5)
-    ax2.plot(a[idx_o], acc_train[idx_o], 'kx', markersize=10, label='train_W')
-    ax2.plot(a[idx_t], acc_train[idx_t], 'yx', markersize=10, label="train_T(W)")
+
+    if title:
+        ax1.set_title(title)
+
+    ax1.set_ylabel("Loss", color=loss_color)
+    ax1.plot(a, loss, c=loss_color)  # , 'bo', markersize=1)
+    ax1.set_ylim(0, 15)
+
+    ax2.set_ylabel('Accuracy', color=accuracy_color)
+    ax2.plot(a, acc_train, c='r')  # , 'ro', markersize=1)
+
     if acc_val:
-        ax2.plot(a, acc_val, 'go', markersize=5)
-        ax2.plot(a[idx_o], acc_val[idx_o], 'kx', markersize=3, label='val_W')
-        ax2.plot(a[idx_t], acc_val[idx_t], 'yx', markersize=3, label="val_T(W)")
+        ax2.plot(a, acc_val, '--', c=accuracy_color)  # , 'go', markersize=1)
 
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("linterp_{}.png".format(fig.number), format='png')
+    if loss_val:
+        ax1.plot(a, loss_val, '--', c=loss_color)
+    if savepath:
+        plt.savefig(savepath, format='png')
+
+    # plt.legend()
+    print('Figure has been saved in directory Interpolation. CLOSE figure to continue with the experiment.')
     plt.show()
-
-
-if __name__ == '__main__':
-    from neuralteleportation.metrics import accuracy
-    from torch.utils.data.dataloader import DataLoader
-    from neuralteleportation.models.model_zoo.resnetcob import resnet18COB
-    from neuralteleportation.training.experiment_setup import get_dataset_subsets, resnet18COB
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    metric = TrainingMetrics(
-        criterion=nn.CrossEntropyLoss(),
-        metrics=[accuracy]
-    )
-    config = LandscapeConfig(
-        lr=5e-4,
-        epochs=10,
-        batch_size=32,
-        cob_range=1e-5,
-        teleport_at=[5],
-        device=device
-    )
-    model = resnet18COB(num_classes=10)
-    trainset, valset, testset = get_dataset_subsets("cifar10")
-    trainset.data = trainset.data[:5000]  # For the example, don't use all the data.
-    trainloader = DataLoader(trainset, batch_size=config.batch_size, drop_last=True)
-
-    x = torch.linspace(-1, 1, 5)
-    y = torch.linspace(-1, 1, 5)
-    surface = torch.stack((x, y))
-
-    model = NeuralTeleportationModel(model, input_shape=(config.batch_size, 3, 32, 32)).to(device)
-
-    w_checkpoints, final_w = generate_teleportation_training_weights(model, trainset, metric=metric, config=config)
-    delta, eta = generate_random_2d_vector(final_w), generate_random_2d_vector(final_w)
-    loss, _ = generate_contour_loss_values(model, (delta, eta), surface, trainset, metric, config)
-    original_w = w_checkpoints[0]
-
-    loss = np.array(loss)
-    loss = np.resize(loss, (len(x), len(y)))
-
-    teleport_idx = [i + 1 for i in config.teleport_at]
-    w_diff = [(w - final_w) for w in w_checkpoints]
-    w_x_direction, w_y_direction = generate_weights_direction(original_w, w_diff)
-    weight_traj = generate_weight_trajectory(w_diff, (w_x_direction, w_y_direction))
-
-    plot_contours(x, y, loss, weight_traj, teleport_idx=teleport_idx)

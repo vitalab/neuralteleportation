@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 from torch import Tensor
 from torch import nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -70,7 +71,10 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                 config.logger.add_scalar(
                     "val_accuracy", val_res["accuracy"], epoch)
         if lr_scheduler and lr_scheduler_interval == "epoch":
-            lr_scheduler.step()
+            if isinstance(lr_scheduler, ReduceLROnPlateau):
+                lr_scheduler.step(metrics=val_res["accuracy"])
+            else:
+                lr_scheduler.step()
 
     if config.logger is not None:
         config.logger.flush()

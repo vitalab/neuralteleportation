@@ -54,8 +54,7 @@ used by a single user, than the best solution is to simply install the package i
 ```bash
 pip install -e .
 ```
-However, if the virtual environment is shared between multiple users (e.g. installed somewhere in
-`~/projects/def-pmjodoin` in order to be accessible to a whole team of people), then installing the package could
+However, if the virtual environment is shared between multiple users, then installing the package could
 result in conflicts and users overwriting each other's installations. People might not even end up running the version
 of the code they would expect!
 

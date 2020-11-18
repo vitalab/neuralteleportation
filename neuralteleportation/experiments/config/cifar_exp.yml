@@ -26,6 +26,9 @@ training_params:
   shuffle_batches: True
   drop_last_batch: True
 
+initializers:
+  - type: none # Uses PyTorch's default initializer
+
 teleportations:
   teleport:
     mode:

@@ -308,6 +308,85 @@ class BatchNormMixin(COBForwardMixin, NeuronLayerMixin):
     def _forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.base_layer().forward(self, input / self.prev_cob)
 
+    def get_nb_params(self) -> int:
+        """Get the number of parameters in the layer (weight and bias).
+
+        Returns:
+            number of parameters in the layer.
+        """
+        nb_params = np.prod(self.weight.shape)
+        if self.bias is not None:
+            nb_params += np.prod(self.bias.shape)
+
+        nb_params += np.prod(self.running_mean.shape)
+        nb_params += np.prod(self.running_var.shape)
+
+        return int(nb_params)
+
+    def get_weights(self, flatten=True, bias=True, get_proxy: bool = True) -> Tuple[torch.Tensor, ...]:
+        """Get the weights from the layer.
+
+        Returns:
+            tuple of weight tensors.
+        """
+
+        # # Check if the weights were updated during training on loading weights.
+        # if get_proxy:
+        #     self._set_proxy_weights()
+        #     if self.bias is not None and bias:
+        #         if flatten:
+        #             return self.w.flatten(), self.b.flatten()
+        #         else:
+        #             return self.w, self.b
+        #     else:
+        #         if flatten:
+        #             return self.w.flatten(),
+        #         else:
+        #             return self.w,
+        # else:
+        if self.bias is not None and bias:
+            if flatten:
+                return self.weight.flatten(), self.bias.flatten(), self.running_mean.flatten(), self.running_var.flatten()
+            else:
+                return self.weight, self.bias
+        else:
+            if flatten:
+                return self.weight.flatten(), self.running_mean.flatten(), self.running_var.flatten()
+            else:
+                return self.weight,
+
+    def set_weights(self, weights: torch.Tensor):
+        """Set weights for the layer.
+
+        Args:
+            weights: weights to apply to the model.
+        """
+        counter = 0
+        w_shape = self.weight.shape
+        w_nb_params = np.prod(w_shape)
+        self.w = weights[counter:counter + w_nb_params].reshape(w_shape)
+        self.weight = torch.nn.Parameter(self.w, requires_grad=True)
+        counter += w_nb_params
+
+        if self.bias is not None:
+            b_shape = self.bias.shape
+            b_nb_params = np.prod(b_shape)
+            self.b = weights[counter:counter + b_nb_params].reshape(b_shape)
+            self.bias = torch.nn.Parameter(self.b, requires_grad=True)
+            counter += b_nb_params
+
+        m_shape = self.running_mean.shape
+        m_nb_params = np.prod(m_shape)
+        m = weights[counter:counter + m_nb_params].reshape(m_shape).type_as(self.running_mean).detach()
+        self.register_buffer('running_mean', m)
+        counter += m_nb_params
+
+
+        v_shape = self.running_var.shape
+        v_nb_params = np.prod(v_shape)
+        v = weights[counter:counter + v_nb_params].reshape(v_shape).type_as(self.running_var).detach()
+        self.register_buffer('running_var', v)
+
 
 class BatchNorm2dCOB(BatchNormMixin, nn.BatchNorm2d):
     reshape_cob = True

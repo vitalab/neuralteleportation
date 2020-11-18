@@ -1,0 +1,77 @@
+runs_per_config: 5
+
+datasets:
+  - cifar10
+  - cifar100
+
+models:
+  - cls: MLPCOB
+    activation: elu #default=relu
+  - cls: MLPCOB
+    activation: leakyrelu
+  - cls: MLPCOB
+    activation: tanh
+
+initializers:
+  - type: none # Uses PyTorch's default initializer
+
+optimizers:
+  - cls: SGD
+    lr: 0.01
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.001
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.0001
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.01
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.001
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.0001
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+
+training_params:
+  epochs: 100
+  batch_size: 256
+  shuffle_batches: True
+  drop_last_batch: True
+
+teleportations:
+  no_teleport:
+  teleport:
+    mode:
+      random:
+    every_n_epochs:
+      - 0
+    teleport_only_once:
+      - True
+    cob_sampling:
+      - change_landscape
+    cob_range:
+      - 0.9

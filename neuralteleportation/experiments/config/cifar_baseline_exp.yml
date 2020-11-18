@@ -31,6 +31,16 @@ optimizers:
   - cls: Adam
     lr: 0.001
 
+initializers:
+  - type: none # Uses PyTorch's default initializer
+  - type: kaiming
+    gain: 0.02
+    non_linearity: relu # This is used by the kaiming initalizer to compute the correct gain
+  - type: xavier
+    gain: 0.02
+  - type: normal
+    gain: 0.02 # in case of the normal distribution gain is the std of the N(0, std)
+
 training_params:
   epochs: 100
   batch_size: 256

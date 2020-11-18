@@ -7,7 +7,45 @@ from io import StringIO
 from tqdm import tqdm
 from glob import glob
 from pathlib import Path
+from matplotlib.patches import PathPatch
 
+
+def adjust_box_widths(g, fac):
+    """
+    Adjust the widths of a seaborn-generated boxplot.
+    Used to add spacing between box groups.
+    """
+    # iterating through Axes instances
+    for ax in g.axes:
+        # iterating through axes artists:
+        for i, c in enumerate(ax.get_children()):
+            # searching for PathPatches
+            if isinstance(c, PathPatch):
+                if i%2 != 0:
+                    # getting current width of box:
+                    p = c.get_path()
+                    verts = p.vertices
+                    verts_sub = verts[:-1]
+                    xmin = np.min(verts_sub[:, 0])
+                    xmax = np.max(verts_sub[:, 0])
+                    xmid = 0.5*(xmin+xmax)
+                    xhalf = 0.5*(xmax - xmin)
+
+                    # setting new width of box
+                    # xmin_new = xmid-fac*xhalf
+                    xmin_new = xmin
+                    xmax_new = xmid+fac*xhalf
+                    # xmax_new = xmax
+                    verts_sub[verts_sub[:, 0] == xmin, 0] = xmin_new
+                    verts_sub[verts_sub[:, 0] == xmax, 0] = xmax_new
+
+                    # setting new width of median line
+                    for l in ax.lines:
+                        if np.all(l.get_xdata() == [xmin, xmax]):
+                            l.set_xdata([xmin_new, xmax_new])
+
+def is_non_zero_file(fpath):  
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
 def shim_metric_name(metric_name):
     # This is used to normalize the metrics names between Comet and CSV
@@ -18,19 +56,23 @@ def shim_metric_name(metric_name):
     }
     return name_map[metric_name] if metric_name in name_map.keys() else metric_name
 
+def get_csv_from_comet(exp):
+    asset_id = [asset["assetId"] for asset in exp.get_asset_list() if asset["fileName"] == "metrics.csv"]
+    if len(asset_id) == 0:
+        return None
+    asset_content = exp.get_asset(asset_id, return_type="text")
+    buff = StringIO(asset_content)
+    return buff
 
 def get_metrics(exp, csv_file_path=None):
     # Fetches CSV file from comet and generates cometAPI style metrics list,
     # if no csv file is found on comet, fallsback on the comet metrics.
-    if csv_file_path is None:
-        asset_id = [asset["assetId"] for asset in exp.get_asset_list() if asset["fileName"] == "metrics.csv"]
-        if len(asset_id) == 0:
-            print("WARN: metrics.csv not found as a comet asset, falling back on comet metrics.")
+    buff = csv_file_path
+    if buff is None or not is_non_zero_file(buff):
+        buff = get_csv_from_comet(exp)
+        if buff is None:
+            print(f"WARN: metrics.csv not found as a comet asset in {exp.id}, falling back on comet metrics.")
             return exp.get_metrics()
-        asset_content = exp.get_asset(asset_id, return_type="text")
-        buff = StringIO(asset_content)
-    else:
-        buff = csv_file_path
     df = pd.read_csv(buff)
     metrics = []
     for _, row in df.iterrows():
@@ -51,9 +93,10 @@ def fetch_comet_data(exps_ids, metrics_filter, hparams_filter, group_by, experim
         exp = APIExperiment(previous_experiment=exp_id)
         hparams = exp.get_parameters_summary()
         hparams = [hparam for hparam in hparams if hparam["name"].lower() in hparams_filter]
-        g_by_param = [hparam for hparam in hparams if hparam["name"].lower() == group_by]
-        assert len(g_by_param) > 0, f"ERROR: Experiment {exp_id} does not have the hyperparameter {group_by}!"
-        g_by_param = g_by_param[0]["valueCurrent"]
+        g_by_param = [hparam["valueCurrent"] for hparam in hparams if hparam["name"].lower() in group_by]
+        assert len(g_by_param) > 0, f"ERROR: Experiment {exp_id} does not have any of the hyperparameters {group_by}!"
+        g_by_param = " & ".join(g_by_param) if len(g_by_param) > 1 else g_by_param[0]
+        g_by_param = shim_param_name(g_by_param)
         if experiments_csv_dict is not None and exp_id in experiments_csv_dict.keys():
             metrics = get_metrics(exp, csv_file_path=experiments_csv_dict[exp_id])
         else:
@@ -76,10 +119,26 @@ def fetch_comet_data(exps_ids, metrics_filter, hparams_filter, group_by, experim
 
 
 def shim_param_name(g_name):
+    if " & " in g_name:
+        splits = g_name.split(" & ")
+        splits = [shim_param_name(name) for name in splits]
+        return " & ".join(splits)
+    
     name_map = {
         "random": "teleport",
     }
-    return name_map[g_name] if g_name in name_map.keys() else g_name
+    new_name = name_map[g_name] if g_name in name_map.keys() else g_name
+    
+    # Hack to detect if param is optimizer or not: lr is always present in optimizer
+    if "lr" in new_name.lower():
+        optim_obj = eval(new_name)
+        optim_name = optim_obj[0]
+        optim_params = optim_obj[1]
+        new_name = optim_name
+        if "momentum" in optim_params.keys():
+            new_name += " with momentum"
+
+    return new_name
 
 
 def find_best_legend_pos(metric_name):
@@ -91,7 +150,7 @@ def find_best_legend_pos(metric_name):
     return "best"
 
 
-def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir):
+def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, legend_pos="best"):
     # Upper bound on epochs, will be trimmed to max epochs
     n_epochs = 1000
     grouped_plots = {}
@@ -115,19 +174,113 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir):
     with sns.axes_style("darkgrid"):
         fig, ax = plt.subplots()
         fig.suptitle(f"{metric_name}")
-        output_filename = os.path.join(output_dir, f"{metric_name}_{group_by}.png")
+        group_by_str = "_".join(group_by)
+        output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}.pdf")
         clrs = sns.color_palette("husl", len(list(grouped_plots.keys())))
-        for i, g_name in enumerate(list(grouped_plots.keys())):
-            epochs = range(grouped_plots[g_name]["max_epochs"])
+        sort_labels = []
+        for i, g_name in enumerate(sorted(list(grouped_plots.keys()))):
             g_mean = grouped_plots[g_name]["mean"]
+            # Find first nan in the mean array
+            not_nan_idx = np.argwhere(np.isnan(g_mean))
+            not_nan_idx = not_nan_idx[0, 0] if not_nan_idx.size > 0 else -1
+            # truncate the mean and std at the first nan found
+            g_mean = g_mean[:not_nan_idx]
             g_std = grouped_plots[g_name]["std"]
-            ax.plot(epochs, g_mean, label=shim_param_name(g_name), c=clrs[i])
+            g_std = g_std[:not_nan_idx]
+            epochs = range(min(grouped_plots[g_name]["max_epochs"], g_mean.shape[0]))
+            # save the last valid val to sort the labels later
+            sort_labels.append({"last_val": g_mean[-1], "label": g_name})
+            ax.plot(epochs, g_mean, label=g_name, c=clrs[i])
             ax.fill_between(epochs, g_mean - g_std, g_mean + g_std, alpha=0.3, facecolor=clrs[i])
             ax.set_ylabel(f"{metric_name}")
             ax.set_xlabel("epoch")
-        ax.legend(loc=find_best_legend_pos(metric_name))
+        leg_pos = find_best_legend_pos(metric_name) if legend_pos == "infer" else legend_pos
+        sort_labels = sorted(sort_labels, key=lambda dk: dk["last_val"], reverse=True)
+        handles, labels = ax.get_legend_handles_labels()
+        # Sort pyplot's legend with the sorted values
+        handles = [handles[labels.index(dict_lbl["label"])] for dict_lbl in sort_labels]
+        labels = [labels[labels.index(dict_lbl["label"])] for dict_lbl in sort_labels]
+        ax.legend(handles, labels, loc=leg_pos)
         plt.savefig(output_filename)
         print(f"Saved plot at : {output_filename}")
+
+
+def prettify_param_name(param):
+    name_map = {
+        "sgd & no_teleport": "Standard SGD",
+        "sgd & teleport": "Teleported SGD",
+        "sgd with momentum & no_teleport": "Standard SGD with momentum",
+        "sgd with momentum & teleport": "Teleported SGD with momentum",
+    }
+    if param in name_map.keys():
+        return name_map[param]
+    return param
+
+def prettify_metric_name(metric):
+    name_map = {
+        "validate_accuracy": "Validation Accuracy",
+        "train_loss": "Training Loss",
+    }
+    if metric in name_map.keys():
+        return name_map[metric]
+    return metric
+
+def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, legend_pos="best"):
+    # Upper bound on epochs, will be trimmed to max epochs
+    metric_human_name = prettify_metric_name(metric_name)
+    n_epochs = 1000
+    group_runs = []
+    for g_name in metrics_grouped.keys():
+        g_metrics = metrics_grouped[g_name]
+        nb_runs = len(g_metrics)
+        # Parses all runs
+        for i in range(nb_runs):
+            g_data = np.zeros((n_epochs,), dtype=np.float32)
+            run_metric = g_metrics[i][metric_name]
+            # Flatten metric data for this run
+            for k in run_metric.keys():
+                g_data[k] = float(run_metric[k])
+            # DataFrame for plotting
+            df = pd.DataFrame.from_dict({
+                metric_human_name: g_data,
+                "epoch": np.array(range(g_data.shape[0])),
+                "hparam": prettify_param_name(g_name.lower()),
+                "metric": metric_name,
+            })
+            # Subsample the dataframe
+            df = df.iloc[epochs_sample]
+            group_runs.append(df.copy())
+    group_df = pd.concat(group_runs, ignore_index=True)
+    with sns.axes_style("darkgrid"):
+        group_by_str = "_".join(group_by)
+        output_filename = os.path.join(output_dir, f"box_{metric_name}_{group_by_str}.pdf")
+        clrs = sns.color_palette("Paired", 6)
+        g = sns.catplot(
+            x="epoch",
+            y=metric_human_name,
+            hue="hparam",
+            # Hard Coded hue order for now
+            hue_order=["Standard SGD", "Teleported SGD", "Standard SGD with momentum", "Teleported SGD with momentum"],
+            data=group_df,
+            height=6,
+            aspect=1.4,
+            palette={
+                "Standard SGD": clrs[4],
+                "Teleported SGD": clrs[5],
+                "Standard SGD with momentum": clrs[2],
+                "Teleported SGD with momentum": clrs[3]
+            },
+            kind="box",
+            legend=False
+        )
+        plt.legend(loc=legend_pos)
+        g.fig.suptitle(f"{metric_human_name}")
+        g.set_xlabels("Epoch", fontsize=20)
+        g.set_ylabels(metric_human_name, fontsize=20)
+        g.fig.tight_layout(pad=3.0)
+        adjust_box_widths(g.fig, 0.7)
+        plt.savefig(output_filename)
+        print(f"Saved box plot at : {output_filename}")
 
 
 def parse_experiments_dir(experiment_dir):
@@ -168,6 +321,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--group_by",
         type=str,
+        nargs="+",
         help="Hyperparameter to group experiments with.",
         required=True
     )
@@ -176,6 +330,24 @@ if __name__ == '__main__':
         type=Path,
         help="Output directory to save figures in.",
         required=True
+    )
+    parser.add_argument(
+        "--legend_pos",
+        type=str,
+        help="Position of the legend on the plots, (by default uses 'best' option of matplotlib)",
+        default="best",
+    )
+    parser.add_argument(
+        "--boxplot",
+        action="store_true",
+        help="Whether to plot the Boxplot.",
+    )
+    parser.add_argument(
+        "--box_epochs",
+        type=int,
+        nargs="+",
+        help="Epochs to subsample the box plot X axis with.",
+        default=None
     )
     args = parser.parse_args()
 
@@ -195,7 +367,10 @@ if __name__ == '__main__':
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir, exist_ok=True)
 
-    all_metrics_grouped = fetch_comet_data(experiments_ids, args.metrics, [args.group_by], args.group_by,
+    all_metrics_grouped = fetch_comet_data(experiments_ids, args.metrics, args.group_by, args.group_by,
                                            experiments_csv_dict=experiments_csv_dict)
     for metric in args.metrics:
-        plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir)
+        plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir, args.legend_pos)
+        if args.boxplot:
+            epochs_subsample = [5, 10, 20, 95] if args.box_epochs is None else args.box_epochs
+            plot_box(all_metrics_grouped, metric, epochs_subsample, args.group_by, args.out_dir, args.legend_pos)

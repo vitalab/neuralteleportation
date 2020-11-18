@@ -8,6 +8,9 @@ models:
   - resnet18COB
   - densenet121COB
 
+initializers:
+  - type: none # Uses PyTorch's default initializer
+
 optimizers:
   - cls: SGD
     lr: 0.01
