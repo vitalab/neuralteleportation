@@ -54,29 +54,26 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                     device=config.device, config=config, lr_scheduler=lr_scheduler)
 
         if val_dataset:
-            if config.comet_logger:
-                with config.comet_logger.validate():
-                    val_res = test(model, val_dataset, metrics, config)
-            else:
+            with config.logger.validate():
                 val_res = test(model, val_dataset, metrics, config)
 
             print("Validation: {}".format(val_res))
             if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
                 print("Stopping: Loss NaN!")
-                if config.exp_logger:
-                    config.exp_logger.add_text(
+                if config.logger:
+                    config.logger.add_text(
                         "Info", "Stopped due to Loss NaN.")
                 break
-            if config.exp_logger is not None:
-                config.exp_logger.add_scalar(
+            if config.logger is not None:
+                config.logger.add_scalar(
                     "val_loss", val_res["loss"], epoch)
-                config.exp_logger.add_scalar(
+                config.logger.add_scalar(
                     "val_accuracy", val_res["accuracy"], epoch)
         if lr_scheduler and lr_scheduler_interval == "epoch":
             lr_scheduler.step()
 
-    if config.exp_logger is not None:
-        config.exp_logger.flush()
+    if config.logger is not None:
+        config.logger.flush()
 
     return model
 
@@ -120,12 +117,9 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
     # Log the mean of each metric at the end of the epoch
     if config is not None:
         reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
-        if config.comet_logger:
-            config.comet_logger.log_metrics(reduced_metrics, epoch=epoch)
-        if config.exp_logger:
-            if config.exp_logger:
-                for metric_name, value in reduced_metrics.items():
-                    config.exp_logger.add_scalar(f"train_{metric_name}", value, epoch)
+        config.logger.log_metrics(reduced_metrics, epoch=epoch)
+        for metric_name, value in reduced_metrics.items():
+            config.logger.add_scalar(f"train_{metric_name}", value, epoch)
 
 
 def test(model: nn.Module, dataset: Dataset,
@@ -154,8 +148,7 @@ def test(model: nn.Module, dataset: Dataset,
 
     pbar.close()
     reduced_results = dict(pd.DataFrame(results).mean())
-    if config.comet_logger:
-        config.comet_logger.log_metrics(reduced_results)
+    config.logger.log_metrics(reduced_results)
     return reduced_results
 
 

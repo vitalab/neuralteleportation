@@ -102,4 +102,4 @@ out_root=${out_root_dir:-~/scratch/neuralteleportation}
 
 # Run task
 python "$project_root_dir"/neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
-  --data_root_dir "$compute_node_data_dir" --comet_config "$project_root_dir"/.comet.config --out_root_dir="$out_root"
+  --data_root_dir "$compute_node_data_dir" --out_root_dir="$out_root"

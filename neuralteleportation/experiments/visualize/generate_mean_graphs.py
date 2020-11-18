@@ -2,7 +2,6 @@ import os
 import numpy as np
 import seaborn as sns
 import pandas as pd
-from comet_ml.api import APIExperiment
 from matplotlib import pyplot as plt
 from io import StringIO
 from tqdm import tqdm

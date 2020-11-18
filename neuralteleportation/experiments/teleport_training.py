@@ -1,11 +1,8 @@
 import copy
 import itertools
+import uuid
 from pathlib import Path
 
-# Necessary to import Comet first to use Comet's auto logging facility and
-# to avoid "Please import comet before importing these modules" error.
-# (see ref: https://www.comet.ml/docs/python-sdk/warnings-errors/)
-import comet_ml  # noqa
 import torch.optim as optim
 import yaml
 from torch import nn
@@ -19,7 +16,7 @@ from neuralteleportation.training.teleport.optim import OptimalTeleportationTrai
 from neuralteleportation.training.teleport.pseudo import PseudoTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
-from neuralteleportation.utils.logger import init_comet_experiment, CsvLogger
+from neuralteleportation.utils.logger import DiskLogger
 
 __training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
@@ -27,7 +24,16 @@ __training_configs__ = {"no_teleport": TrainingConfig,
                         "pseudo": PseudoTeleportationTrainingConfig}
 
 
-def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_root_dir: Path = None) -> None:
+def make_experiment(out_root: Path):
+    assert out_root.exists()
+    experiment_id = str(uuid.uuid4())  # Create a unique ID randomly
+    experiment_dir = out_root / experiment_id
+    assert not experiment_dir.exists()  # Check for collision (Extremely unlikely - I assume it will never happen)
+    experiment_dir.mkdir()
+    return experiment_dir
+
+
+def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
 
@@ -102,14 +108,12 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
 
                     # Iterate over different possible training configurations
                     for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
-                        comet_experiment = init_comet_experiment(comet_config)
-                        experiment_path = out_root / comet_experiment.get_key()
+                        experiment_dir = make_experiment(out_root)
                         training_config = training_config_cls(
                             optimizer=(optimizer_name, optimizer_kwargs),
                             lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                             device='cuda',
-                            comet_logger=comet_experiment,
-                            exp_logger=CsvLogger(experiment_path),
+                            logger=DiskLogger(experiment_dir),
                             **training_params,
                             **teleport_config_kwargs,
                             **teleport_mode_config_kwargs,
@@ -134,8 +138,6 @@ def main():
         description="Run an arbitrary series of experiments training neural networks using teleportations")
     parser.add_argument("config", type=Path,
                         help="Path to the YAML file describing the configuration matrix of the experiments to run")
-    parser.add_argument("--comet_config", type=Path, default=Path(".comet.config"),
-                        help="Path to the Comet config file indicating how to log the experiments")
     parser.add_argument("--data_root_dir", type=Path,
                         help="Root directory of data inside which each dataset creates its own directory. "
                              "This option is useful in case the datasets must be pre-downloaded to a known location "
@@ -150,7 +152,7 @@ def main():
     print(f'INFO: Using output root dir: {args.out_root_dir}')
     args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
-    run_experiment(args.config, args.comet_config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir)
+    run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir)
 
 
 if __name__ == '__main__':

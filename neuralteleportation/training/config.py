@@ -2,7 +2,6 @@ import copy
 from dataclasses import dataclass, fields
 from typing import Sequence, Callable, Dict, Any, Tuple
 
-from comet_ml import Experiment
 from torch import Tensor
 from torch.nn.modules.loss import _Loss
 
@@ -17,8 +16,7 @@ class TrainingConfig:
     batch_size: int = 32
     drop_last_batch: bool = False
     device: str = 'cpu'
-    comet_logger: Experiment = None
-    exp_logger: BaseLogger = None
+    logger: BaseLogger = None
     shuffle_batches: bool = False
 
 
