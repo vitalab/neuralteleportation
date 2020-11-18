@@ -86,7 +86,7 @@ $HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_traini
 
 produces all the metrics needed to reproduce the plots of figure 9 in the paper. The metrics have to be in a directory specific to the initialization, the model and the dataset. For example, a directory Metrics/xavier_VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model with xavier initialization for the dataset CIFAR-10. **WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
 
-* **Pseudo-teleportation vs SGD** (Figure 10): Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/pseudoo_teleportation.yaml* 
+* **Pseudo-teleportation vs SGD** (Figure 10): Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/pseudoo_teleportation.yml* 
 
 ```bash
 $HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_PseudoTeleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Pseudo_teleport/VGG_cifar10
