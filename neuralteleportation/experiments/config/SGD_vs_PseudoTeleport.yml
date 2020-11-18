@@ -1,0 +1,75 @@
+runs_per_config: 5
+
+datasets:
+  - cifar10
+  - cifar100
+
+models:
+  - MLPCOB
+  - resnet18COB
+  - vgg16_bnCOB
+  - densenet121COB
+
+initializers:
+  - type: none # Uses PyTorch's default initializer
+
+optimizers:
+  - cls: SGD
+    lr: 0.01
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.001
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.0001
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.01
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.001
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+  - cls: SGD
+    lr: 0.0001
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+
+training_params:
+  epochs: 100
+  batch_size: 256
+  shuffle_batches: True
+  drop_last_batch: True
+
+teleportations:
+  no_teleport:
+  teleport:
+    mode:
+      pseudo:
+    every_n_epochs:
+      - 0
+    teleport_only_once:
+      - True
+    cob_sampling:
+      - change_landscape
+    cob_range:
+      - 0.9
