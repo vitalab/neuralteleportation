@@ -5,6 +5,7 @@ import math
 import os
 from pathlib import Path
 
+import torch
 import torch.optim as optim
 import yaml
 from torch import nn
@@ -64,6 +65,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                     model_kwargs = model_obj
                 # initalizers
                 for initializer in config["initializers"]:
+                    config['initializer'] = initializer
+
                     # optimizers
                     for optimizer_kwargs in config["optimizers"]:
                         optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
@@ -132,7 +135,7 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                         optimizer=(optimizer_name, optimizer_kwargs),
                                         lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                                         device='cuda' if cuda_avail() else 'cpu',
-                                        logger=DiskLogger(experiment_dir),
+                                        logger=DiskLogger(experiment_path),
                                         **training_params,
                                         **teleport_config_kwargs,
                                         **teleport_mode_config_kwargs,
@@ -141,7 +144,6 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     # Run experiment (setting up a new model and optimizer for each experiment)
                                     model = get_model(dataset_name, model_name, device=training_config.device,
                                                     initializer=initializer, **model_kwargs)
-                                    comet_experiment.log_parameter(name="initializer", value=[initializer])
                                     optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
                                     lr_scheduler = None
                                     if has_scheduler:
@@ -149,29 +151,26 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     run_model(model, training_config, metrics,
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)
-                                    if experiment_path:
 
-                                        if teleport != 'no_teleport' and 'optim_metric' in teleport_mode_config_kwargs.keys():
-                                            teleport_info = teleport_mode_config_kwargs['optim_metric'].__name__
-                                        else:
-                                            teleport_info = '_' + teleport_mode if teleport != 'no_teleport' else ''  # FIXME
+                                    if teleport != 'no_teleport' and 'optim_metric' in teleport_mode_config_kwargs.keys():
+                                        teleport_info = teleport_mode_config_kwargs['optim_metric'].__name__
+                                    else:
+                                        teleport_info = '_' + teleport_mode_config_kwargs['teleport_mode'] if teleport != 'no_teleport' else ''  # FIXME
 
-                                        lr_scheduler_info = '_' + lr_scheduler_name if has_scheduler else ''
+                                    lr_scheduler_info = '_' + lr_scheduler_name if has_scheduler else ''
 
-                                        filename = "{}_{}-{}_{}-{}{}{}.pt".format(model_name, dataset_name,
-                                                                                training_config.batch_size,
-                                                                                optimizer_name, optimizer_kwargs['lr'],
-                                                                                lr_scheduler_info, teleport_info
-                                                                                )
+                                    filename = "{}_{}-{}_{}-{}{}{}.pt".format(model_name, dataset_name,
+                                                                            training_config.batch_size,
+                                                                            optimizer_name, optimizer_kwargs['lr'],
+                                                                            lr_scheduler_info, teleport_info
+                                                                            )
+                                    torch.save(model.state_dict(), experiment_path / filename)
 
-                                        filename = get_nonexistent_path(os.path.join(experiment_path, filename), mkdir=False)
-
-                                        torch.save(model.state_dict(), filename)
-
-                                        # Save training config with same name as weights
-                                        training_config.comet_logger = None # set to None to avoid error when dumping.
-                                        with open(os.path.splitext(filename)[0] + '.yml', 'w') as f:
-                                            yaml.dump(training_config, f, indent=0)
+                                    # Save training config with same name as weights
+                                    training_config.logger = None # set to None to avoid error when dumping.
+                                    yml_filename = (experiment_path / filename).with_suffix('.yml')
+                                    with open(yml_filename, 'w') as f:
+                                        yaml.dump(training_config, f, indent=0)
 
 
 def main():
