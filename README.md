@@ -7,7 +7,6 @@ Neural network teleportation using representation theory of quivers.
 ## How to run   
 First, install dependencies   
 ```bash
-
 # set-up project's environment
 cd neuralteleportation
 conda env create -f neuralteleportation.yml
