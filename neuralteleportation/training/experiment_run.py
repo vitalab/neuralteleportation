@@ -20,9 +20,11 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
     print(f"Training {model_cls.__name__}")
 
     # Always log parameters (to enable useful filtering options in the web interface)
-    config.logger.log_parameters(config_to_dict(config))
-    config.logger.log_parameters({"model_name": model_cls.__name__.lower(),
-                                        "dataset_name": train_set.__class__.__name__.lower()})
+    hparams = config_to_dict(config)
+    hparams.update({
+        "model_name": model_cls.__name__.lower(),
+        "dataset_name": train_set.__class__.__name__.lower()})
+    config.logger.log_parameters(hparams)
     with config.logger.train():
         trained_model = train(model, train_set, metrics, config,
                               val_dataset=val_set, optimizer=optimizer, lr_scheduler=lr_scheduler)

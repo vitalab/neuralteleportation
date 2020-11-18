@@ -95,6 +95,8 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
+        if batch_idx == config.max_batch:
+            break
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
@@ -136,6 +138,8 @@ def test(model: nn.Module, dataset: Dataset,
     pbar = tqdm(enumerate(test_loader))
     with torch.no_grad():
         for i, (data, target) in pbar:
+            if i == config.max_batch:
+                break
             data, target = data.to(config.device), target.to(config.device)
             output = model(data)
             results['loss'].append(metrics.criterion(output, target).item())

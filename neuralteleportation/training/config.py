@@ -18,6 +18,7 @@ class TrainingConfig:
     device: str = 'cpu'
     logger: BaseLogger = None
     shuffle_batches: bool = False
+    max_batch: int = None
 
 
 @dataclass
@@ -38,7 +39,7 @@ class TrainingMetrics:
     metrics: Sequence[Callable[[Tensor, Tensor], float]]
 
 
-_SERIALIZATION_EXCLUDED_FIELDS = ['comet_logger', 'exp_logger']
+_SERIALIZATION_EXCLUDED_FIELDS = ['logger']
 
 
 def config_to_dict(training_config: TrainingConfig) -> Dict[str, Any]:

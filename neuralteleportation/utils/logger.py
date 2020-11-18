@@ -69,6 +69,7 @@ class DiskLogger(BaseLogger):
         self.hparams_file_path: Path = experiment_path / 'hparams.yml'
 
         self.prefix = None
+        self.params_logged = False
 
     def make_prefixed_metric_name(self, metric_name):
         if self.prefix is None:
@@ -97,8 +98,10 @@ class DiskLogger(BaseLogger):
         self._update()
 
     def log_parameters(self, params_dict):
+        assert not self.params_logged
         with open(self.hparams_file_path, 'w') as f:
             yaml.dump(params_dict, f)
+        self.params_logged = True
 
     def log_metrics(self, metrics_dict, epoch=0):
         for k, v in metrics_dict.items():

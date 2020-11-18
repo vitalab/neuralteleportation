@@ -166,12 +166,6 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                                                             )
                                     torch.save(model.state_dict(), experiment_path / filename)
 
-                                    # Save training config with same name as weights
-                                    training_config.logger = None # set to None to avoid error when dumping.
-                                    yml_filename = (experiment_path / filename).with_suffix('.yml')
-                                    with open(yml_filename, 'w') as f:
-                                        yaml.dump(training_config, f, indent=0)
-
 
 def main():
     default_out_root = Path('./out')
