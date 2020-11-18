@@ -29,7 +29,7 @@ This repository contains the code necessary to teleport a neural network.
 
 * [neuralteleportation](neuralteleportation) : contains the main classes for network teleportation. 
 * [layers](neuralteleportation/layers): contains the classes necessary for teleporting individual layers. 
-* [models](neuralteleportation/models): contains frequently used models such as MLP, VGG, ResNet and DenseNet
+* [models](neuralteleportation/models): contains frequently used models such as MLP, VGG, ResNet and DenseNet.
 * [experiments](neuralteleportation/experiments): contains experiments using teleportation. 
 * [tests](tests): contains black-box tests for network teleportation. 
 
@@ -38,10 +38,10 @@ This repository contains the code necessary to teleport a neural network.
 * **Micro-teleportations** (Figure 4): Running the script *neuralteleportation/experiments/micro_teleportation/microteleportation.py*
 
 ```bash
-python neuralteleportation/experiments/micro_teleportation/microteleportation.py
+python neuralteleportation/experiments/micro_teleportation/micro_teleportation.py
 ```
 
-produces histograms of angles of gradient vs micro-teleportations for MLP, VGG, ResNet and DenseNet on CIFAR-10 and random data.
+produces histograms of angles of gradient vs micro-teleportations for MLP and VGG on CIFAR-10 and random data.
 
 
 * **Interpolations for flatness visualization** (Figure 5): Running the script *neuralteleportation/experiments/flatness_1D_interp.py*
@@ -84,7 +84,7 @@ produces all the metrics needed to reproduce the plots of figure 8 in the paper.
 $HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/Teleportation_vs_Initializers.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Initializations/Metrics/xavier_VGG_cifar10
 ```
 
-produces all the metrics needed to reproduce the plots of figure 9 in the paper. The metrics have to be in a directory specific to the initialization, the model and the dataset. For example, a directory Metrics/xavier_VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model with xavier initialization for the dataset CIFAR-10.
+produces all the metrics needed to reproduce the plots of figure 9 in the paper. The metrics have to be in a directory specific to the initialization, the model and the dataset. For example, a directory Metrics/xavier_VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model with xavier initialization for the dataset CIFAR-10. **WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
 
 * **Pseudo-teleportation vs SGD** (Figure 10): Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/pseudoo_teleportation.yaml* 
 
