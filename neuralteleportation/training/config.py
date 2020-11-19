@@ -50,12 +50,15 @@ def config_to_dict(training_config: TrainingConfig) -> Dict[str, Any]:
     """
     from neuralteleportation.experiments.teleport_training import __training_configs__
     training_config_cls_label = {v: k for k, v in __training_configs__.items()}[training_config.__class__]
-    result = [("teleport", training_config_cls_label)]
+    result = {"teleport": training_config_cls_label}
     for field in [f for f in fields(training_config) if f.name not in _SERIALIZATION_EXCLUDED_FIELDS]:
         field_value = getattr(training_config, field.name)
         if callable(field_value):
             field_value = field_value.__name__
         else:
+            if type(field_value) is tuple:
+                # Tuples cannot be loaded back by the yaml module
+                field_value = list(field_value)
             field_value = copy.deepcopy(field_value)
-        result.append((field.name, field_value))
-    return dict(result)
+        result[field.name] = field_value
+    return result

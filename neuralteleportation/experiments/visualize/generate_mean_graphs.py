@@ -1,13 +1,16 @@
 import os
+from collections import defaultdict
+from io import StringIO
+from glob import glob
+from pathlib import Path
+import yaml
+
 import numpy as np
 import seaborn as sns
 import pandas as pd
 from matplotlib import pyplot as plt
-from io import StringIO
-from tqdm import tqdm
-from glob import glob
-from pathlib import Path
 from matplotlib.patches import PathPatch
+from tqdm import tqdm
 
 
 def adjust_box_widths(g, fac):
@@ -87,20 +90,30 @@ def get_metrics(exp, csv_file_path=None):
     return metrics
 
 
-def fetch_comet_data(exps_ids, metrics_filter, hparams_filter, group_by, experiments_csv_dict=None):
-    all_metrics_grouped = {}
+def fetch_data(exps_ids, metrics_filter, group_by, experiments_csv_dict=None):
+    all_metrics_grouped = defaultdict(list)
     for exp_id in tqdm(exps_ids, desc="Fetching data: "):
-        exp = APIExperiment(previous_experiment=exp_id)
-        hparams = exp.get_parameters_summary()
-        hparams = [hparam for hparam in hparams if hparam["name"].lower() in hparams_filter]
-        g_by_param = [hparam["valueCurrent"] for hparam in hparams if hparam["name"].lower() in group_by]
-        assert len(g_by_param) > 0, f"ERROR: Experiment {exp_id} does not have any of the hyperparameters {group_by}!"
-        g_by_param = " & ".join(g_by_param) if len(g_by_param) > 1 else g_by_param[0]
-        g_by_param = shim_param_name(g_by_param)
-        if experiments_csv_dict is not None and exp_id in experiments_csv_dict.keys():
-            metrics = get_metrics(exp, csv_file_path=experiments_csv_dict[exp_id])
-        else:
-            metrics = get_metrics(exp)
+        # Get hparams
+        metrics_file = Path(experiments_csv_dict[exp_id])
+        hparams_file = metrics_file.parent / 'hparams.yml'
+        with open(hparams_file, 'r') as f:
+            hparams = yaml.safe_load(f)
+
+        # Get group name (e.g "SGD & no_teleport")
+        def get_value(param_value):
+            # For case where value is [class_name, constructor_params]
+            if type(param_value) is list:
+                v = param_value[0]
+            else:
+                v = param_value
+            assert type(v) is str
+            return v
+        group_param_values = [get_value(v) for k, v in hparams.items() if k in group_by]
+        assert len(group_param_values) > 0, f"ERROR: Experiment {exp_id} does not have any of the hyperparameters {group_by}!"
+        group_name = " & ".join(group_param_values)
+
+        # Get metrics array
+        metrics = get_metrics(None, csv_file_path=experiments_csv_dict[exp_id])
         metrics = [metric for metric in metrics if metric["metricName"].lower() in metrics_filter]
         metrics_dict = {}
         for metric in metrics:
@@ -111,34 +124,8 @@ def fetch_comet_data(exps_ids, metrics_filter, hparams_filter, group_by, experim
                 metrics_dict[name] = {epoch: value}
             else:
                 metrics_dict[name][epoch] = value
-        if g_by_param not in all_metrics_grouped.keys():
-            all_metrics_grouped[g_by_param] = [metrics_dict]
-        else:
-            all_metrics_grouped[g_by_param].append(metrics_dict)
+        all_metrics_grouped[group_name].append(metrics_dict)
     return all_metrics_grouped
-
-
-def shim_param_name(g_name):
-    if " & " in g_name:
-        splits = g_name.split(" & ")
-        splits = [shim_param_name(name) for name in splits]
-        return " & ".join(splits)
-    
-    name_map = {
-        "random": "teleport",
-    }
-    new_name = name_map[g_name] if g_name in name_map.keys() else g_name
-    
-    # Hack to detect if param is optimizer or not: lr is always present in optimizer
-    if "lr" in new_name.lower():
-        optim_obj = eval(new_name)
-        optim_name = optim_obj[0]
-        optim_params = optim_obj[1]
-        new_name = optim_name
-        if "momentum" in optim_params.keys():
-            new_name += " with momentum"
-
-    return new_name
 
 
 def find_best_legend_pos(metric_name):
@@ -367,8 +354,8 @@ if __name__ == '__main__':
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir, exist_ok=True)
 
-    all_metrics_grouped = fetch_comet_data(experiments_ids, args.metrics, args.group_by, args.group_by,
-                                           experiments_csv_dict=experiments_csv_dict)
+    all_metrics_grouped = fetch_data(experiments_ids, args.metrics, args.group_by,
+                                     experiments_csv_dict=experiments_csv_dict)
     for metric in args.metrics:
         plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir, args.legend_pos)
         if args.boxplot:
