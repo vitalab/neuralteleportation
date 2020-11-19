@@ -49,123 +49,127 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
         if data_root_dir is not None:
             dataset_kwargs.update(root=data_root_dir, download=False)
         train_set, val_set, test_set = get_dataset_subsets(dataset_name, **dataset_kwargs)
-
         for training_params in all_training_params:
-
             # models
-            for model_name in config["models"]:
+            for model_obj in config["models"]:
+                model_obj = copy.deepcopy(model_obj)
+                model_kwargs = {}
+                model_name = model_obj
+                if not isinstance(model_obj, str):
+                    model_name = model_obj.pop("cls")
+                    model_kwargs = model_obj
+                # initalizers
+                for initializer in config["initializers"]:
+                    # optimizers
+                    for optimizer_kwargs in config["optimizers"]:
+                        optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
+                        optimizer_name = optimizer_kwargs.pop("cls")
+                        lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
+                        has_scheduler = False
+                        if lr_scheduler_kwargs:
+                            lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
+                            lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
+                            if "lr_lambda" in lr_scheduler_kwargs.keys():
+                                # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
+                                # This is needed to transform lambda functions defined as strings to a python callable
+                                lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
 
-                # optimizers
-                for optimizer_kwargs in config["optimizers"]:
-                    optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
-                    optimizer_name = optimizer_kwargs.pop("cls")
-                    lr_scheduler_kwargs = optimizer_kwargs.pop("lr_scheduler", None)
-                    has_scheduler = False
-                    if lr_scheduler_kwargs:
-                        lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
-                        lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
-                        if "lr_lambda" in lr_scheduler_kwargs.keys():
-                            # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
-                            # This is needed to transform lambda functions defined as strings to a python callable
-                            lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
+                            if "steps_per_epoch" in lr_scheduler_kwargs.keys():
+                                steps = len(train_set) / training_params['batch_size']
+                                lr_scheduler_kwargs['steps_per_epoch'] = math.floor(steps) \
+                                    if training_params['drop_last_batch'] else math.ceil(steps)
 
-                        if "steps_per_epoch" in lr_scheduler_kwargs.keys():
-                            steps = len(train_set) / training_params['batch_size']
-                            lr_scheduler_kwargs['steps_per_epoch'] = math.floor(steps) \
-                                if training_params['drop_last_batch'] else math.ceil(steps)
+                            has_scheduler = True
 
-                        has_scheduler = True
+                        # teleport configuration
+                        for teleport, teleport_config_kwargs in config["teleportations"].items():
 
-                    # teleport configuration
-                    for teleport, teleport_config_kwargs in config["teleportations"].items():
-
-                        # w/o teleport configuration
-                        if teleport == "no_teleport":
-                            training_config_cls = __training_configs__["no_teleport"]
-                            # Ensure config collections are iterable, even if no config was defined
-                            # This is done to simplify the generation of the configuration matrix
-                            teleport_config_kwargs, teleport_mode_configs = {}, [(training_config_cls, {})]
-
-                        # w/ teleport configuration
-                        else:  # teleport == "teleport"
-                            # Copy the config to play around with its content without affecting the config loaded in memory
-                            teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
-
-                            teleport_mode_obj = teleport_config_kwargs.pop("mode")
-                            teleport_mode_configs = []
-                            for teleport_mode, teleport_mode_config_kwargs in teleport_mode_obj.items():
-                                training_config_cls = __training_configs__[teleport_mode]
-                                if teleport_mode == "optim":
-                                    teleport_mode_config_kwargs["optim_metric"] = [
-                                        getattr(teleport_optim, metric) for metric
-                                        in teleport_mode_config_kwargs.pop("metric")
-                                    ]
-
+                            # w/o teleport configuration
+                            if teleport == "no_teleport":
+                                training_config_cls = __training_configs__["no_teleport"]
                                 # Ensure config collections are iterable, even if no config was defined
                                 # This is done to simplify the generation of the configuration matrix
-                                if teleport_mode_config_kwargs is None:
-                                    teleport_mode_config_kwargs = {}
+                                teleport_config_kwargs, teleport_mode_configs = {}, [(training_config_cls, {})]
 
-                                for teleport_mode_single_config_kwargs in dict_values_product(
-                                        teleport_mode_config_kwargs):
-                                    teleport_mode_configs.append(
-                                        (training_config_cls, teleport_mode_single_config_kwargs))
+                            # w/ teleport configuration
+                            else:  # teleport == "teleport"
+                                # Copy the config to play around with its content without affecting the config loaded in memory
+                                teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
 
-                        # generate matrix of training configuration
-                        # (cartesian product of values for each training config kwarg)
-                        teleport_configs = dict_values_product(teleport_config_kwargs)
-                        config_matrix = itertools.product(teleport_configs, teleport_mode_configs)
+                                teleport_mode_obj = teleport_config_kwargs.pop("mode")
+                                teleport_mode_configs = []
+                                for teleport_mode, teleport_mode_config_kwargs in teleport_mode_obj.items():
+                                    training_config_cls = __training_configs__[teleport_mode]
+                                    if teleport_mode == "optim":
+                                        teleport_mode_config_kwargs["optim_metric"] = [
+                                            getattr(teleport_optim, metric) for metric
+                                            in teleport_mode_config_kwargs.pop("metric")
+                                        ]
 
-                        # Iterate over different possible training configurations
-                        for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
-                            comet_experiment = init_comet_experiment(comet_config) if os.path.isfile(
-                                        comet_config) else None
-                            experiment_path = out_root / comet_experiment.get_key()  # FIXME don't rely on comet
-                            training_config = training_config_cls(
-                                optimizer=(optimizer_name, optimizer_kwargs),
-                                lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
-                                device='cuda' if cuda_avail() else 'cpu',
-                                comet_logger=comet_experiment,
-                                exp_logger=CsvLogger(experiment_path),
-                                **training_params,
-                                **teleport_config_kwargs,
-                                **teleport_mode_config_kwargs,
-                            )
+                                    # Ensure config collections are iterable, even if no config was defined
+                                    # This is done to simplify the generation of the configuration matrix
+                                    if teleport_mode_config_kwargs is None:
+                                        teleport_mode_config_kwargs = {}
 
-                            # Run experiment (setting up a new model and optimizer for each experiment)
-                            model = get_model(dataset_name, model_name, device=training_config.device)
-                            optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
-                            lr_scheduler = None
-                            if has_scheduler:
-                                lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer,
-                                                                                              **lr_scheduler_kwargs)
-                            run_model(model, training_config, metrics,
-                                      train_set, test_set, val_set=val_set,
-                                      optimizer=optimizer, lr_scheduler=lr_scheduler)
+                                    for teleport_mode_single_config_kwargs in dict_values_product(teleport_mode_config_kwargs):
+                                        teleport_mode_configs.append((training_config_cls, teleport_mode_single_config_kwargs))
 
-                            if experiment_path:
+                            # generate matrix of training configuration
+                            # (cartesian product of values for each training config kwarg)
+                            teleport_configs = dict_values_product(teleport_config_kwargs)
+                            config_matrix = itertools.product(teleport_configs, teleport_mode_configs)
 
-                                if teleport != 'no_teleport' and 'optim_metric' in teleport_mode_config_kwargs.keys():
-                                    teleport_info = teleport_mode_config_kwargs['optim_metric'].__name__
-                                else:
-                                    teleport_info = '_' + teleport_mode if teleport != 'no_teleport' else ''  # FIXME
+                            # Iterate over different possible training configurations
+                            for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
+                                num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
+                                for _ in range(num_runs):
+                                    comet_experiment = init_comet_experiment(comet_config) if os.path.isfile(comet_config) else None
+                                    experiment_path = out_root / comet_experiment.get_key()  # FIXME don't rely on comet
+                                    training_config = training_config_cls(
+                                        optimizer=(optimizer_name, optimizer_kwargs),
+                                        lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
+                                        device='cuda' if cuda_avail() else 'cpu',
+                                        comet_logger=comet_experiment,
+                                        exp_logger=CsvLogger(experiment_path),
+                                        **training_params,
+                                        **teleport_config_kwargs,
+                                        **teleport_mode_config_kwargs,
+                                    )
 
-                                lr_scheduler_info = '_' + lr_scheduler_name if has_scheduler else ''
+                                    # Run experiment (setting up a new model and optimizer for each experiment)
+                                    model = get_model(dataset_name, model_name, device=training_config.device,
+                                                    initializer=initializer, **model_kwargs)
+                                    comet_experiment.log_parameter(name="initializer", value=[initializer])
+                                    optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
+                                    lr_scheduler = None
+                                    if has_scheduler:
+                                        lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
+                                    run_model(model, training_config, metrics,
+                                            train_set, test_set, val_set=val_set,
+                                            optimizer=optimizer, lr_scheduler=lr_scheduler)
+                                    if experiment_path:
 
-                                filename = "{}_{}-{}_{}-{}{}{}.pt".format(model_name, dataset_name,
-                                                                          training_config.batch_size,
-                                                                          optimizer_name, optimizer_kwargs['lr'],
-                                                                          lr_scheduler_info, teleport_info
-                                                                          )
+                                        if teleport != 'no_teleport' and 'optim_metric' in teleport_mode_config_kwargs.keys():
+                                            teleport_info = teleport_mode_config_kwargs['optim_metric'].__name__
+                                        else:
+                                            teleport_info = '_' + teleport_mode if teleport != 'no_teleport' else ''  # FIXME
 
-                                filename = get_nonexistent_path(os.path.join(experiment_path, filename), mkdir=False)
+                                        lr_scheduler_info = '_' + lr_scheduler_name if has_scheduler else ''
 
-                                torch.save(model.state_dict(), filename)
+                                        filename = "{}_{}-{}_{}-{}{}{}.pt".format(model_name, dataset_name,
+                                                                                training_config.batch_size,
+                                                                                optimizer_name, optimizer_kwargs['lr'],
+                                                                                lr_scheduler_info, teleport_info
+                                                                                )
 
-                                # Save training config with same name as weights
-                                training_config.comet_logger = None # set to None to avoid error when dumping.
-                                with open(os.path.splitext(filename)[0] + '.yml', 'w') as f:
-                                    yaml.dump(training_config, f, indent=0)
+                                        filename = get_nonexistent_path(os.path.join(experiment_path, filename), mkdir=False)
+
+                                        torch.save(model.state_dict(), filename)
+
+                                        # Save training config with same name as weights
+                                        training_config.comet_logger = None # set to None to avoid error when dumping.
+                                        with open(os.path.splitext(filename)[0] + '.yml', 'w') as f:
+                                            yaml.dump(training_config, f, indent=0)
 
 
 def main():
