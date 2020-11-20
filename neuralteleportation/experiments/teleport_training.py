@@ -152,19 +152,7 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)
 
-                                    if teleport != 'no_teleport' and 'optim_metric' in teleport_mode_config_kwargs.keys():
-                                        teleport_info = teleport_mode_config_kwargs['optim_metric'].__name__
-                                    else:
-                                        teleport_info = '_' + teleport_mode_config_kwargs['teleport_mode'] if teleport != 'no_teleport' else ''  # FIXME
-
-                                    lr_scheduler_info = '_' + lr_scheduler_name if has_scheduler else ''
-
-                                    filename = "{}_{}-{}_{}-{}{}{}.pt".format(model_name, dataset_name,
-                                                                            training_config.batch_size,
-                                                                            optimizer_name, optimizer_kwargs['lr'],
-                                                                            lr_scheduler_info, teleport_info
-                                                                            )
-                                    torch.save(model.state_dict(), experiment_path / filename)
+                                    torch.save(model.state_dict(), experiment_path / 'weights.pt')
 
 
 def main():
