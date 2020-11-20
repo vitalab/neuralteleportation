@@ -37,7 +37,7 @@ def make_experiment(out_root: Path):
     return experiment_dir
 
 
-def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None) -> None:
+def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None, save_weights=False) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
 
@@ -152,7 +152,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)
 
-                                    torch.save(model.state_dict(), experiment_path / 'weights.pt')
+                                    if save_weights:
+                                        torch.save(model.state_dict(), experiment_path / 'weights.pt')
 
 
 def main():
@@ -169,6 +170,7 @@ def main():
                              "(e.g. when working on a cluster with no internet access).")
     parser.add_argument("--out_root_dir", type=Path, default=default_out_root,
                         help="Root directory where the outputs of the training will be stored (e.g. metrics).")
+    parser.add_argument("--save_weights", action="store_true")
     args = parser.parse_args()
 
     # Manage output directory (for metrics)
@@ -177,7 +179,8 @@ def main():
     print(f'INFO: Using output root dir: {args.out_root_dir}')
     args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
-    run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir)
+    run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir,
+                   save_weights=args.save_weights)
 
 
 if __name__ == '__main__':
