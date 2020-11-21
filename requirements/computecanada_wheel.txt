@@ -14,4 +14,3 @@ torchsummary
 networkx
 tensorboard
 visdom
-comet_ml
