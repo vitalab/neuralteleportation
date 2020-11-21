@@ -86,11 +86,17 @@ def fetch_data(exps_ids, metrics_filter, group_by, experiments_csv_dict=None):
 
         # Get group name (e.g "SGD & no_teleport")
         def get_value(param_value):
-            # For case where value is [class_name, constructor_params]
             if type(param_value) is list:
-                v = param_value[0]
+                name, params = param_value
+                if name == 'SGD' and 'momentum' in params:
+                    v = 'SGD with momentum'
+                else:
+                    v = name
             else:
-                v = param_value
+                if param_value == 'random':
+                    v = 'teleport'
+                else:
+                    v = param_value
             assert type(v) is str
             return v
         group_param_values = [get_value(v) for k, v in hparams.items() if k in group_by]

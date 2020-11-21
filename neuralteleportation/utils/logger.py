@@ -108,19 +108,19 @@ class DiskLogger(BaseLogger):
     def train(self):
         self.prefix = 'train'
         yield
-        self.prefix = ''
+        self.prefix = None
 
     @contextlib.contextmanager
     def validate(self):
         self.prefix = 'validate'
         yield
-        self.prefix = ''
+        self.prefix = None
 
     @contextlib.contextmanager
     def test(self):
         self.prefix = 'test'
         yield
-        self.prefix = ''
+        self.prefix = None
 
 
 def test_csv_logger():
