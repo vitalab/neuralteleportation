@@ -59,27 +59,9 @@ def shim_metric_name(metric_name):
     }
     return name_map[metric_name] if metric_name in name_map.keys() else metric_name
 
-def get_csv_from_comet(exp):
-    asset_id = [asset["assetId"] for asset in exp.get_asset_list() if asset["fileName"] == "metrics.csv"]
-    if len(asset_id) == 0:
-        return None
-    asset_content = exp.get_asset(asset_id, return_type="text")
-    buff = StringIO(asset_content)
-    return buff
 
-def get_metrics(exp, csv_file_path=None):
-    # Fetches CSV file from comet and generates cometAPI style metrics list,
-    # if no csv file is found on comet, fallsback on the comet metrics.
-    buff = csv_file_path
-    if buff is None or not is_non_zero_file(buff):
-        buff = get_csv_from_comet(exp)
-        if buff is None:
-            print(f"WARN: metrics.csv not found as a comet asset in {exp.id}, falling back on comet metrics.")
-            return exp.get_metrics()
-    df = pd.read_csv(buff)
-    if len(df) < 20:
-        df = pd.DataFrame({'step': np.arange(120), 'validate_accuracy': 50.0})
-        print("WARNING: FAKE TEST DATA INSERTED because less than 20 epochs")
+def get_metrics(csv_file_path):
+    df = pd.read_csv(csv_file_path)
     metrics = []
     for _, row in df.iterrows():
         r_keys = [k for k in row.keys() if k != "step"]
@@ -116,7 +98,7 @@ def fetch_data(exps_ids, metrics_filter, group_by, experiments_csv_dict=None):
         group_name = " & ".join(group_param_values)
 
         # Get metrics array
-        metrics = get_metrics(None, csv_file_path=experiments_csv_dict[exp_id])
+        metrics = get_metrics(experiments_csv_dict[exp_id])
         metrics = [metric for metric in metrics if metric["metricName"].lower() in metrics_filter]
         metrics_dict = {}
         for metric in metrics:
