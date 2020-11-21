@@ -78,8 +78,8 @@ def get_metrics(exp, csv_file_path=None):
             return exp.get_metrics()
     df = pd.read_csv(buff)
     if len(df) < 20:
-        epochs = np.arange(120)
-        df.loc[epochs, 'validate_accuracy'] = 50.0
+        df['step'] = np.arange(120)
+        df['validate_accuracy'] = 50.0
         print("WARNING: FAKE TEST DATA INSERTED because less than 20 epochs")
     metrics = []
     for _, row in df.iterrows():
