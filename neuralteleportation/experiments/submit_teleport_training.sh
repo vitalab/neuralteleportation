@@ -94,6 +94,7 @@ timeout 3m pip install "$project_root_dir"/.
 check_timeout
 
 # Copy any dataset we might use to the compute node
+dataset_dir=${dataset_dir%/}/  # Ensure the presence of a trailing slash if there isn't one (to ensure consistent behavior with rsync)
 compute_node_data_dir="$SLURM_TMPDIR"/data
 rsync -a "$dataset_dir" "$compute_node_data_dir"
 
