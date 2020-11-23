@@ -44,42 +44,66 @@ V100 GPU, 8 cores on a Intel Gold 6148 Skylake GPU, and 32GB of RAM.
 
 ### Convergence boost of teleportation (Figure 6)
 
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/SGD_vs_teleport.yml* 
+To run with on a single GPU:
 
 ```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_teleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/SGDvsTeleport/Metrics/VGG_cifar10/
+python neuralteleportation/experiments/teleport_training.py \
+  neuralteleportation/experiments/config/SGD_vs_teleport.yml \ 
+  --out_root_dir ./out_fig6
 ```
-The metrics have to be in a directory specific to the model and the dataset. For example, a directory Metrics/VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model for the dataset CIFAR-10.
+
+The output folder will contain the results necessary to produce the plots. See section "Generating box plots from the metrics files of training experiments" below.
+
+**The compute required for this experiment is about 40 GPU\*hours**. If you have access to a computer with multiple
+GPUs, you can parallelize as follows:
+
+```bash
+python neuralteleportation/experiments/config/unravel_matrix_config.py \
+  neuralteleportation/experiments/config/SGD_vs_teleport.yml \
+  --output_dir ./configs_fig6
+
+# Auto-detect the number of GPUs
+cvd_tokens=$( echo $CUDA_VISIBLE_DEVICES | tr ',' ' '  )
+cvd_array=( $cvd_tokens )
+N_GPUS=${#cvd_array[@]}
+
+# Run N_GPUS training jobs in parallel using GNU Parallel
+ls ./configs_fig6/*.yml | parallel -j $N_GPUS CUDA_VISIBLE_DEVICES='$(({%} - 1))' \
+  neuralteleportation/experiments/teleport_training.py \
+    ./configs_fig6/{} --out_root_dir ./out_fig6
+```
+
+If you have access to resources on a cluster through SLURM, the following will
+automatically submit a SLURM job for each training job:
+
+```bash
+bash neuralteleportation/experiments/submit_teleport_training_batch.sh \
+  -f neuralteleportation/experiments/config/SGD_vs_teleport.yml \  
+  --out_root_dir <OUTPUT_DIR> \
+  -p <THIS_REPO> \
+  -d <DATASETS_FOLDER> \
+  -v <PYTHON_ENV_FOLDER> \
+  -m <EMAIL_ADDRESS>
+```
+
+Please refer to the script for more details.
 
 ### Teleportation with other activation functions (Figure 8)
 
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/OtherActivations.yml* 
-
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/OtherActivations.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/OtherActivations/Metrics/tanh_cifar10
-```
-
-produces all the metrics needed to reproduce the plots of figure 8 in the paper. The metrics have to be in a directory specific to the activation and the dataset. For example, a directory Metrics/tanh_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the MLP model with tanh activation for the dataset CIFAR-10.
+Use the instructions in section "Convergence boost of teleportation" above, but with
+this config file: `neuralteleportation/experiments/config/OtherActivations.yml`. 
 
 ### Teleportation with different initializations (Figure 9)
 
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/Initializations.yml* 
+Use the instructions in section "Convergence boost of teleportation" above, but with
+this config file: `neuralteleportation/experiments/config/Teleportation_vs_Initializers.yml`. 
 
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/Teleportation_vs_Initializers.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Initializations/Metrics/xavier_VGG_cifar10
-```
-
-produces all the metrics needed to reproduce the plots of figure 9 in the paper. The metrics have to be in a directory specific to the initialization, the model and the dataset. For example, a directory Metrics/xavier_VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model with xavier initialization for the dataset CIFAR-10. **WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
+**WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
 
 ### Pseudo-teleportation (Figure 10)
 
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/pseudo_teleportation.yml* 
-
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_PseudoTeleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Pseudo_teleport/VGG_cifar10
-```
-
-produces all the metrics needed to reproduce the plots of figure 10 in the paper. The metrics have to be in a directory specific to the activation and the dataset. For example, a directory VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without pseudo-teleportation (60 experiments total) on the VGG model for the dataset CIFAR-10.
+Use the instructions in section "Convergence boost of teleportation" above, but with
+this config file: `neuralteleportation/experiments/config/SGD_vs_PseudoTeleport.yml` .
 
 ### Micro-teleportations (Figure 4)
 
