@@ -70,6 +70,6 @@ teleportations:
     teleport_only_once:
       - True
     cob_sampling:
-      - change_landscape
+      - inter_landscape
     cob_range:
       - 0.9

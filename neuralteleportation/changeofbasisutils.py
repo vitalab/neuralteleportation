@@ -2,20 +2,20 @@ import numpy as np
 from torch import Tensor, tensor
 
 
-available_sampling_types = ["within_landscape", "change_landscape", "positive", "negative", "centered"]
+available_sampling_types = ["intra_landscape", "inter_landscape", "positive", "negative", "centered"]
 
 
 def get_available_cob_sampling_types():
     return available_sampling_types
 
 
-def get_random_cob(range_cob: float, size: int, sampling_type: str = 'within_landscape', center=1,
+def get_random_cob(range_cob: float, size: int, sampling_type: str = 'intra_landscape', center=1,
                    requires_grad: bool=False) -> Tensor:
     """
         Return random change of basis:
 
-        'within_landscape' - in interval [1 - range_cob, 1 + range_cob]
-        'change_landscape' - equally in intervals [-1 - range_cob, -1 + range_cob] and [1 - range_cob, 1 + range_cob]
+        'intra_landscape' - in interval [1 - range_cob, 1 + range_cob]
+        'inter_landscape' - equally in intervals [-1 - range_cob, -1 + range_cob] and [1 - range_cob, 1 + range_cob]
         'positive'         - in interval [0, range_cob]
         'negative'         - in interval [-range_cob, 0]
         'centered'         - in interval [center - range_cob, center + range_cob]
@@ -31,7 +31,7 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'within_lan
         torch.Tensor of size size.
     """
     # Change of basis in interval [1-range_cob, 1+range_cob]
-    if sampling_type == 'within_landscape':
+    if sampling_type == 'intra_landscape':
         assert not (range_cob > center or center <= 0), 'This range for change of basis sampling allows for negative ' \
                                                         'changes of basis.'
         if center != 1:
@@ -40,7 +40,7 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'within_lan
         cob = np.random.uniform(low=-range_cob, high=range_cob, size=size).astype(np.float) + 1
 
     # Change of basis equally in intervals [-1-range_cob, -1+range_cob] and [1-range_cob, 1+range_cob]
-    elif sampling_type == 'change_landscape':
+    elif sampling_type == 'inter_landscape':
         samples = np.random.randint(0, 2, size=size)
         cob = np.zeros_like(samples, dtype=np.float)
         cob[samples == 1] = np.random.uniform(low=-1-range_cob, high=-1+range_cob, size=samples.sum())
@@ -62,7 +62,7 @@ def get_random_cob(range_cob: float, size: int, sampling_type: str = 'within_lan
 
     else:
         raise ValueError("Invalid sampling type. Sampling types allowed: "
-                         "within_landscape, change_landscape, positive, negative, centered")
+                         "intra_landscape, inter_landscape, positive, negative, centered")
 
     return tensor(cob, requires_grad=requires_grad)
 

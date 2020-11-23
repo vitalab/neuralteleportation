@@ -41,7 +41,7 @@ def normalized_dot_product(t1: Tensor, t2: Tensor) -> Tensor:
 
 
 def micro_teleportation_dot_product(network, dataset, nb_teleport=100, network_descriptor='',
-                                    sampling_types=['within_landscape'],
+                                    sampling_types=['intra_landscape'],
                                     batch_sizes=[8, 64],
                                     criterion=None,
                                     device='cpu',
@@ -366,7 +366,7 @@ def dot_product_between_teleportation(network, dataset,
             model.set_weights(w1)
 
             # teleport and get the new weights
-            model.random_teleport(cob_range=cob, sampling_type='within_landscape')
+            model.random_teleport(cob_range=cob, sampling_type='intra_landscape')
             w2 = model.get_weights().detach().to(device)
 
             # cos(theta) = (w1 w2)/(||w1|| ||w2||)
@@ -387,7 +387,7 @@ def dot_product_between_teleportation(network, dataset,
     plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/dot_product_vs_cob_{network_descriptor}_Samp_type_within_landscape')
+    plt.savefig(f'{series_dir}/dot_product_vs_cob_{network_descriptor}_Samp_type_intra_landscape')
     plt.show()
 
     plt.plot(cobs, angles)
@@ -398,5 +398,5 @@ def dot_product_between_teleportation(network, dataset,
     plt.xlabel('change of basis')
 
     Path(series_dir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f'{series_dir}/angle_vs_cob_{network_descriptor}_Samp_type_within_landscape')
+    plt.savefig(f'{series_dir}/angle_vs_cob_{network_descriptor}_Samp_type_intra_landscape')
     plt.show()

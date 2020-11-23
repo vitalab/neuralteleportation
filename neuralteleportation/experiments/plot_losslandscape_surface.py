@@ -31,7 +31,7 @@ def argument_parser():
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["cifar10", "mnist"],
                         help="Selects the dataset use in the experiment")
     parser.add_argument("--cob_range", type=float, default=0.5, help='set the CoB range for the teleportation.')
-    parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
+    parser.add_argument("--cob_sampling", type=str, default="intra_landscape", help="Sampling type for CoB.")
 
     # Experiment Configuration
     parser.add_argument("--train", "-t", action="store_true", default=False,

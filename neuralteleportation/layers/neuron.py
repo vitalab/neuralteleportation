@@ -27,7 +27,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
         if self.bias is not None:
             self.b = self.bias.clone().detach().requires_grad_()
 
-    def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'within_landscape',
+    def get_cob(self, basis_range: float = 0.5, sampling_type: str = 'intra_landscape',
                 center: float = 1) -> torch.Tensor:
         """Returns a random change of basis for the output features of the layer.
 

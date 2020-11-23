@@ -41,7 +41,7 @@ teleportations:
       - 2
       - 5
     cob_sampling:
-      - within_landscape
-      - change_landscape
+      - intra_landscape
+      - inter_landscape
     cob_range:
       - 0.5

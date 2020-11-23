@@ -6,7 +6,7 @@ datasets:
 
 models:
   - cls: MLPCOB
-    activation: elu #default=relu
+    activation: elu
   - cls: MLPCOB
     activation: leakyrelu
   - cls: MLPCOB
@@ -72,6 +72,6 @@ teleportations:
     teleport_only_once:
       - True
     cob_sampling:
-      - change_landscape
+      - inter_landscape
     cob_range:
       - 0.9

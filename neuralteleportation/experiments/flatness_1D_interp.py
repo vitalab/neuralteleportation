@@ -40,8 +40,8 @@ def argument_parser():
                         help="Whether or not to use the same cob for the teleportation A and B")
     parser.add_argument("--cob_range", type=float, default=0.9,
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
-    parser.add_argument("--cob_sampling", type=str, default="within_landscape",
-                        choices=['within_landscape', 'change_landscape', 'positive', 'negative', 'centered'],
+    parser.add_argument("--cob_sampling", type=str, default="intra_landscape",
+                        choices=['intra_landscape', 'inter_landscape', 'positive', 'negative', 'centered'],
                         help="Defines the type of sampling used for the COB. It must be a valid mix with cob_range")
 
     # Interpolation params

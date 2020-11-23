@@ -11,7 +11,7 @@ models:
   - densenet121COB
 
 initializers:
-  - type: normal # Uses PyTorch's default initializer
+  - type: normal
     gain: 0.02
   - type: xavier
     gain: 0.02 # MLP will not converge unless gain: 1.0.
@@ -73,6 +73,6 @@ teleportations:
     teleport_only_once:
       - True
     cob_sampling:
-      - change_landscape
+      - inter_landscape
     cob_range:
       - 0.9
