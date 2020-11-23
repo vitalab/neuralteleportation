@@ -76,13 +76,16 @@ def get_metrics(csv_file_path):
 
 
 def fetch_data(exps_ids, metrics_filter, group_by, experiments_csv_dict=None):
-    all_metrics_grouped = defaultdict(list)
+    all_metrics_grouped = defaultdict(lambda: defaultdict(list))  # x['dataset-model']['optimizer-teleport'] = [...]
     for exp_id in tqdm(exps_ids, desc="Fetching data: "):
         # Get hparams
         metrics_file = Path(experiments_csv_dict[exp_id])
         hparams_file = metrics_file.parent / 'hparams.yml'
         with open(hparams_file, 'r') as f:
             hparams = yaml.safe_load(f)
+
+        # Get dataset-model name
+        dataset_model = f"{hparams['dataset_name']}_{hparams['model_name']}"
 
         # Get group name (e.g "SGD & no_teleport")
         def get_value(param_value):
@@ -115,7 +118,7 @@ def fetch_data(exps_ids, metrics_filter, group_by, experiments_csv_dict=None):
                 metrics_dict[name] = {epoch: value}
             else:
                 metrics_dict[name][epoch] = value
-        all_metrics_grouped[group_name].append(metrics_dict)
+        all_metrics_grouped[dataset_model][group_name].append(metrics_dict)
     return all_metrics_grouped
 
 
@@ -128,7 +131,7 @@ def find_best_legend_pos(metric_name):
     return "best"
 
 
-def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, legend_pos="best"):
+def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, dataset_model_name, legend_pos="best"):
     # Upper bound on epochs, will be trimmed to max epochs
     n_epochs = 1000
     grouped_plots = {}
@@ -151,9 +154,9 @@ def plot_mean_std_curve(metrics_grouped, metric_name, group_by, output_dir, lege
         }
     with sns.axes_style("darkgrid"):
         fig, ax = plt.subplots()
-        fig.suptitle(f"{metric_name}")
+        fig.suptitle(f"{dataset_model_name}")
         group_by_str = "_".join(group_by)
-        output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}.pdf")
+        output_filename = os.path.join(output_dir, f"{metric_name}_{group_by_str}_{dataset_model_name}.pdf")
         clrs = sns.color_palette("husl", len(list(grouped_plots.keys())))
         sort_labels = []
         for i, g_name in enumerate(sorted(list(grouped_plots.keys()))):
@@ -203,7 +206,8 @@ def prettify_metric_name(metric):
         return name_map[metric]
     return metric
 
-def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, legend_pos="best"):
+
+def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, dataset_model, legend_pos="best"):
     # Upper bound on epochs, will be trimmed to max epochs
     metric_human_name = prettify_metric_name(metric_name)
     n_epochs = 1000
@@ -231,7 +235,7 @@ def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, 
     group_df = pd.concat(group_runs, ignore_index=True)
     with sns.axes_style("darkgrid"):
         group_by_str = "_".join(group_by)
-        output_filename = os.path.join(output_dir, f"box_{metric_name}_{group_by_str}.pdf")
+        output_filename = os.path.join(output_dir, f"box_{metric_name}_{group_by_str}_{dataset_model}.pdf")
         clrs = sns.color_palette("Paired", 6)
         g = sns.catplot(
             x="epoch",
@@ -252,7 +256,7 @@ def plot_box(metrics_grouped, metric_name, epochs_sample, group_by, output_dir, 
             legend=False
         )
         plt.legend(loc=legend_pos)
-        g.fig.suptitle(f"{metric_human_name}")
+        g.fig.suptitle(f"{dataset_model}")
         g.set_xlabels("Epoch", fontsize=20)
         g.set_ylabels(metric_human_name, fontsize=20)
         g.fig.tight_layout(pad=3.0)
@@ -348,7 +352,10 @@ if __name__ == '__main__':
     all_metrics_grouped = fetch_data(experiments_ids, args.metrics, args.group_by,
                                      experiments_csv_dict=experiments_csv_dict)
     for metric in args.metrics:
-        plot_mean_std_curve(all_metrics_grouped, metric, args.group_by, args.out_dir, args.legend_pos)
-        if args.boxplot:
-            epochs_subsample = [5, 10, 20, 95] if args.box_epochs is None else args.box_epochs
-            plot_box(all_metrics_grouped, metric, epochs_subsample, args.group_by, args.out_dir, args.legend_pos)
+        for dataset_model_name, dataset_model_group in all_metrics_grouped.items():
+            plot_mean_std_curve(dataset_model_group, metric, args.group_by, args.out_dir, dataset_model_name,
+                                args.legend_pos)
+            if args.boxplot:
+                epochs_subsample = [5, 10, 20, 95] if args.box_epochs is None else args.box_epochs
+                plot_box(dataset_model_group, metric, epochs_subsample, args.group_by, args.out_dir, dataset_model_name,
+                         args.legend_pos)
