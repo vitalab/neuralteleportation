@@ -1,10 +1,21 @@
 # Neural Teleportation    
  
-## Description   
-
 Neural network teleportation using representation theory of quivers. 
 
-## How to run   
+**NOTE TO REVIEWERS: The instructions for reproducing our results are in the section
+"Running experiments", below.**
+
+## Repository content
+
+This repository contains the code necessary to teleport a neural network. 
+
+* [neuralteleportation](neuralteleportation) : contains the main classes for network teleportation. 
+* [layers](neuralteleportation/layers): contains the classes necessary for teleporting individual layers. 
+* [models](neuralteleportation/models): contains frequently used models such as MLP, VGG, ResNet and DenseNet.
+* [experiments](neuralteleportation/experiments): contains experiments using teleportation. 
+* [tests](tests): contains black-box tests for network teleportation. 
+
+## Setting up 
 First, install dependencies   
 ```bash
 # set-up project's environment
@@ -23,19 +34,52 @@ To test that the project was installed successfully, you can try the following c
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel   
 ``` 
 
-## Repository content
-
-This repository contains the code necessary to teleport a neural network. 
-
-* [neuralteleportation](neuralteleportation) : contains the main classes for network teleportation. 
-* [layers](neuralteleportation/layers): contains the classes necessary for teleporting individual layers. 
-* [models](neuralteleportation/models): contains frequently used models such as MLP, VGG, ResNet and DenseNet.
-* [experiments](neuralteleportation/experiments): contains experiments using teleportation. 
-* [tests](tests): contains black-box tests for network teleportation. 
-
 ## Running experiments
 
 The following instructions allow to reproduce the results found in our paper.
+
+Reproducing all our results requires XXX GPU\*hours. We also give estimates per
+experiments, below. Our estimates are upper bounds. A "GPU" corresponds to an Nvidia
+V100 GPU, 8 cores on a Intel Gold 6148 Skylake GPU, and 32GB of RAM.  
+
+### Convergence boost of teleportation (Figure 6)
+
+Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/SGD_vs_teleport.yml* 
+
+```bash
+$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_teleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/SGDvsTeleport/Metrics/VGG_cifar10/
+```
+The metrics have to be in a directory specific to the model and the dataset. For example, a directory Metrics/VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model for the dataset CIFAR-10.
+
+### Teleportation with other activation functions (Figure 8)
+
+Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/OtherActivations.yml* 
+
+```bash
+$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/OtherActivations.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/OtherActivations/Metrics/tanh_cifar10
+```
+
+produces all the metrics needed to reproduce the plots of figure 8 in the paper. The metrics have to be in a directory specific to the activation and the dataset. For example, a directory Metrics/tanh_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the MLP model with tanh activation for the dataset CIFAR-10.
+
+### Teleportation with different initializations (Figure 9)
+
+Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/Initializations.yml* 
+
+```bash
+$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/Teleportation_vs_Initializers.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Initializations/Metrics/xavier_VGG_cifar10
+```
+
+produces all the metrics needed to reproduce the plots of figure 9 in the paper. The metrics have to be in a directory specific to the initialization, the model and the dataset. For example, a directory Metrics/xavier_VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model with xavier initialization for the dataset CIFAR-10. **WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
+
+### Pseudo-teleportation (Figure 10)
+
+Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/pseudo_teleportation.yml* 
+
+```bash
+$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_PseudoTeleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Pseudo_teleport/VGG_cifar10
+```
+
+produces all the metrics needed to reproduce the plots of figure 10 in the paper. The metrics have to be in a directory specific to the activation and the dataset. For example, a directory VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without pseudo-teleportation (60 experiments total) on the VGG model for the dataset CIFAR-10.
 
 ### Micro-teleportations (Figure 4)
 
@@ -61,15 +105,6 @@ trains two MLPs A and B, with batch-sizes 8 and 2014, respectively. Then interpo
 Hyperparameters can be found in the usage of the script. 
 **WARNING** It is probable that the MLPs give NaN's during training. If this happens, just re-run the script.
 
-### SGD vs Teleportation (Figure 6)
-
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/SGD_vs_teleport.yml* 
-
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_teleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/SGDvsTeleport/Metrics/VGG_cifar10/
-```
-The metrics have to be in a directory specific to the model and the dataset. For example, a directory Metrics/VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model for the dataset CIFAR-10.
-
 ### Gradient changed by teleportation (Figure 7)
 
 Running the script *neuralteleportation/utils/statistics_teleportations.py*
@@ -79,36 +114,6 @@ python neuralteleportation/utils/statistics_teleportations.py
 ```
 
 produces the four plots shown in figure 7 in the paper for MLP, VGG, ResNet and DenseNet on CIFAR-10.
-
-### Teleportation vs SGD on other activation functions (Figure 8)
-
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/OtherActivations.yml* 
-
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/OtherActivations.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/OtherActivations/Metrics/tanh_cifar10
-```
-
-produces all the metrics needed to reproduce the plots of figure 8 in the paper. The metrics have to be in a directory specific to the activation and the dataset. For example, a directory Metrics/tanh_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the MLP model with tanh activation for the dataset CIFAR-10.
-
-### Teleportation vs different initializations (Figure 9)
-
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/Initializations.yml* 
-
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/Teleportation_vs_Initializers.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Initializations/Metrics/xavier_VGG_cifar10
-```
-
-produces all the metrics needed to reproduce the plots of figure 9 in the paper. The metrics have to be in a directory specific to the initialization, the model and the dataset. For example, a directory Metrics/xavier_VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without teleportation (60 experiments total) on the VGG model with xavier initialization for the dataset CIFAR-10. **WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
-
-### Pseudo-teleportation vs SGD (Figure 10)
-
-Running the yaml file in a cluster with slurm *neuralteleportation/experiments/config/pseudo_teleportation.yml* 
-
-```bash
-$HOME/neuralteleportation/neuralteleportation/experiments/submit_teleport_training_batch.sh -p $HOME/neuralteleportation/ -d $HOME/datasets/ -f $HOME/neuralteleportation/neuralteleportation/experiments/config/SGD_vs_PseudoTeleport.yml -v $HOME/virtualenv/ -m email@email.email --out_root_dir $HOME/scratch/Pseudo_teleport/VGG_cifar10
-```
-
-produces all the metrics needed to reproduce the plots of figure 10 in the paper. The metrics have to be in a directory specific to the activation and the dataset. For example, a directory VGG_cifar10, should contain 5 runs over two optimizers (SGD and SGD+Momentum), three learning rates (0.01, 0.001 and 0.0001) done with and without pseudo-teleportation (60 experiments total) on the VGG model for the dataset CIFAR-10.
 
 ### Weight histogram comparison before and after teleportation (Figure 11)
 
