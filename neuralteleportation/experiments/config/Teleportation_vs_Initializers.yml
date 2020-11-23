@@ -6,12 +6,15 @@ datasets:
 
 models:
   - MLPCOB
-  - vgg16_bnCOB
   - resnet18COB
+  - vgg16_bnCOB
   - densenet121COB
 
 initializers:
-  - type: none # Uses PyTorch's default initializer
+  - type: normal # Uses PyTorch's default initializer
+    gain: 0.02
+  - type: xavier
+    gain: 0.02 # MLP will not converge unless gain: 1.0.
 
 optimizers:
   - cls: SGD
