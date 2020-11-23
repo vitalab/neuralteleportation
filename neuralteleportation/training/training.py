@@ -55,7 +55,10 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                     device=config.device, config=config, lr_scheduler=lr_scheduler)
 
         if val_dataset:
-            with config.logger.validate():
+            if config.logger:
+                with config.logger.validate():
+                    val_res = test(model, val_dataset, metrics, config)
+            else:
                 val_res = test(model, val_dataset, metrics, config)
 
             print("Validation: {}".format(val_res))
@@ -121,7 +124,7 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
     pbar.close()
 
     # Log the mean of each metric at the end of the epoch
-    if config is not None:
+    if config is not None and config.logger is not None:
         reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
         config.logger.log_metrics(reduced_metrics, epoch=epoch)
         for metric_name, value in reduced_metrics.items():
@@ -156,7 +159,8 @@ def test(model: nn.Module, dataset: Dataset,
 
     pbar.close()
     reduced_results = dict(pd.DataFrame(results).mean())
-    config.logger.log_metrics(reduced_results)
+    if config.logger is not None:
+        config.logger.log_metrics(reduced_results, epoch=0)
     return reduced_results
 
 
