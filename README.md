@@ -162,10 +162,17 @@ produces the histograms shown in figure 11 in the paper.
 
 ### Generating box plots from the metrics files of training experiments
 
-Metrics have to be ordered by model and dataset, as described in each of the experiments shown above.
+The following can be used to generate the plots from figure 6, for example.
+Replace `<EXPERIMENT_DIR>` with the `--out_root_dir` you have used
+(see instructions above).
 
 ```bash
-python neuralteleportation/experiments/visualize/generate_mean_graphs.py --metrics validate_accuracy --group_by teleport optimizer --experiment_dir ../Results_NeuralTeleportation/SGDvsTeleport/Metrics/VGG_cifar10/ --boxplot --box_epochs 30 60 95 --out_dir ../Results_NeuralTeleportation/SGDvsTeleport/Plots/
+python neuralteleportation/experiments/visualize/generate_mean_graphs.py \
+  --experiment_dir <EXPERIMENT_DIR> \
+  --metrics val_accuracy \
+  --group_by teleport optimizer \
+  --boxplot --box_epochs 30 60 95 \ 
+  --out_dir ./results
 ```
 
 ## Known Limitations
