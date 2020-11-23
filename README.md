@@ -38,9 +38,9 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 
 The following instructions allow to reproduce the results found in our paper.
 
-Reproducing all our results requires XXX GPU\*hours. We also give estimates per
-experiments, below. Our estimates are upper bounds. A "GPU" corresponds to an Nvidia
-V100 GPU, 8 cores on a Intel Gold 6148 Skylake GPU, and 32GB of RAM.  
+Reproducing all our results requires about 160 GPU\*hours. We also give estimates
+per experiments, below. A "GPU" corresponds to an Nvidia V100 GPU, 8 cores on an
+Intel Gold 6148 Skylake GPU, and 32GB of RAM.  
 
 ### Convergence boost of teleportation (Figure 6)
 
