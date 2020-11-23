@@ -93,6 +93,8 @@ Please refer to the script for more details.
 Use the instructions in section "Convergence boost of teleportation" above, but with
 this config file: `neuralteleportation/experiments/config/OtherActivations.yml`. 
 
+This experiment requires about 32 GPU*hours (probably less).
+
 ### Teleportation with different initializations (Figure 9)
 
 Use the instructions in section "Convergence boost of teleportation" above, but with
@@ -100,10 +102,14 @@ this config file: `neuralteleportation/experiments/config/Teleportation_vs_Initi
 
 **WARNING** The MLP model with xavier init needs a gain=1.0 to converge, unlike the other models where the default gain=0.02 is enough.
 
+This experiment requires about 40 GPU*hours.
+
 ### Pseudo-teleportation (Figure 10)
 
 Use the instructions in section "Convergence boost of teleportation" above, but with
 this config file: `neuralteleportation/experiments/config/SGD_vs_PseudoTeleport.yml` .
+
+This experiment requires about 40 GPU*hours.
 
 ### Micro-teleportations (Figure 4)
 
@@ -115,6 +121,7 @@ python neuralteleportation/experiments/micro_teleportation/micro_teleportation.p
 
 produces histograms of angles of gradient vs micro-teleportations for MLP and VGG on CIFAR-10 and random data.
 
+This experiment requires in the order of 1 GPU*hour.
 
 ### Interpolations for flatness visualization (Figure 5)
 
@@ -129,6 +136,8 @@ trains two MLPs A and B, with batch-sizes 8 and 2014, respectively. Then interpo
 Hyperparameters can be found in the usage of the script. 
 **WARNING** It is probable that the MLPs give NaN's during training. If this happens, just re-run the script.
 
+This experiment requires in the order of 1-2 GPU*hours.
+
 ### Gradient changed by teleportation (Figure 7)
 
 Running the script *neuralteleportation/utils/statistics_teleportations.py*
@@ -138,6 +147,8 @@ python neuralteleportation/utils/statistics_teleportations.py
 ```
 
 produces the four plots shown in figure 7 in the paper for MLP, VGG, ResNet and DenseNet on CIFAR-10.
+
+This experiment requires in the order of 1 GPU*hour.
 
 ### Weight histogram comparison before and after teleportation (Figure 11)
 
