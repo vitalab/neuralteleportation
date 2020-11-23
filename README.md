@@ -58,6 +58,7 @@ The output folder will contain the results necessary to produce the plots. See s
 GPUs, you can parallelize as follows:
 
 ```bash
+# Generate a YAML config file for each training job
 python neuralteleportation/experiments/config/unravel_matrix_config.py \
   neuralteleportation/experiments/config/SGD_vs_teleport.yml \
   --output_dir ./configs_fig6
