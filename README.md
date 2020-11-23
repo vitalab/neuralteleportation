@@ -68,9 +68,10 @@ cvd_array=( $cvd_tokens )
 N_GPUS=${#cvd_array[@]}
 
 # Run N_GPUS training jobs in parallel using GNU Parallel
-ls ./configs_fig6/*.yml | parallel -j $N_GPUS CUDA_VISIBLE_DEVICES='$(({%} - 1))' \
-  neuralteleportation/experiments/teleport_training.py \
-    ./configs_fig6/{} --out_root_dir ./out_fig6
+ls ./configs_fig6/*.yml | parallel -j $N_GPUS --linebuffer \
+  CUDA_VISIBLE_DEVICES='$(({%} - 1))' \
+  python neuralteleportation/experiments/teleport_training.py {} \
+  --out_root_dir ./out_fig6
 ```
 
 If you have access to resources on a cluster through SLURM, the following will
