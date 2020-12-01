@@ -14,40 +14,28 @@ class BaseLogger:
     def add_scalar(self, name, value, step):
         pass
 
-    def add_figure(self, name, fig):
-        pass
-
     def add_text(self, name, text):
-        pass
-
-    def add_video(self, name, video, fps):
-        pass
-
-    def add_graph(self, name, graph, graph_input):
-        pass
-
-    def add_histogram(self, model, step):
-        pass
+        print(name, text)
 
     def log_parameters(self, params_dict):
         # Comet compatibility
-        raise NotImplementedError
+        pass
 
     def log_metrics(self, metrics_dict, epoch):
         # Comet compatibility
-        raise NotImplementedError
+        pass
 
     def train(self):
         # Comet compatibility
-        raise NotImplementedError
+        pass
 
     def validate(self):
         # Comet compatibility
-        raise NotImplementedError
+        pass
 
     def test(self):
         # Comet compatibility
-        raise NotImplementedError
+        pass
 
     def flush(self):
         pass
@@ -99,7 +87,7 @@ class DiskLogger(BaseLogger):
             yaml.dump(params_dict, f)
         self.params_logged = True
 
-    def log_metrics(self, metrics_dict, epoch=0):
+    def log_metrics(self, metrics_dict, epoch):
         for k, v in metrics_dict.items():
             self.data_dict[self.make_prefixed_metric_name(k)][epoch] = v
         self._update()
