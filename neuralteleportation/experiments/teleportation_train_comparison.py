@@ -41,8 +41,8 @@ def argumentparser():
     parser.add_argument("--teleport_every", type=int, default=4,
                         help="After how many epoch should the model be teleported")
     parser.add_argument("--cob_range", type=float, default=0.5, help="Sets the range of change of basis")
-    parser.add_argument("--cob_sampling", type=str, default="within_landscape",
-                        choices=["within_landscape", "change_landscape", "positive", "negative", "centered"],
+    parser.add_argument("--cob_sampling", type=str, default="intra_landscape",
+                        choices=["intra_landscape", "inter_landscape", "positive", "negative", "centered"],
                         help="What type of sampling should be used for the teleportation")
     parser.add_argument("--plot", action="store_true", default=False, help="")
     parser.add_argument("--targeted_teleportation", action="store_true", default=False,

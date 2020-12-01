@@ -2,9 +2,6 @@
  
 Neural network teleportation using representation theory of quivers. 
 
-**NOTE TO REVIEWERS: The instructions for reproducing our results are in the section
-"Running experiments", below.**
-
 ## Repository content
 
 This repository contains the code necessary to teleport a neural network. 
@@ -115,7 +112,7 @@ This experiment requires about 40 GPU*hours.
 
 ### Micro-teleportations (Figure 4)
 
-Running the script *neuralteleportation/experiments/micro_teleportation/microteleportation.py*
+Running the script *neuralteleportation/experiments/micro_teleportation/micro_teleportation.py*
 
 ```bash
 python neuralteleportation/experiments/micro_teleportation/micro_teleportation.py

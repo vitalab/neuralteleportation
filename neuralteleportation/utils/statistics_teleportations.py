@@ -89,7 +89,7 @@ def plot_histogram_teleported_gradients(network, pbar, n_part=5, nb_batches=20, 
         bin_height = bin_height / float(max(bin_height))
         plt.subplot(3, 1, 1)
         plt.bar(bin_boundary[:-1], bin_height, width=np.maximum(width, 0.1), color='r')
-        plt.title(f'{network_descriptor}: within_landscape COB; range: {cob[i]}')
+        plt.title(f'{network_descriptor}: intra_landscape COB; range: {cob[i]}')
         plt.xlim(x_ming, x_maxg)
         plt.legend(['Gradient \n vs \n Teleported gradient'])
 
@@ -117,7 +117,7 @@ def plot_difference_teleported_gradients(network, pbar, nb_teleportations=10, n_
                                          device='cpu', limit_batches=10):
     """
     This method plots the difference of the gradient of the network and the gradient of a teleportation, by
-    partitioning the cob_range from 0.1 to 0.9 in n_part parts for within_landscape cob_sampling. Each gradient
+    partitioning the cob_range from 0.1 to 0.9 in n_part parts for intra_landscape cob_sampling. Each gradient
     is normalized by the norm of the weights producing the corresponding gradient.
 
     Args:

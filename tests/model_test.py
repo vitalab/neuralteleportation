@@ -150,7 +150,7 @@ def test_multiple_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 2
     pred1 = model(x).detach().numpy()
 
     for _ in range(10):
-        model.random_teleport(cob_range=10, sampling_type='change_landscape')
+        model.random_teleport(cob_range=10, sampling_type='inter_landscape')
 
         pred2 = model(x).detach().numpy()
 
@@ -161,7 +161,7 @@ def test_multiple_teleport(network: nn.Module, input_shape: Tuple = (1, 1, 28, 2
             model_name, diff_average)
 
     for _ in range(10):
-        model.random_teleport(cob_range=10, sampling_type='change_landscape', reset_teleportation=False)
+        model.random_teleport(cob_range=10, sampling_type='inter_landscape', reset_teleportation=False)
 
         pred2 = model(x).detach().numpy()
 

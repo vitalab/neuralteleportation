@@ -25,7 +25,7 @@ def argument_parser():
                         help="used batch size.")
     parser.add_argument("--cob_range", type=float, default=0.5,
                         help="Defines the range used for the COB. It must be a valid mix with cob_sampling")
-    parser.add_argument("--cob_sampling", type=str, default="usual",
+    parser.add_argument("--cob_sampling", type=str, default="intra_landscape",
                         help="Defines the type of sampling used for the COB. It must be a valide mix with cob_range")
     parser.add_argument("--teleport_at", "-t", nargs='+', type=int, default=[5],
                         help="Make the model teleport after at the given epoch number")

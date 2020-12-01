@@ -24,7 +24,7 @@ class TrainingConfig:
 @dataclass
 class TeleportationTrainingConfig(TrainingConfig):
     cob_range: float = 0.5
-    cob_sampling: str = 'within_landscape'
+    cob_sampling: str = 'intra_landscape'
     every_n_epochs: int = 1
     teleport_only_once: bool = False
     # The ``teleport_fn`` field is required to use the pipeline from the ``training`` module,

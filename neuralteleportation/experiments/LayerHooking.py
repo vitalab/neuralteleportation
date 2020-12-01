@@ -31,7 +31,7 @@ def argument_parser():
                              "format for the model they are trying to hook")
     parser.add_argument("--num_teleportation", type=int, default=2)
     parser.add_argument("--cob_range", type=float, default=10.0)
-    parser.add_argument("--cob_sampling", type=str, default="within_landscape")
+    parser.add_argument("--cob_sampling", type=str, default="intra_landscape")
     parser.add_argument("--show_original", action="store_true", default=True,
                         help="enable the plotting of the original image.")
     return parser.parse_args()

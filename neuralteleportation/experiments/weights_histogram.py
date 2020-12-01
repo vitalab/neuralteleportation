@@ -24,7 +24,7 @@ def argument_parser() -> argparse.Namespace:
 
     # Hyper Parameters
     parser.add_argument("--cob_range", type=float, default=0.9, help='set the CoB range for the teleportation.')
-    parser.add_argument("--cob_sampling", type=str, default="within_landscape", help="Sampling type for CoB.")
+    parser.add_argument("--cob_sampling", type=str, default="intra_landscape", help="Sampling type for CoB.")
 
     # Plotting Parameters
     parser.add_argument("--plot_mode", type=str, default="modelwise", choices=["layerwise", "modelwise"],
