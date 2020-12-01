@@ -1,13 +1,10 @@
 import copy
 import itertools
+import uuid
 import math
 import os
 from pathlib import Path
 
-# Necessary to import Comet first to use Comet's auto logging facility and
-# to avoid "Please import comet before importing these modules" error.
-# (see ref: https://www.comet.ml/docs/python-sdk/warnings-errors/)
-import comet_ml  # noqa
 import torch
 import torch.optim as optim
 import yaml
@@ -23,8 +20,7 @@ from neuralteleportation.training.teleport.optim import OptimalTeleportationTrai
 from neuralteleportation.training.teleport.pseudo import PseudoTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
-from neuralteleportation.utils.logger import init_comet_experiment, CsvLogger
-from neuralteleportation.utils.pathutils import get_nonexistent_path
+from neuralteleportation.utils.logger import DiskLogger
 
 __training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
@@ -32,7 +28,16 @@ __training_configs__ = {"no_teleport": TrainingConfig,
                         "pseudo": PseudoTeleportationTrainingConfig}
 
 
-def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_root_dir: Path = None) -> None:
+def make_experiment(out_root: Path):
+    assert out_root.exists()
+    experiment_id = str(uuid.uuid4())  # Create a unique ID randomly
+    experiment_dir = out_root / experiment_id
+    assert not experiment_dir.exists()  # Check for collision (Extremely unlikely - I assume it will never happen)
+    experiment_dir.mkdir()
+    return experiment_dir
+
+
+def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None, save_weights=False) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
 
@@ -60,6 +65,8 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
                     model_kwargs = model_obj
                 # initalizers
                 for initializer in config["initializers"]:
+                    config['initializer'] = initializer
+
                     # optimizers
                     for optimizer_kwargs in config["optimizers"]:
                         optimizer_kwargs = copy.deepcopy(optimizer_kwargs)
@@ -123,14 +130,12 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
                             for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                                 num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
                                 for _ in range(num_runs):
-                                    comet_experiment = init_comet_experiment(comet_config) if os.path.isfile(comet_config) else None
-                                    experiment_path = out_root / comet_experiment.get_key()  # FIXME don't rely on comet
+                                    experiment_path = make_experiment(out_root)
                                     training_config = training_config_cls(
                                         optimizer=(optimizer_name, optimizer_kwargs),
                                         lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                                         device='cuda' if cuda_avail() else 'cpu',
-                                        comet_logger=comet_experiment,
-                                        exp_logger=CsvLogger(experiment_path),
+                                        logger=DiskLogger(experiment_path),
                                         **training_params,
                                         **teleport_config_kwargs,
                                         **teleport_mode_config_kwargs,
@@ -139,7 +144,6 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
                                     # Run experiment (setting up a new model and optimizer for each experiment)
                                     model = get_model(dataset_name, model_name, device=training_config.device,
                                                     initializer=initializer, **model_kwargs)
-                                    comet_experiment.log_parameter(name="initializer", value=[initializer])
                                     optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
                                     lr_scheduler = None
                                     if has_scheduler:
@@ -147,29 +151,9 @@ def run_experiment(config_path: Path, comet_config: Path, out_root: Path, data_r
                                     run_model(model, training_config, metrics,
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)
-                                    if experiment_path:
 
-                                        if teleport != 'no_teleport' and 'optim_metric' in teleport_mode_config_kwargs.keys():
-                                            teleport_info = teleport_mode_config_kwargs['optim_metric'].__name__
-                                        else:
-                                            teleport_info = '_' + teleport_mode if teleport != 'no_teleport' else ''  # FIXME
-
-                                        lr_scheduler_info = '_' + lr_scheduler_name if has_scheduler else ''
-
-                                        filename = "{}_{}-{}_{}-{}{}{}.pt".format(model_name, dataset_name,
-                                                                                training_config.batch_size,
-                                                                                optimizer_name, optimizer_kwargs['lr'],
-                                                                                lr_scheduler_info, teleport_info
-                                                                                )
-
-                                        filename = get_nonexistent_path(os.path.join(experiment_path, filename), mkdir=False)
-
-                                        torch.save(model.state_dict(), filename)
-
-                                        # Save training config with same name as weights
-                                        training_config.comet_logger = None # set to None to avoid error when dumping.
-                                        with open(os.path.splitext(filename)[0] + '.yml', 'w') as f:
-                                            yaml.dump(training_config, f, indent=0)
+                                    if save_weights:
+                                        torch.save(model.state_dict(), experiment_path / 'weights.pt')
 
 
 def main():
@@ -180,14 +164,13 @@ def main():
         description="Run an arbitrary series of experiments training neural networks using teleportations")
     parser.add_argument("config", type=Path,
                         help="Path to the YAML file describing the configuration matrix of the experiments to run")
-    parser.add_argument("--comet_config", type=Path, default=Path(".comet.config"),
-                        help="Path to the Comet config file indicating how to log the experiments")
     parser.add_argument("--data_root_dir", type=Path,
                         help="Root directory of data inside which each dataset creates its own directory. "
                              "This option is useful in case the datasets must be pre-downloaded to a known location "
                              "(e.g. when working on a cluster with no internet access).")
     parser.add_argument("--out_root_dir", type=Path, default=default_out_root,
                         help="Root directory where the outputs of the training will be stored (e.g. metrics).")
+    parser.add_argument("--save_weights", action="store_true")
     args = parser.parse_args()
 
     # Manage output directory (for metrics)
@@ -196,7 +179,8 @@ def main():
     print(f'INFO: Using output root dir: {args.out_root_dir}')
     args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
-    run_experiment(args.config, args.comet_config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir)
+    run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir,
+                   save_weights=args.save_weights)
 
 
 if __name__ == '__main__':

@@ -1,8 +1,0 @@
-# You should copy this file as `.comet.config` (so that it will be ignored by git)
-# and modify the `api_key` field with your own API key (which you can find when logged into your Comet account).
-
-[comet]
-online=True
-api_key=<YOUR_API_KEY>
-workspace=<NAME OF WORKSPACE>
-project_name=<NAME OF PROJECT>

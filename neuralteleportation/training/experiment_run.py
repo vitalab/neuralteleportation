@@ -8,7 +8,6 @@ from torchvision.datasets import VisionDataset
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TrainingConfig, TrainingMetrics, config_to_dict
 from neuralteleportation.training.training import test, train
-from neuralteleportation.utils.logger import CsvLogger
 
 
 def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics,
@@ -21,15 +20,13 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
     print(f"Training {model_cls.__name__}")
 
     # Always log parameters (to enable useful filtering options in the web interface)
-    if config.comet_logger:
-        config.comet_logger.log_parameters(config_to_dict(config))
-        config.comet_logger.log_parameters({"model_name": model_cls.__name__.lower(),
-                                            "dataset_name": train_set.__class__.__name__.lower()})
-    if config.comet_logger:
-        with config.comet_logger.train():
-            trained_model = train(model, train_set, metrics, config,
-                                  val_dataset=val_set, optimizer=optimizer, lr_scheduler=lr_scheduler)
-    else:
+    assert config.logger is not None
+    hparams = config_to_dict(config)
+    hparams.update({
+        "model_name": model_cls.__name__.lower(),
+        "dataset_name": train_set.__class__.__name__.lower()})
+    config.logger.log_parameters(hparams)
+    with config.logger.train():
         trained_model = train(model, train_set, metrics, config,
                               val_dataset=val_set, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
@@ -37,20 +34,12 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
     # This avoids problem in case models are shuffled between CPU and GPU during training
     trained_model.to(config.device)
 
-    if config.comet_logger:
-        with config.comet_logger.test():
-            print("Testing {}: {} \n".format(model.__class__.__name__,
-                                             test(trained_model, test_set, metrics, config)))
-            print()
-    else:
+    with config.logger.test():
         print("Testing {}: {} \n".format(model.__class__.__name__,
                                          test(trained_model, test_set, metrics, config)))
         print()
 
-    if isinstance(config.exp_logger, CsvLogger):
-        config.exp_logger.flush()
-        config.comet_logger.log_asset(config.exp_logger.log_file_path)
-
+    config.logger.flush()
 
 
 def run_multi_output_training(train_fct: Callable, models: Sequence[nn.Module],

@@ -2,7 +2,6 @@ import copy
 from dataclasses import dataclass, fields
 from typing import Sequence, Callable, Dict, Any, Tuple
 
-from comet_ml import Experiment
 from torch import Tensor
 from torch.nn.modules.loss import _Loss
 
@@ -17,9 +16,9 @@ class TrainingConfig:
     batch_size: int = 32
     drop_last_batch: bool = False
     device: str = 'cpu'
-    comet_logger: Experiment = None
-    exp_logger: BaseLogger = None
+    logger: BaseLogger = None
     shuffle_batches: bool = False
+    max_batch: int = None
 
 
 @dataclass
@@ -40,7 +39,7 @@ class TrainingMetrics:
     metrics: Sequence[Callable[[Tensor, Tensor], float]]
 
 
-_SERIALIZATION_EXCLUDED_FIELDS = ['comet_logger', 'exp_logger']
+_SERIALIZATION_EXCLUDED_FIELDS = ['logger']
 
 
 def config_to_dict(training_config: TrainingConfig) -> Dict[str, Any]:
@@ -51,12 +50,15 @@ def config_to_dict(training_config: TrainingConfig) -> Dict[str, Any]:
     """
     from neuralteleportation.experiments.teleport_training import __training_configs__
     training_config_cls_label = {v: k for k, v in __training_configs__.items()}[training_config.__class__]
-    result = [("teleport", training_config_cls_label)]
+    result = {"teleport": training_config_cls_label}
     for field in [f for f in fields(training_config) if f.name not in _SERIALIZATION_EXCLUDED_FIELDS]:
         field_value = getattr(training_config, field.name)
         if callable(field_value):
             field_value = field_value.__name__
         else:
+            if type(field_value) is tuple:
+                # Tuples cannot be loaded back by the yaml module
+                field_value = list(field_value)
             field_value = copy.deepcopy(field_value)
-        result.append((field.name, field_value))
-    return dict(result)
+        result[field.name] = field_value
+    return result

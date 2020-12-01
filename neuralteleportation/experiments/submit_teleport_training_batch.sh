@@ -115,9 +115,13 @@ if [ -n "$out_root_dir" ]; then
   arg_out_root_dir="--out_root_dir $out_root_dir"
 fi
 
+if [ -n "$SLURM_ACCOUNT" ]; then
+  arg_account="-A $SLURM_ACCOUNT"
+fi
+
 # Submit individual jobs for all the configuration files in``experiment_config_dir``
 for experiment_config_file in "$experiment_config_dir"/*.yml; do
-  sbatch $arg_mail \
+  sbatch $arg_account $arg_mail \
     "$project_root_dir"/neuralteleportation/experiments/submit_teleport_training.sh \
       -p "$project_root_dir" -d "$dataset_dir" -c "$experiment_config_file" $arg_out_root_dir
 done

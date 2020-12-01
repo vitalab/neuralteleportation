@@ -55,8 +55,8 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
                     device=config.device, config=config, lr_scheduler=lr_scheduler)
 
         if val_dataset:
-            if config.comet_logger:
-                with config.comet_logger.validate():
+            if config.logger:
+                with config.logger.validate():
                     val_res = test(model, val_dataset, metrics, config)
             else:
                 val_res = test(model, val_dataset, metrics, config)
@@ -64,14 +64,14 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
             print("Validation: {}".format(val_res))
             if np.isnan(val_res["loss"]) or np.isnan(val_res["accuracy"]):
                 print("Stopping: Loss NaN!")
-                if config.exp_logger:
-                    config.exp_logger.add_text(
+                if config.logger:
+                    config.logger.add_text(
                         "Info", "Stopped due to Loss NaN.")
                 break
-            if config.exp_logger is not None:
-                config.exp_logger.add_scalar(
+            if config.logger is not None:
+                config.logger.add_scalar(
                     "val_loss", val_res["loss"], epoch)
-                config.exp_logger.add_scalar(
+                config.logger.add_scalar(
                     "val_accuracy", val_res["accuracy"], epoch)
         if lr_scheduler and lr_scheduler_interval == "epoch":
             if isinstance(lr_scheduler, ReduceLROnPlateau):
@@ -79,8 +79,8 @@ def train(model: nn.Module, train_dataset: Dataset, metrics: TrainingMetrics, co
             else:
                 lr_scheduler.step()
 
-    if config.exp_logger is not None:
-        config.exp_logger.flush()
+    if config.logger is not None:
+        config.logger.flush()
 
     return model
 
@@ -98,6 +98,8 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
     model.train()
     pbar = tqdm(enumerate(train_loader))
     for batch_idx, (data, target) in pbar:
+        if batch_idx == config.max_batch:
+            break
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
@@ -122,14 +124,11 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
     pbar.close()
 
     # Log the mean of each metric at the end of the epoch
-    if config is not None:
+    if config is not None and config.logger is not None:
         reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
-        if config.comet_logger:
-            config.comet_logger.log_metrics(reduced_metrics, epoch=epoch)
-        if config.exp_logger:
-            if config.exp_logger:
-                for metric_name, value in reduced_metrics.items():
-                    config.exp_logger.add_scalar(f"train_{metric_name}", value, epoch)
+        config.logger.log_metrics(reduced_metrics, epoch=epoch)
+        for metric_name, value in reduced_metrics.items():
+            config.logger.add_scalar(f"train_{metric_name}", value, epoch)
 
 
 def test(model: nn.Module, dataset: Dataset,
@@ -142,6 +141,8 @@ def test(model: nn.Module, dataset: Dataset,
     pbar = tqdm(enumerate(test_loader))
     with torch.no_grad():
         for i, (data, target) in pbar:
+            if i == config.max_batch:
+                break
             data, target = data.to(config.device), target.to(config.device)
             output = model(data)
             results['loss'].append(metrics.criterion(output, target).item())
@@ -158,8 +159,8 @@ def test(model: nn.Module, dataset: Dataset,
 
     pbar.close()
     reduced_results = dict(pd.DataFrame(results).mean())
-    if config.comet_logger:
-        config.comet_logger.log_metrics(reduced_results)
+    if config.logger is not None:
+        config.logger.log_metrics(reduced_results, epoch=0)
     return reduced_results
 
 

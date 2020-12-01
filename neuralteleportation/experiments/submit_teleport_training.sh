@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1               # Number of GPUs (per node)
 #SBATCH --cpus-per-task=8          # Number of cores (not cpus)
 #SBATCH --mem=32000M               # memory (per node)
-#SBATCH --time=00-02:00            # time (DD-HH:MM)
+#SBATCH --time=00-08:00            # time (DD-HH:MM)
 
 __usage="
 Usage: submit_teleport_training.sh --project_root_dir PROJECT_ROOT_DIR
@@ -103,4 +103,4 @@ out_root=${out_root_dir:-~/scratch/neuralteleportation}
 
 # Run task
 python "$project_root_dir"/neuralteleportation/experiments/teleport_training.py "$experiment_config_file" \
-  --data_root_dir "$compute_node_data_dir" --comet_config "$project_root_dir"/.comet.config --out_root_dir="$out_root"
+  --data_root_dir "$compute_node_data_dir" --out_root_dir="$out_root"
