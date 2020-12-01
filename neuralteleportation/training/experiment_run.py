@@ -20,6 +20,7 @@ def run_model(model: nn.Module, config: TrainingConfig, metrics: TrainingMetrics
     print(f"Training {model_cls.__name__}")
 
     # Always log parameters (to enable useful filtering options in the web interface)
+    assert config.logger is not None
     hparams = config_to_dict(config)
     hparams.update({
         "model_name": model_cls.__name__.lower(),
