@@ -1,6 +1,7 @@
 # Neural Teleportation    
  
 Neural network teleportation using representation theory of quivers. 
+This repository refers to the paper https://arxiv.org/abs/2012.01118
 
 ## Repository content
 
