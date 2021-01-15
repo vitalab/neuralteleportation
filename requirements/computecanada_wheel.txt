@@ -12,5 +12,4 @@ packaging
 seaborn
 torchsummary
 networkx
-tensorboard
-visdom
+comet_ml

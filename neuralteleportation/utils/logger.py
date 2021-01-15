@@ -6,6 +6,7 @@ from time import time, sleep
 
 import pandas as pd
 import yaml
+from comet_ml import Experiment
 
 
 class BaseLogger:
@@ -73,12 +74,12 @@ class DiskLogger(BaseLogger):
         df.index.name = 'step'
         df.to_csv(self.log_file_path)
 
-    def add_scalar(self, name, value, step):
+    def add_scalar(self, name, value, epoch):
         """Save the data in memory
 
         Will not write to disk instantly. Call flush() to do it. Otherwise, it will be called after a time interval.
         """
-        self.data_dict[self.make_prefixed_metric_name(name)][step] = value
+        self.data_dict[self.make_prefixed_metric_name(name)][epoch] = value
         self._update()
 
     def log_parameters(self, params_dict):
@@ -91,6 +92,12 @@ class DiskLogger(BaseLogger):
         for k, v in metrics_dict.items():
             self.data_dict[self.make_prefixed_metric_name(k)][epoch] = v
         self._update()
+
+    def set_context_prefix(self, prefix):
+        self.prefix = prefix
+
+    def reset_context_prefix(self):
+        self.prefix = None
 
     @contextlib.contextmanager
     def train(self):
@@ -109,6 +116,70 @@ class DiskLogger(BaseLogger):
         self.prefix = 'test'
         yield
         self.prefix = None
+
+
+class CometLogger(BaseLogger):
+    def __init__(self, experiment_id=None):
+        self.experiment = Experiment(auto_metric_logging=False)
+        if experiment_id is not None:
+            self.experiment.log_parameter('experiment_id', experiment_id)
+
+    def add_scalar(self, name, value, step):
+        self.experiment.log_metric(name, value, epoch=step)
+
+    def log_parameters(self, params_dict):
+        self.experiment.log_parameters(params_dict)
+
+    def log_metrics(self, metrics_dict, epoch):
+        self.experiment.log_metrics(metrics_dict, epoch=epoch)
+
+    def add_text(self, name, text):
+        self.experiment.log_text(f'{name}: {text}')
+
+    def set_context_prefix(self, prefix):
+        self.experiment.context = prefix
+
+    def reset_context_prefix(self):
+        self.experiment.context = None
+
+
+class MultiLogger:
+    def __init__(self, loggers):
+        self.loggers = loggers
+
+    @contextlib.contextmanager
+    def train(self):
+        for l in self.loggers:
+            l.set_context_prefix('train')
+        yield
+        for l in self.loggers:
+            l.reset_context_prefix()
+
+    @contextlib.contextmanager
+    def validate(self):
+        for l in self.loggers:
+            l.set_context_prefix('validate')
+        yield
+        for l in self.loggers:
+            l.reset_context_prefix()
+
+    @contextlib.contextmanager
+    def test(self):
+        for l in self.loggers:
+            l.set_context_prefix('test')
+        yield
+        for l in self.loggers:
+            l.reset_context_prefix()
+
+    def __getattr__(self, item):
+        method = getattr(self.loggers[0], item)
+        assert callable(method), f'MultiLogger only supports method access; {item} is not callable.'
+
+        def new_f(*args, **kwargs):
+            for l in self.loggers:
+                method = getattr(l, item)
+                method(*args, **kwargs)
+        return new_f
 
 
 def test_csv_logger():
