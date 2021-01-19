@@ -122,6 +122,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
 
     def teleport(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
+        initial_shape = self.weight.shape
         self.w = self.weight * self._get_cob_weight_factor(prev_cob, next_cob).type_as(self.weight)
         # This helps avoid a crash due to self.w not being a leaf variable,
         # meaning it is not at the begining of the graph and 
@@ -133,6 +134,7 @@ class NeuronLayerMixin(NeuralTeleportationLayerMixin):
             # Same as self.w
             self.b = self.b.clone().detach().requires_grad_()
             self.bias = torch.nn.Parameter(self.b, requires_grad=True)
+        assert self.weight.shape == initial_shape
 
     def apply_cob(self, prev_cob: torch.Tensor, next_cob: torch.Tensor):
         pass
@@ -279,7 +281,7 @@ class ConvMixin(NeuronLayerMixin):
 class Conv2dCOB(ConvMixin, nn.Conv2d):
 
     def _get_cob_weight_factor(self, prev_cob: torch.Tensor, next_cob: torch.Tensor) -> torch.Tensor:
-        return (next_cob[..., None] / prev_cob[None, ...])[..., None, None]
+        return (next_cob[..., None] / prev_cob.reshape((-1, len(prev_cob)//self.groups)))[..., None, None]
 
 
 class ConvTranspose2dCOB(ConvMixin, nn.ConvTranspose2d):

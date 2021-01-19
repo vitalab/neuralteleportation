@@ -22,6 +22,10 @@ class ReLUCOB(ActivationLayerMixin, nn.ReLU):
     reshape_cob = True
 
 
+class ReLU6COB(ActivationLayerMixin, nn.ReLU6):
+    reshape_cob = True
+
+
 class TanhCOB(ActivationLayerMixin, nn.Tanh):
     reshape_cob = True
 
