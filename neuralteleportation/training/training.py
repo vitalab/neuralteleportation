@@ -128,7 +128,7 @@ def train_epoch(model: nn.Module, metrics: TrainingMetrics, optimizer: Optimizer
         reduced_metrics = {metric: mean(values_by_batch) for metric, values_by_batch in metrics_by_batch.items()}
         config.logger.log_metrics(reduced_metrics, epoch=epoch)
         for metric_name, value in reduced_metrics.items():
-            config.logger.add_scalar(f"train_{metric_name}", value, epoch)
+            config.logger.add_scalar(metric_name, value, epoch)
 
 
 def test(model: nn.Module, dataset: Dataset,

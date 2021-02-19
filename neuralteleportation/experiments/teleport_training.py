@@ -2,9 +2,9 @@ import copy
 import itertools
 import uuid
 import math
-import os
 from pathlib import Path
 
+import comet_ml  # Must be imported before torch for annoying reasons
 import torch
 import torch.optim as optim
 import yaml
@@ -20,7 +20,7 @@ from neuralteleportation.training.teleport.optim import OptimalTeleportationTrai
 from neuralteleportation.training.teleport.pseudo import PseudoTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
-from neuralteleportation.utils.logger import DiskLogger
+from neuralteleportation.utils.logger import DiskLogger, MultiLogger, CometLogger
 
 __training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
@@ -34,10 +34,11 @@ def make_experiment(out_root: Path):
     experiment_dir = out_root / experiment_id
     assert not experiment_dir.exists()  # Check for collision (Extremely unlikely - I assume it will never happen)
     experiment_dir.mkdir()
-    return experiment_dir
+    return experiment_dir, experiment_id
 
 
-def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None, save_weights=False) -> None:
+def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None, save_weights=False,
+                   enable_comet=False) -> None:
     with open(str(config_path), 'r') as stream:
         config = yaml.safe_load(stream)
 
@@ -130,12 +131,21 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                             for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                                 num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
                                 for _ in range(num_runs):
-                                    experiment_path = make_experiment(out_root)
+                                    experiment_path, experiment_id = make_experiment(out_root)
+
+                                    if enable_comet:
+                                        logger = MultiLogger([
+                                            DiskLogger(experiment_path),
+                                            CometLogger(experiment_id)
+                                        ])
+                                    else:
+                                        logger = DiskLogger(experiment_path)
+
                                     training_config = training_config_cls(
                                         optimizer=(optimizer_name, optimizer_kwargs),
                                         lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
                                         device='cuda' if cuda_avail() else 'cpu',
-                                        logger=DiskLogger(experiment_path),
+                                        logger=logger,
                                         **training_params,
                                         **teleport_config_kwargs,
                                         **teleport_mode_config_kwargs,
@@ -171,6 +181,7 @@ def main():
     parser.add_argument("--out_root_dir", type=Path, default=default_out_root,
                         help="Root directory where the outputs of the training will be stored (e.g. metrics).")
     parser.add_argument("--save_weights", action="store_true")
+    parser.add_argument("--enable_comet", action="store_true")
     args = parser.parse_args()
 
     # Manage output directory (for metrics)
@@ -180,7 +191,7 @@ def main():
     args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
     run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir,
-                   save_weights=args.save_weights)
+                   save_weights=args.save_weights, enable_comet=args.enable_comet)
 
 
 if __name__ == '__main__':
