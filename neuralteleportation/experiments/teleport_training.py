@@ -18,6 +18,7 @@ from neuralteleportation.training.experiment_setup import get_model, get_dataset
 from neuralteleportation.training.teleport import optim as teleport_optim
 from neuralteleportation.training.teleport.optim import OptimalTeleportationTrainingConfig
 from neuralteleportation.training.teleport.pseudo import PseudoTeleportationTrainingConfig
+from neuralteleportation.training.teleport.pseudo import DistributionTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
 from neuralteleportation.utils.logger import DiskLogger, MultiLogger, CometLogger
@@ -25,7 +26,8 @@ from neuralteleportation.utils.logger import DiskLogger, MultiLogger, CometLogge
 __training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig,
-                        "pseudo": PseudoTeleportationTrainingConfig}
+                        "pseudo": PseudoTeleportationTrainingConfig,
+                        "same_distr": DistributionTeleportationTrainingConfig}
 
 
 def make_experiment(out_root: Path):
@@ -78,7 +80,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                             lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
                             lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
                             if "lr_lambda" in lr_scheduler_kwargs.keys():
-                                # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
+                                # WARNING: Take care of what you pass in as lr_lambda as the string is directly
+                                # evaluated
                                 # This is needed to transform lambda functions defined as strings to a python callable
                                 lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
 
@@ -101,7 +104,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
 
                             # w/ teleport configuration
                             else:  # teleport == "teleport"
-                                # Copy the config to play around with its content without affecting the config loaded in memory
+                                # Copy the config to play around with its content without affecting the config loaded
+                                #  in memory
                                 teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
 
                                 teleport_mode_obj = teleport_config_kwargs.pop("mode")
@@ -119,8 +123,10 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     if teleport_mode_config_kwargs is None:
                                         teleport_mode_config_kwargs = {}
 
-                                    for teleport_mode_single_config_kwargs in dict_values_product(teleport_mode_config_kwargs):
-                                        teleport_mode_configs.append((training_config_cls, teleport_mode_single_config_kwargs))
+                                    for teleport_mode_single_config_kwargs in \
+                                            dict_values_product(teleport_mode_config_kwargs):
+                                        teleport_mode_configs.append((training_config_cls,
+                                                                      teleport_mode_single_config_kwargs))
 
                             # generate matrix of training configuration
                             # (cartesian product of values for each training config kwarg)
@@ -128,7 +134,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                             config_matrix = itertools.product(teleport_configs, teleport_mode_configs)
 
                             # Iterate over different possible training configurations
-                            for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
+                            for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs)\
+                                    in config_matrix:
                                 num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
                                 for _ in range(num_runs):
                                     experiment_path, experiment_id = make_experiment(out_root)
@@ -157,7 +164,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
                                     lr_scheduler = None
                                     if has_scheduler:
-                                        lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
+                                        lr_scheduler = \
+                                            getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
                                     run_model(model, training_config, metrics,
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)

@@ -55,6 +55,27 @@ class NeuralTeleportationModel(nn.Module):
         """ Set the cob to ones. """
         self.teleport_activations(torch.ones(self.get_cob_size()))
 
+    def init_from_cumulative(self, cumulative, bins) -> None:
+        """
+            Initializes the weights of the network by a cumulative distribution.
+            Warning: it only works for
+        :param cumulative: cumulative distribution
+        :param bins: bins of histogram
+        :return: None
+        """
+        def _find_near(array, n):
+            idx = (np.abs(array-n)).argmin()
+            return idx, array[idx]
+
+        def init_cumulative(m):
+            if isinstance(m, nn.Linear):
+                for i in range(m.weight.shape[0]):
+                    for j in range(m.weight.shape[1]):
+                        idx, _ = _find_near(cumulative, np.random.rand(1))
+                        m.weight[i, j] = (bins[idx]+bins[idx+1])/2
+
+        self.apply(init_cumulative)
+
     def generate_random_cob(self, cob_range: float = 0.5, sampling_type: str = 'intra_landscape',
                             requires_grad: bool = False, center: float = 1) -> torch.Tensor:
         """

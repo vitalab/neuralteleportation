@@ -2,16 +2,19 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Callable
 
+import numpy as np
 import torch
 from torch.nn.functional import normalize
+from matplotlib import pyplot as plt
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TeleportationTrainingConfig
 
 
-def simulate_teleport_distribution(model: NeuralTeleportationModel, config: "PseudoTeleportationTrainingConfig",
+def simulate_teleportation_sphere(model: NeuralTeleportationModel, config: "PseudoTeleportationTrainingConfig",
                                    **kwargs) -> NeuralTeleportationModel:
-    print(f"Shifting weights similar to a {config.cob_sampling} teleportation w/ {config.cob_range} COB range.")
+    print(f"Shifting weights on a sphere similar to a {config.cob_sampling} teleportation w/ {config.cob_range} "
+          f"COB range.")
 
     model.cpu()  # Move model to CPU to avoid having 2 models on the GPU (to avoid possible CUDA OOM error)
 
@@ -33,6 +36,51 @@ def simulate_teleport_distribution(model: NeuralTeleportationModel, config: "Pse
     return model.to(config.device)
 
 
+def simulate_teleportation_distribution(model: NeuralTeleportationModel,
+                                        config: "DistributionTeleportationTrainingConfig",
+                                        **kwargs) -> NeuralTeleportationModel:
+    def _get_distribution(array):
+        aux = []
+        for i in range(len(array)):
+            aux.append(array[i].item())
+        return np.array(aux)
+
+    print(f"Shifting weights to a similar distribution to a {config.cob_sampling} teleportation w/ {config.cob_range}"
+          f"COB range.")
+
+    model.cpu()
+
+    teleported_model = deepcopy(model).random_teleport(cob_range=config.cob_range,
+                                                       sampling_type=config.cob_sampling)
+
+    teleported_layers = _get_distribution(teleported_model.get_weights(concat=True))
+
+    _, aux = plt.subplots()
+    distribution, bins, _ = aux.hist(teleported_layers, 100, density=True, cumulative=True)
+
+    model.init_from_cumulative(distribution, bins)
+
+    return model.to(config.device)
+
+@dataclass
+class DistributionTeleportationTrainingConfig(TeleportationTrainingConfig):
+    teleport_fn : Callable = field(default=simulate_teleportation_distribution)
+
 @dataclass
 class PseudoTeleportationTrainingConfig(TeleportationTrainingConfig):
-    teleport_fn: Callable = field(default=simulate_teleport_distribution)
+    teleport_fn: Callable = field(default=simulate_teleportation_sphere)
+
+
+if __name__=="__main__":
+    from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
+
+    mlp = MLPCOB(input_shape=(1, 28, 28), num_classes=10, activation='relu', hidden_layers=(200,200))
+    mlp = NeuralTeleportationModel(network=mlp, input_shape=(1, 28, 28))
+
+    config = DistributionTeleportationTrainingConfig()
+
+    model = simulate_teleportation_distribution(model=mlp, config=config)
+
+    print("Successful initialization as weights with distribution after teleportation.")
+
+
