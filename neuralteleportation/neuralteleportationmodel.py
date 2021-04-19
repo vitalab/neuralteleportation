@@ -74,7 +74,8 @@ class NeuralTeleportationModel(nn.Module):
                         idx, _ = _find_near(cumulative, np.random.rand(1))
                         m.weight[i, j] = (bins[idx]+bins[idx+1])/2
 
-        self.apply(init_cumulative)
+        with torch.no_grad():
+            self.apply(init_cumulative)
 
     def generate_random_cob(self, cob_range: float = 0.5, sampling_type: str = 'intra_landscape',
                             requires_grad: bool = False, center: float = 1) -> torch.Tensor:

@@ -150,7 +150,9 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
 
                                     training_config = training_config_cls(
                                         optimizer=(optimizer_name, optimizer_kwargs),
-                                        lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
+                                        lr_scheduler=(lr_scheduler_name,
+                                                      lr_scheduler_interval,
+                                                      lr_scheduler_kwargs) if has_scheduler else None,
                                         device='cuda' if cuda_avail() else 'cpu',
                                         logger=logger,
                                         **training_params,
@@ -165,7 +167,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     lr_scheduler = None
                                     if has_scheduler:
                                         lr_scheduler = \
-                                            getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
+                                            getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer,
+                                                                                           **lr_scheduler_kwargs)
                                     run_model(model, training_config, metrics,
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)
@@ -199,7 +202,7 @@ def main():
     args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
     run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir,
-                   save_weights=args.save_weights, enable_comet=args.enable_comet)
+                   save_weights=args.save_weights, enable_comet=True)
 
 
 if __name__ == '__main__':
