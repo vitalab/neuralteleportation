@@ -56,7 +56,8 @@ def simulate_teleportation_distribution(model: NeuralTeleportationModel,
     teleported_layers = _get_distribution(teleported_model.get_weights(concat=True))
 
     _, aux = plt.subplots()
-    distribution, bins, _ = aux.hist(teleported_layers, 100, density=True, cumulative=True)
+    distribution, bins, _ = aux.hist(teleported_layers, 10000, density=True, cumulative=True)
+    plt.close()
 
     model.init_from_cumulative(distribution, bins)
 

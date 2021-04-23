@@ -1,0 +1,39 @@
+runs_per_config: 1
+
+datasets:
+  - cifar10
+
+models:
+  - MLPCOB
+
+initializers:
+  - type: none # Uses PyTorch's default initializer
+
+optimizers:
+  - cls: SGD
+    lr: 0.001
+    momentum: 0.9
+    weight_decay: 0.01
+    lr_scheduler:
+      cls: ReduceLROnPlateau
+      mode: max
+
+training_params:
+  epochs: 100
+  batch_size: 256
+  shuffle_batches: True
+  drop_last_batch: True
+
+teleportations:
+  teleport:
+    mode:
+      same_distr:
+      random:
+    every_n_epochs:
+      - 0
+    teleport_only_once:
+      - True
+    cob_sampling:
+      - inter_landscape
+    cob_range:
+      - 0.9
