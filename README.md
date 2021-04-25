@@ -18,7 +18,7 @@ First, install dependencies
 ```bash
 # set-up project's environment
 cd neuralteleportation
-conda env create -f neuralteleportation.yml
+conda env create -f requirements/neuralteleportation.yml
 
 # activate the environment so that we install the project's package in it
 conda activate neuralteleportation
