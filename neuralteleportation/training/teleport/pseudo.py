@@ -5,7 +5,6 @@ from typing import Callable
 import numpy as np
 import torch
 from torch.nn.functional import normalize
-from matplotlib import pyplot as plt
 
 from neuralteleportation.neuralteleportationmodel import NeuralTeleportationModel
 from neuralteleportation.training.config import TeleportationTrainingConfig
@@ -39,33 +38,23 @@ def simulate_teleportation_sphere(model: NeuralTeleportationModel, config: "Pseu
 def simulate_teleportation_distribution(model: NeuralTeleportationModel,
                                         config: "DistributionTeleportationTrainingConfig",
                                         **kwargs) -> NeuralTeleportationModel:
-    def _get_distribution(array):
-        aux = []
-        for i in range(len(array)):
-            aux.append(array[i].item())
-        return np.array(aux)
-
     print(f"Shifting weights to a similar distribution to a {config.cob_sampling} teleportation w/ {config.cob_range}"
           f"COB range.")
 
     model.cpu()
-
     teleported_model = deepcopy(model).random_teleport(cob_range=config.cob_range,
                                                        sampling_type=config.cob_sampling)
-
-    teleported_layers = _get_distribution(teleported_model.get_weights(concat=True))
-
-    _, aux = plt.subplots()
-    distribution, bins, _ = aux.hist(teleported_layers, 10000, density=True, cumulative=True)
-    plt.close()
-
-    model.init_from_cumulative(distribution, bins)
-
+    teleported_weights = teleported_model.get_weights(concat=True).cpu().detach().numpy()
+    hist, bin_edges = np.histogram(teleported_weights, bins=10_000)
+    hist = hist / hist.sum()
+    model.init_like_histogram(hist, bin_edges)
     return model.to(config.device)
+
 
 @dataclass
 class DistributionTeleportationTrainingConfig(TeleportationTrainingConfig):
     teleport_fn : Callable = field(default=simulate_teleportation_distribution)
+
 
 @dataclass
 class PseudoTeleportationTrainingConfig(TeleportationTrainingConfig):

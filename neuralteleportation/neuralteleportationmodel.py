@@ -55,27 +55,25 @@ class NeuralTeleportationModel(nn.Module):
         """ Set the cob to ones. """
         self.teleport_activations(torch.ones(self.get_cob_size()))
 
-    def init_from_cumulative(self, cumulative, bins) -> None:
-        """
-            Initializes the weights of the network by a cumulative distribution.
-            Warning: it only works for
-        :param cumulative: cumulative distribution
-        :param bins: bins of histogram
-        :return: None
-        """
-        def _find_near(array, n):
-            idx = (np.abs(array-n)).argmin()
-            return idx, array[idx]
+    def init_like_histogram(self, hist: np.ndarray, bin_edges: np.ndarray) -> None:
+        """Initializes the weights of the network as if they were sampled from the provided histogram.
 
-        def init_cumulative(m):
+        Args:
+            hist: Probability of each bin in the histogram.
+            bin_edges: Boundaries of each bin (length(hist)+1).
+        """
+        cum_hist = np.cumsum(hist)
+        bin_centers = bin_edges[:-1] + (bin_edges[1] - bin_edges[0])/2
+
+        def init_layer_like_histogram(m):
             if isinstance(m, nn.Linear):
                 for i in range(m.weight.shape[0]):
                     for j in range(m.weight.shape[1]):
-                        idx, _ = _find_near(cumulative, np.random.rand(1))
-                        m.weight[i, j] = (bins[idx]+bins[idx+1])/2
+                        rand_bin = (np.abs(cum_hist-np.random.rand(1))).argmin()
+                        m.weight[i, j] = bin_centers[rand_bin]
 
         with torch.no_grad():
-            self.apply(init_cumulative)
+            self.apply(init_layer_like_histogram)
 
     def generate_random_cob(self, cob_range: float = 0.5, sampling_type: str = 'intra_landscape',
                             requires_grad: bool = False, center: float = 1) -> torch.Tensor:
