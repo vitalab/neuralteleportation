@@ -112,8 +112,6 @@ def main():
         simulate_teleportation_distribution
     from copy import deepcopy
 
-    config = DistributionTeleportationTrainingConfig()
-
     args = argument_parser()
 
     if args.save_format:    # Make sure the output directory exists, if we are to save the plots
@@ -132,7 +130,7 @@ def main():
 
     # Plot histogram of weights with same distribution
     # sampled from the cumulative distribution
-    model = simulate_teleportation_distribution(deepcopy(net), config=config)
+    model = simulate_teleportation_distribution(deepcopy(net), config=DistributionTeleportationTrainingConfig())
     plot_model_weights_histogram(model, args.plot_mode, title="Weights with distribution simulated from teleportation",
                                  output_dir=args.output_dir, save_format=args.save_format,
                                  xlim=args.xlim, ylim_max=args.ylim_max)

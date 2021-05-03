@@ -70,7 +70,7 @@ class NeuralTeleportationModel(nn.Module):
                 for i in range(m.weight.shape[0]):
                     for j in range(m.weight.shape[1]):
                         rand_bin = (np.abs(cum_hist-np.random.rand(1))).argmin()
-                        m.weight[i, j] = bin_centers[rand_bin]
+                        m.weight[i, j] = bin_centers[rand_bin].item()
 
         with torch.no_grad():
             self.apply(init_layer_like_histogram)

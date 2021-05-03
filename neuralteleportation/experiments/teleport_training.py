@@ -87,8 +87,7 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
 
                             if "steps_per_epoch" in lr_scheduler_kwargs.keys():
                                 steps = len(train_set) / training_params['batch_size']
-                                lr_scheduler_kwargs['steps_per_epoch'] = math.floor(steps) \
-                                    if training_params['drop_last_batch'] else math.ceil(steps)
+                                lr_scheduler_kwargs['steps_per_epoch'] = math.floor(steps) if training_params['drop_last_batch'] else math.ceil(steps)
 
                             has_scheduler = True
 
@@ -123,10 +122,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     if teleport_mode_config_kwargs is None:
                                         teleport_mode_config_kwargs = {}
 
-                                    for teleport_mode_single_config_kwargs in \
-                                            dict_values_product(teleport_mode_config_kwargs):
-                                        teleport_mode_configs.append((training_config_cls,
-                                                                      teleport_mode_single_config_kwargs))
+                                    for teleport_mode_single_config_kwargs in dict_values_product(teleport_mode_config_kwargs):
+                                        teleport_mode_configs.append((training_config_cls, teleport_mode_single_config_kwargs))
 
                             # generate matrix of training configuration
                             # (cartesian product of values for each training config kwarg)
@@ -134,8 +131,7 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                             config_matrix = itertools.product(teleport_configs, teleport_mode_configs)
 
                             # Iterate over different possible training configurations
-                            for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs)\
-                                    in config_matrix:
+                            for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                                 num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
                                 for _ in range(num_runs):
                                     experiment_path, experiment_id = make_experiment(out_root)
@@ -166,9 +162,7 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                                     optimizer = getattr(optim, optimizer_name)(model.parameters(), **optimizer_kwargs)
                                     lr_scheduler = None
                                     if has_scheduler:
-                                        lr_scheduler = \
-                                            getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer,
-                                                                                           **lr_scheduler_kwargs)
+                                        lr_scheduler = getattr(optim.lr_scheduler, lr_scheduler_name)(optimizer, **lr_scheduler_kwargs)
                                     run_model(model, training_config, metrics,
                                             train_set, test_set, val_set=val_set,
                                             optimizer=optimizer, lr_scheduler=lr_scheduler)
@@ -202,7 +196,7 @@ def main():
     args.out_root_dir.mkdir(parents=True, exist_ok=True)
 
     run_experiment(args.config, data_root_dir=args.data_root_dir, out_root=args.out_root_dir,
-                   save_weights=args.save_weights, enable_comet=True)
+                   save_weights=args.save_weights, enable_comet=args.enable_comet)
 
 
 if __name__ == '__main__':

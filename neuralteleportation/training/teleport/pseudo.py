@@ -45,7 +45,7 @@ def simulate_teleportation_distribution(model: NeuralTeleportationModel,
     teleported_model = deepcopy(model).random_teleport(cob_range=config.cob_range,
                                                        sampling_type=config.cob_sampling)
     teleported_weights = teleported_model.get_weights(concat=True).cpu().detach().numpy()
-    hist, bin_edges = np.histogram(teleported_weights, bins=10_000)
+    hist, bin_edges = np.histogram(teleported_weights, bins=1000)
     hist = hist / hist.sum()
     model.init_like_histogram(hist, bin_edges)
     return model.to(config.device)
@@ -59,18 +59,3 @@ class DistributionTeleportationTrainingConfig(TeleportationTrainingConfig):
 @dataclass
 class PseudoTeleportationTrainingConfig(TeleportationTrainingConfig):
     teleport_fn: Callable = field(default=simulate_teleportation_sphere)
-
-
-if __name__=="__main__":
-    from neuralteleportation.models.model_zoo.mlpcob import MLPCOB
-
-    mlp = MLPCOB(input_shape=(1, 28, 28), num_classes=10, activation='relu', hidden_layers=(200,200))
-    mlp = NeuralTeleportationModel(network=mlp, input_shape=(1, 28, 28))
-
-    config = DistributionTeleportationTrainingConfig()
-
-    model = simulate_teleportation_distribution(model=mlp, config=config)
-
-    print("Successful initialization as weights with distribution after teleportation.")
-
-
