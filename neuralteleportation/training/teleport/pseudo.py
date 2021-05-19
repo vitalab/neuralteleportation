@@ -2,6 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Callable
 
+import numpy as np
 import torch
 from torch.nn.functional import normalize
 
@@ -9,9 +10,10 @@ from neuralteleportation.neuralteleportationmodel import NeuralTeleportationMode
 from neuralteleportation.training.config import TeleportationTrainingConfig
 
 
-def simulate_teleport_distribution(model: NeuralTeleportationModel, config: "PseudoTeleportationTrainingConfig",
+def simulate_teleportation_sphere(model: NeuralTeleportationModel, config: "PseudoTeleportationTrainingConfig",
                                    **kwargs) -> NeuralTeleportationModel:
-    print(f"Shifting weights similar to a {config.cob_sampling} teleportation w/ {config.cob_range} COB range.")
+    print(f"Shifting weights on a sphere similar to a {config.cob_sampling} teleportation w/ {config.cob_range} "
+          f"COB range.")
 
     model.cpu()  # Move model to CPU to avoid having 2 models on the GPU (to avoid possible CUDA OOM error)
 
@@ -33,6 +35,27 @@ def simulate_teleport_distribution(model: NeuralTeleportationModel, config: "Pse
     return model.to(config.device)
 
 
+def simulate_teleportation_distribution(model: NeuralTeleportationModel,
+                                        config: "DistributionTeleportationTrainingConfig",
+                                        **kwargs) -> NeuralTeleportationModel:
+    print(f"Shifting weights to a similar distribution to a {config.cob_sampling} teleportation w/ {config.cob_range}"
+          f"COB range.")
+
+    model.cpu()
+    teleported_model = deepcopy(model).random_teleport(cob_range=config.cob_range,
+                                                       sampling_type=config.cob_sampling)
+    teleported_weights = teleported_model.get_weights(concat=True).cpu().detach().numpy()
+    hist, bin_edges = np.histogram(teleported_weights, bins=1000)
+    hist = hist / hist.sum()
+    model.init_like_histogram(hist, bin_edges)
+    return model.to(config.device)
+
+
+@dataclass
+class DistributionTeleportationTrainingConfig(TeleportationTrainingConfig):
+    teleport_fn : Callable = field(default=simulate_teleportation_distribution)
+
+
 @dataclass
 class PseudoTeleportationTrainingConfig(TeleportationTrainingConfig):
-    teleport_fn: Callable = field(default=simulate_teleport_distribution)
+    teleport_fn: Callable = field(default=simulate_teleportation_sphere)

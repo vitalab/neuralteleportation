@@ -18,6 +18,7 @@ from neuralteleportation.training.experiment_setup import get_model, get_dataset
 from neuralteleportation.training.teleport import optim as teleport_optim
 from neuralteleportation.training.teleport.optim import OptimalTeleportationTrainingConfig
 from neuralteleportation.training.teleport.pseudo import PseudoTeleportationTrainingConfig
+from neuralteleportation.training.teleport.pseudo import DistributionTeleportationTrainingConfig
 from neuralteleportation.training.teleport.random import RandomTeleportationTrainingConfig
 from neuralteleportation.utils.itertools import dict_values_product
 from neuralteleportation.utils.logger import DiskLogger, MultiLogger, CometLogger
@@ -25,7 +26,8 @@ from neuralteleportation.utils.logger import DiskLogger, MultiLogger, CometLogge
 __training_configs__ = {"no_teleport": TrainingConfig,
                         "random": RandomTeleportationTrainingConfig,
                         "optim": OptimalTeleportationTrainingConfig,
-                        "pseudo": PseudoTeleportationTrainingConfig}
+                        "pseudo": PseudoTeleportationTrainingConfig,
+                        "same_distr": DistributionTeleportationTrainingConfig}
 
 
 def make_experiment(out_root: Path):
@@ -78,14 +80,14 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                             lr_scheduler_name = lr_scheduler_kwargs.pop("cls")
                             lr_scheduler_interval = lr_scheduler_kwargs.pop("interval", "epoch")
                             if "lr_lambda" in lr_scheduler_kwargs.keys():
-                                # WARNING: Take care of what you pass in as lr_lambda as the string is directly evaluated
+                                # WARNING: Take care of what you pass in as lr_lambda as the string is directly
+                                # evaluated
                                 # This is needed to transform lambda functions defined as strings to a python callable
                                 lr_scheduler_kwargs["lr_lambda"] = eval(lr_scheduler_kwargs.pop("lr_lambda"))
 
                             if "steps_per_epoch" in lr_scheduler_kwargs.keys():
                                 steps = len(train_set) / training_params['batch_size']
-                                lr_scheduler_kwargs['steps_per_epoch'] = math.floor(steps) \
-                                    if training_params['drop_last_batch'] else math.ceil(steps)
+                                lr_scheduler_kwargs['steps_per_epoch'] = math.floor(steps) if training_params['drop_last_batch'] else math.ceil(steps)
 
                             has_scheduler = True
 
@@ -101,7 +103,8 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
 
                             # w/ teleport configuration
                             else:  # teleport == "teleport"
-                                # Copy the config to play around with its content without affecting the config loaded in memory
+                                # Copy the config to play around with its content without affecting the config loaded
+                                #  in memory
                                 teleport_config_kwargs = copy.deepcopy(teleport_config_kwargs)
 
                                 teleport_mode_obj = teleport_config_kwargs.pop("mode")
@@ -143,7 +146,9 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
 
                                     training_config = training_config_cls(
                                         optimizer=(optimizer_name, optimizer_kwargs),
-                                        lr_scheduler=(lr_scheduler_name, lr_scheduler_interval, lr_scheduler_kwargs) if has_scheduler else None,
+                                        lr_scheduler=(lr_scheduler_name,
+                                                      lr_scheduler_interval,
+                                                      lr_scheduler_kwargs) if has_scheduler else None,
                                         device='cuda' if cuda_avail() else 'cpu',
                                         logger=logger,
                                         **training_params,

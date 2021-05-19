@@ -108,6 +108,10 @@ def plot_model_weights_histogram(model: NeuralTeleportationModel, mode: str, tit
 
 
 def main():
+    from neuralteleportation.training.teleport.pseudo import DistributionTeleportationTrainingConfig, \
+        simulate_teleportation_distribution
+    from copy import deepcopy
+
     args = argument_parser()
 
     if args.save_format:    # Make sure the output directory exists, if we are to save the plots
@@ -124,9 +128,17 @@ def main():
                                  output_dir=args.output_dir, save_format=args.save_format,
                                  xlim=args.xlim, ylim_max=args.ylim_max)
 
+    # Plot histogram of weights with same distribution
+    # sampled from the cumulative distribution
+    model = simulate_teleportation_distribution(deepcopy(net), config=DistributionTeleportationTrainingConfig())
+    plot_model_weights_histogram(model, args.plot_mode, title="Weights with distribution simulated from teleportation",
+                                 output_dir=args.output_dir, save_format=args.save_format,
+                                 xlim=args.xlim, ylim_max=args.ylim_max)
+
     # Teleport the model and plot an histogram of its teleported weights
     net.random_teleport(args.cob_range, args.cob_sampling)
-    plot_model_weights_histogram(net, args.plot_mode, title=f"CoB range = {args.cob_range}",
+    plot_model_weights_histogram(net, args.plot_mode, title=f"Weights of teleported network "
+                                                            f"with CoB range = {args.cob_range}",
                                  output_dir=args.output_dir, save_format=args.save_format,
                                  xlim=args.xlim, ylim_max=args.ylim_max, zoom_plot=True)
 
