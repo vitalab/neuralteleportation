@@ -36,8 +36,10 @@ instead of generic packages automatically downloaded by pip. This last recommend
 following commands add options that are not generally seen when configuring local virtual environments.
 
 When using virtualenv, it is necessary to first create an environment like below. Note that it is important to first
-load the Python module to ensure that the virtual environment's base Python version is the appropriate one.
+load the environment and Python modules to make sure the virtual environment uses the same versions of Python and 
+other major libraries, e.g. torch.
 ```bash
+module load StdEnv/2018
 module load python/3.7
 virtualenv --no-download <path_to_virtual_env>
 ```
