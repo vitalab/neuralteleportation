@@ -21,7 +21,7 @@ pip install -e .
 ### Compute Canada environment
 
 Here is a brief step by step description of how to setup a working environment for the project on Compute Canada's (CC)
-servers. For more information on how to configure virtual environments on Compute Canada's servers,
+servers. For more information on how to configure virtual environments on CC servers,
 please refer to their own
 [documentation on the subject](https://docs.computecanada.ca/wiki/Python#Creating_and_using_a_virtual_environment).
 
@@ -30,13 +30,13 @@ please refer to their own
 > do not need to be run, but rather serve as reference in case somebody would want to setup an environment accessible
 > from login nodes.  
 
-On Compute Canada's servers, the recommended tool to manage virtual environments is Python's own virtualenv, rather
-than Conda. It is also recommended to use packages compiled specially by Compute Canada for the servers' architectures,
+On CC servers, the recommended tool to manage virtual environments is Python's own virtualenv, rather
+than Conda. It is also recommended to use packages compiled specially by CC for the servers' architectures,
 instead of generic packages automatically downloaded by pip. This last recommendation explains why some of the
 following commands add options that are not generally seen when configuring local virtual environments.
 
 When using virtualenv, it is necessary to first create an environment like below. Note that it is important to first
-load the CC standard environment and Python modules to make sure the virtual environment uses the same versions of Python and 
+load the [CC standard environment](https://docs.computecanada.ca/wiki/Standard_software_environments/en) and Python modules to make sure the virtual environment uses the same versions of Python and 
 other major libraries, e.g. torch.
 ```bash
 module load StdEnv/2018
