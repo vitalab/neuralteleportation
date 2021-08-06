@@ -83,6 +83,7 @@ check_timeout()
 }
 
 # Install and activate a virtual environment directly on the compute node
+module load StdEnv/2018
 module load httpproxy # To allow connections to Comet server
 module load python/3.7
 timeout 3m virtualenv --no-download "$SLURM_TMPDIR"/env
