@@ -20,7 +20,7 @@ pip install -e .
 
 ### Compute Canada environment
 
-Here is a brief step by step description of how to setup a working environment for the project on Compute Canada's
+Here is a brief step by step description of how to setup a working environment for the project on Compute Canada's (CC)
 servers. For more information on how to configure virtual environments on Compute Canada's servers,
 please refer to their own
 [documentation on the subject](https://docs.computecanada.ca/wiki/Python#Creating_and_using_a_virtual_environment).
@@ -36,7 +36,7 @@ instead of generic packages automatically downloaded by pip. This last recommend
 following commands add options that are not generally seen when configuring local virtual environments.
 
 When using virtualenv, it is necessary to first create an environment like below. Note that it is important to first
-load the environment and Python modules to make sure the virtual environment uses the same versions of Python and 
+load the CC standard environment and Python modules to make sure the virtual environment uses the same versions of Python and 
 other major libraries, e.g. torch.
 ```bash
 module load StdEnv/2018
