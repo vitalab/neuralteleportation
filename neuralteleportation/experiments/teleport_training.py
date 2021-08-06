@@ -3,6 +3,7 @@ import itertools
 import uuid
 import math
 from pathlib import Path
+from typing import Mapping, Union
 
 import comet_ml  # Must be imported before torch for annoying reasons
 import torch
@@ -30,10 +31,12 @@ __training_configs__ = {"no_teleport": TrainingConfig,
                         "same_distr": DistributionTeleportationTrainingConfig}
 
 
-def make_experiment(out_root: Path):
-    assert out_root.exists()
+def make_experiment(out_root: Path, dataset: str, model: Union[str, Mapping[str, str]]):
+    if not isinstance(model, str):
+        model = "_".join(model.values())
+    (out_root / dataset / model).mkdir(parents=True, exist_ok=True)
     experiment_id = str(uuid.uuid4())  # Create a unique ID randomly
-    experiment_dir = out_root / experiment_id
+    experiment_dir = out_root / dataset / model / experiment_id
     assert not experiment_dir.exists()  # Check for collision (Extremely unlikely - I assume it will never happen)
     experiment_dir.mkdir()
     return experiment_dir, experiment_id
@@ -134,7 +137,7 @@ def run_experiment(config_path: Path, out_root: Path, data_root_dir: Path = None
                             for teleport_config_kwargs, (training_config_cls, teleport_mode_config_kwargs) in config_matrix:
                                 num_runs = int(config["runs_per_config"]) if "runs_per_config" in config.keys() else 1
                                 for _ in range(num_runs):
-                                    experiment_path, experiment_id = make_experiment(out_root)
+                                    experiment_path, experiment_id = make_experiment(out_root, dataset_name, model_obj)
 
                                     if enable_comet:
                                         logger = MultiLogger([
