@@ -86,13 +86,14 @@ check_timeout()
 module load StdEnv/2018
 module load httpproxy # To allow connections to Comet server
 module load python/3.7
-timeout 3m virtualenv --no-download "$SLURM_TMPDIR"/env
-check_timeout
-source "$SLURM_TMPDIR"/env/bin/activate
-timeout 4m pip install --no-index -r "$project_root_dir"/requirements/computecanada_wheel.txt
-check_timeout
-timeout 3m pip install "$project_root_dir"/.
-check_timeout
+#timeout 3m virtualenv --no-download "$SLURM_TMPDIR"/env
+#check_timeout
+#source "$SLURM_TMPDIR"/env/bin/activate
+#timeout 4m pip install --no-index -r "$project_root_dir"/requirements/computecanada_wheel.txt
+#check_timeout
+#timeout 3m pip install "$project_root_dir"/.
+#check_timeout
+source ~/virtualenv/neuralteleportation/bin/activate
 
 # Copy any dataset we might use to the compute node
 dataset_dir=${dataset_dir%/}/  # Ensure the presence of a trailing slash if there isn't one (to ensure consistent behavior with rsync)
